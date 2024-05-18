@@ -1,3 +1,10 @@
-# Default ignored files
-/shelf/
-/workspace.xml
+*.class
+*.log
+*.cache
+*.tasty
+
+target/
+.bsp/
+project/project/
+project/target/
+/.idea/workspace.xml
