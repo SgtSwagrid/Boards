@@ -10,4 +10,4 @@ Featured games (this list will continually expand):
 1. [Chess](https://en.wikipedia.org/wiki/Chess)
 2. [Chaturanga](https://en.wikipedia.org/wiki/Chaturanga)
 
-This project is a continuation from a long lineage of similar projects ([1.0 (Java)](https://github.com/SgtSwagrid/boards-1.0), [2.0 (Python)](https://github.com/SgtSwagrid/boards-2.0), [3.0 (Scala)](https://github.com/SgtSwagrid/boards-3.0)).
+This project is a continuation from a long lineage of similar projects ([1.0](https://github.com/SgtSwagrid/boards-1.0), [2.0](https://github.com/SgtSwagrid/boards-2.0), [3.0 ](https://github.com/SgtSwagrid/boards-3.0)).
