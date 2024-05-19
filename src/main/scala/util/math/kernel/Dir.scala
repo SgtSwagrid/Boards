@@ -5,6 +5,7 @@ import util.math.Number.*
 import util.math.Pos.{*, given}
 import util.math.{Metric, Pos, Vec}
 import util.math.kernel.Kernel
+import util.math.kernel.Kernel.given
 import util.math.kernel.Kernel.Shape
 
 import scala.annotation.targetName
@@ -51,6 +52,9 @@ class Dir(val positions: Int => Kernel[?]):
     
   @targetName("translate")
   def + (pos: Pos): Kernel[?] = from(pos)
+  
+  @targetName("multiply")
+  def * (x: Int): Dir = new Dir(dim => Kernel(positions(dim).positions.toSeq.map(_ * x)))
 
 object Dir:
   

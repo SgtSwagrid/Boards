@@ -8,6 +8,7 @@ object Test extends App:
   
   
   println(Chess.setup.draw)
+  
   actions
     .map:
       case Move(_, from, to) => (from, to)
@@ -15,6 +16,8 @@ object Test extends App:
     .map((from, action) => s"$from |-> ${action.map(_(1)).mkString(", ")}")
     .toSeq.sorted
     .foreach(println)
+  
+  
   
   Chess.initial.next
     .flatMap:

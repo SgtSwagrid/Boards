@@ -30,6 +30,12 @@ case class PieceSet (
   def get(pos: Pos): Option[Piece] =
     if contains(pos) then Some(piecesByPos(pos)) else None
     
+  def forall(f: Piece => Boolean): Boolean =
+    piecesByPos.values.forall(f)
+    
+  def exists(f: Piece => Boolean): Boolean =
+    piecesByPos.values.exists(f)
+    
   def belongsTo(pos: Pos, players: Int*): Boolean =
     get(pos).exists(piece => players.contains(piece.owner))
   def isFriendly(pos: Pos)(using state: BoardState): Boolean =
