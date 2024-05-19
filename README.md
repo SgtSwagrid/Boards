@@ -1,4 +1,4 @@
-# Boards 3.0
+# Boards 4.0
 
 This is an ongoing project featuring:
 1. A [DSL](https://en.wikipedia.org/wiki/Domain-specific_language) for easily creating [combinatorial](https://brilliant.org/wiki/combinatorial-games-definition/) games in [Scala](https://www.scala-lang.org/).
@@ -8,3 +8,6 @@ This is an ongoing project featuring:
 
 Featured games (this list will continually expand):
 1. [Chess](https://en.wikipedia.org/wiki/Chess)
+2. [Chaturanga](https://en.wikipedia.org/wiki/Chaturanga)
+
+This project is a continuation from a long lineage of similar projects ([1.0 (Java)](https://github.com/SgtSwagrid/boards-1.0), [2.0 (Python)](https://github.com/SgtSwagrid/boards-2.0), [3.0 (Scala)](https://github.com/SgtSwagrid/boards-3.0)).
