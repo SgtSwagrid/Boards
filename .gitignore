@@ -205,3 +205,7 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/scala,java,jetbrains,sbt,playframework,windows
+
+# Automatically generated Javascript
+/server/public/scripts/application.js
+/server/public/scripts/application.js.map

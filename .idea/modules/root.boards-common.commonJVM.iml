@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module external.linked.project.id="commonJVM [file:/C:/Users/alecd/IdeaProjects/Boards/]" external.linked.project.path="$MODULE_DIR$/../../common/.jvm" external.root.project.path="$MODULE_DIR$/../.." external.system.id="SBT" external.system.module.type="nestedProject" type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_22">
+    <output url="file://$MODULE_DIR$/../../common/.jvm/target/scala-3.4.2/classes" />
+    <output-test url="file://$MODULE_DIR$/../../common/.jvm/target/scala-3.4.2/test-classes" />
+    <exclude-output />
+    <content url="file://$MODULE_DIR$/../../common/.jvm">
+      <excludeFolder url="file://$MODULE_DIR$/../../common/.jvm/target" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="sbt: scala-sdk-3.4.2" level="project" />
+    <orderEntry type="module" module-name="root.boards-common.common-sources" exported="" />
+    <orderEntry type="library" name="sbt: org.scala-lang:scala-library:2.13.12:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-lang:scala3-library_3:3.4.2:jar" level="project" />
+  </component>
+</module>

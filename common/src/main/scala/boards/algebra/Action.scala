@@ -47,12 +47,6 @@ object Action:
     
     inline def enact(state: BoardState) =
       state.destroy(piece)
-  
-  case class Select
-    (pos: Pos, id: Int)
-  extends Action:
-    
-    inline def enact(state: BoardState) = state
     
   case object NoOp extends Action:
     inline def enact(state: BoardState) = state

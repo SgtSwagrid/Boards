@@ -5,12 +5,14 @@
     <output-test url="file://$MODULE_DIR$/../../client/target/scala-3.4.2/test-classes" />
     <exclude-output />
     <content url="file://$MODULE_DIR$/../../client">
+      <sourceFolder url="file://$MODULE_DIR$/../../client/src/main/scala" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/../../client/target" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="sbt: scala-sdk-3.4.2" level="project" />
-    <orderEntry type="module" module-name="root.boards-common" />
+    <orderEntry type="module" module-name="root.boards-common.common-sources" exported="" />
+    <orderEntry type="module" module-name="root.boards-common.commonJS" />
     <orderEntry type="library" name="sbt: app.tulz:tuplez-full-light_sjs1_3:0.4.0:jar" level="project" />
     <orderEntry type="library" name="sbt: com.raquo:airstream_sjs1_3:17.0.0:jar" level="project" />
     <orderEntry type="library" name="sbt: com.raquo:ew_sjs1_3:0.2.0:jar" level="project" />
@@ -22,7 +24,6 @@
     <orderEntry type="library" scope="TEST" name="sbt: org.scala-js:scalajs-test-bridge_2.13:1.16.0:jar" level="project" />
     <orderEntry type="library" scope="TEST" name="sbt: org.scala-js:scalajs-test-interface_2.13:1.16.0:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scala-lang:scala-library:2.13.13:jar" level="project" />
-    <orderEntry type="library" name="sbt: org.scala-lang:scala3-library_3:3.4.2:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scala-lang:scala3-library_sjs1_3:3.4.2:jar" level="project" />
   </component>
 </module>

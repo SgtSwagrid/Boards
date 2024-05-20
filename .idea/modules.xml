@@ -4,7 +4,9 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.iml" filepath="$PROJECT_DIR$/.idea/modules/root.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-client.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-client.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-common.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-common.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-common.common-sources.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-common.common-sources.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-common.commonJS.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-common.commonJS.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-common.commonJVM.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-common.commonJVM.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-server.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-server.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.root-build.iml" filepath="$PROJECT_DIR$/.idea/modules/root.root-build.iml" />
     </modules>

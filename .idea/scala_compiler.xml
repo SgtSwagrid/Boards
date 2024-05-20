@@ -24,7 +24,7 @@
         <parameter value="utf8" />
       </parameters>
     </profile>
-    <profile name="sbt 3" modules="boards.boards-server,root.boards-server">
+    <profile name="sbt 3" modules="boards.boards-server">
       <option name="deprecationWarnings" value="true" />
       <option name="uncheckedWarnings" value="true" />
       <option name="featureWarnings" value="true" />
@@ -33,13 +33,34 @@
         <parameter value="utf8" />
       </parameters>
     </profile>
-    <profile name="sbt 4" modules="boards.boards-client.common,root.boards-common">
+    <profile name="sbt 4" modules="boards.boards-client.common">
       <option name="featureWarnings" value="true" />
     </profile>
-    <profile name="sbt 5" modules="boards.boards-client.client,root.boards-client">
+    <profile name="sbt 5" modules="boards.boards-client.client">
       <option name="featureWarnings" value="true" />
       <parameters>
         <parameter value="-scalajs" />
+      </parameters>
+    </profile>
+    <profile name="sbt 6" modules="root.boards-client,root.boards-common.commonJS">
+      <option name="implicitConversions" value="true" />
+      <option name="featureWarnings" value="true" />
+      <parameters>
+        <parameter value="-scalajs" />
+      </parameters>
+    </profile>
+    <profile name="sbt 7" modules="root.boards-common,root.boards-common.commonJVM">
+      <option name="implicitConversions" value="true" />
+      <option name="featureWarnings" value="true" />
+    </profile>
+    <profile name="sbt 8" modules="root.boards-server">
+      <option name="implicitConversions" value="true" />
+      <option name="deprecationWarnings" value="true" />
+      <option name="uncheckedWarnings" value="true" />
+      <option name="featureWarnings" value="true" />
+      <parameters>
+        <parameter value="-encoding" />
+        <parameter value="utf8" />
       </parameters>
     </profile>
   </component>
