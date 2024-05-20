@@ -15,10 +15,31 @@
     <option name="optimiseBytecode" value="true" />
     <option name="explainTypeErrors" value="true" />
     <option name="continuations" value="true" />
-    <profile name="sbt 1" modules="Boards">
+    <profile name="sbt 1" modules="Boards,boards,root" />
+    <profile name="sbt 2" modules="boards.server">
+      <option name="deprecationWarnings" value="true" />
+      <option name="uncheckedWarnings" value="true" />
       <parameters>
-        <parameter value="-Xmax-inlines" />
-        <parameter value="64" />
+        <parameter value="-encoding" />
+        <parameter value="utf8" />
+      </parameters>
+    </profile>
+    <profile name="sbt 3" modules="boards.boards-server,root.boards-server">
+      <option name="deprecationWarnings" value="true" />
+      <option name="uncheckedWarnings" value="true" />
+      <option name="featureWarnings" value="true" />
+      <parameters>
+        <parameter value="-encoding" />
+        <parameter value="utf8" />
+      </parameters>
+    </profile>
+    <profile name="sbt 4" modules="boards.boards-client.common,root.boards-common">
+      <option name="featureWarnings" value="true" />
+    </profile>
+    <profile name="sbt 5" modules="boards.boards-client.client,root.boards-client">
+      <option name="featureWarnings" value="true" />
+      <parameters>
+        <parameter value="-scalajs" />
       </parameters>
     </profile>
   </component>

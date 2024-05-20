@@ -2,8 +2,11 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Boards.iml" filepath="$PROJECT_DIR$/.idea/modules/Boards.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Boards.Boards-build.iml" filepath="$PROJECT_DIR$/.idea/modules/Boards.Boards-build.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.iml" filepath="$PROJECT_DIR$/.idea/modules/root.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-client.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-client.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-common.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-common.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-server.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-server.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.root-build.iml" filepath="$PROJECT_DIR$/.idea/modules/root.root-build.iml" />
     </modules>
   </component>
 </project>
