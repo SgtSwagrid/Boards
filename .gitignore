@@ -209,3 +209,6 @@ $RECYCLE.BIN/
 # Automatically generated Javascript
 /server/public/scripts/application.js
 /server/public/scripts/application.js.map
+
+# Database
+*.db
