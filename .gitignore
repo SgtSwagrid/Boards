@@ -211,4 +211,5 @@ $RECYCLE.BIN/
 /server/public/scripts/application.js.map
 
 # Database
+/database/
 *.db

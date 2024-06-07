@@ -9,14 +9,21 @@
       <sourceFolder url="file://$MODULE_DIR$/../../server/conf" type="java-resource" />
       <sourceFolder url="file://$MODULE_DIR$/../../server/public" type="java-resource" />
       <sourceFolder url="file://$MODULE_DIR$/../../server/target/scala-3.4.2/routes/main" isTestSource="false" generated="true" />
+      <sourceFolder url="file://$MODULE_DIR$/../../server/target/scala-3.4.2/twirl/main" isTestSource="false" generated="true" />
       <excludeFolder url="file://$MODULE_DIR$/../../server/target" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="sbt: scala-sdk-3.4.2" level="project" />
+    <orderEntry type="module" module-name="root.boards-client" />
     <orderEntry type="module" module-name="root.boards-common.common-sources" exported="" />
+    <orderEntry type="module" module-name="root.boards-common.commonJS" />
     <orderEntry type="module" module-name="root.boards-common.commonJVM" />
+    <orderEntry type="module" module-name="root.boards-common.games-sources" exported="" />
+    <orderEntry type="module" module-name="root.boards-common.gamesJS" />
+    <orderEntry type="module" module-name="root.boards-common.gamesJVM" />
     <orderEntry type="library" name="sbt: aopalliance:aopalliance:1.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: app.tulz:tuplez-full-light_sjs1_3:0.4.0:jar" level="project" />
     <orderEntry type="library" scope="TEST" name="sbt: cglib:cglib:3.3.0:jar" level="project" />
     <orderEntry type="library" name="sbt: ch.qos.logback:logback-classic:1.5.6:jar" level="project" />
     <orderEntry type="library" name="sbt: ch.qos.logback:logback-core:1.5.6:jar" level="project" />
@@ -40,6 +47,9 @@
     <orderEntry type="library" name="sbt: com.google.inject:guice:6.0.0:jar" level="project" />
     <orderEntry type="library" name="sbt: com.google.j2objc:j2objc-annotations:2.8:jar" level="project" />
     <orderEntry type="library" name="sbt: com.h2database:h2:2.2.224:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.raquo:airstream_sjs1_3:17.0.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.raquo:ew_sjs1_3:0.2.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.raquo:laminar_sjs1_3:17.0.0:jar" level="project" />
     <orderEntry type="library" scope="TEST" name="sbt: com.shapesecurity:salvation2:3.0.1:jar" level="project" />
     <orderEntry type="library" name="sbt: com.thoughtworks.paranamer:paranamer:2.8:jar" level="project" />
     <orderEntry type="library" name="sbt: com.typesafe.slick:slick-hikaricp_3:3.5.1:jar" level="project" />
@@ -57,10 +67,24 @@
     <orderEntry type="library" scope="TEST" name="sbt: commons-validator:commons-validator:1.7:jar" level="project" />
     <orderEntry type="library" scope="TEST" name="sbt: dev.failsafe:failsafe:3.3.2:jar" level="project" />
     <orderEntry type="library" scope="TEST" name="sbt: io.appium:java-client:8.2.1:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.circe:circe-core_3:0.14.7:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.circe:circe-core_sjs1_3:0.14.7:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.circe:circe-generic_3:0.14.7:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.circe:circe-generic_sjs1_3:0.14.7:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.circe:circe-jawn_3:0.14.7:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.circe:circe-numbers_3:0.14.7:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.circe:circe-numbers_sjs1_3:0.14.7:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.circe:circe-parser_3:0.14.7:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.circe:circe-parser_sjs1_3:0.14.7:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.circe:circe-scalajs_sjs1_3:0.14.7:jar" level="project" />
     <orderEntry type="library" scope="TEST" name="sbt: io.fluentlenium:fluentlenium-core:6.0.0:jar" level="project" />
     <orderEntry type="library" name="sbt: io.jsonwebtoken:jjwt-api:0.11.5:jar" level="project" />
     <orderEntry type="library" name="sbt: io.jsonwebtoken:jjwt-impl:0.11.5:jar" level="project" />
     <orderEntry type="library" name="sbt: io.jsonwebtoken:jjwt-jackson:0.11.5:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.laminext:core_sjs1_3:0.17.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.laminext:fetch-circe_sjs1_3:0.17.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.laminext:fetch_sjs1_3:0.17.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.laminext:util_sjs1_3:0.17.0:jar" level="project" />
     <orderEntry type="library" scope="TEST" name="sbt: io.opentelemetry:opentelemetry-api-events:1.28.0-alpha:jar" level="project" />
     <orderEntry type="library" scope="TEST" name="sbt: io.opentelemetry:opentelemetry-api:1.28.0:jar" level="project" />
     <orderEntry type="library" scope="TEST" name="sbt: io.opentelemetry:opentelemetry-context:1.28.0:jar" level="project" />
@@ -111,6 +135,7 @@
     <orderEntry type="library" scope="TEST" name="sbt: org.eclipse.jetty:jetty-util:9.4.50.v20221201:jar" level="project" />
     <orderEntry type="library" scope="TEST" name="sbt: org.hamcrest:hamcrest-core:1.3:jar" level="project" />
     <orderEntry type="library" name="sbt: org.lz4:lz4-java:1.8.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.mindrot:jbcrypt:0.4:jar" level="project" />
     <orderEntry type="library" scope="TEST" name="sbt: org.ow2.asm:asm:7.1:jar" level="project" />
     <orderEntry type="library" name="sbt: org.parboiled:parboiled_3:2.5.0:jar" level="project" />
     <orderEntry type="library" name="sbt: org.playframework.twirl:twirl-api_3:2.0.5:jar" level="project" />
@@ -132,10 +157,15 @@
     <orderEntry type="library" scope="TEST" name="sbt: org.playframework:play-test_3:3.0.3:jar" level="project" />
     <orderEntry type="library" name="sbt: org.playframework:play_3:3.0.3:jar" level="project" />
     <orderEntry type="library" name="sbt: org.reactivestreams:reactive-streams:1.0.4:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-js:scalajs-dom_sjs1_3:2.8.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-js:scalajs-javalib:1.16.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-js:scalajs-library_2.13:1.16.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-js:scalajs-scalalib_2.13:2.13.13+1.16.0:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scala-lang.modules:scala-parser-combinators_3:2.3.0:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scala-lang.modules:scala-xml_3:2.2.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: org.scala-lang:scala-library:2.13.12:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-lang:scala-library:2.13.13:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scala-lang:scala3-library_3:3.4.2:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-lang:scala3-library_sjs1_3:3.4.2:jar" level="project" />
     <orderEntry type="library" scope="TEST" name="sbt: org.scala-sbt:test-interface:1.0:jar" level="project" />
     <orderEntry type="library" scope="TEST" name="sbt: org.seleniumhq.selenium:htmlunit-driver:4.13.0:jar" level="project" />
     <orderEntry type="library" scope="TEST" name="sbt: org.seleniumhq.selenium:selenium-api:4.14.1:jar" level="project" />
@@ -150,5 +180,10 @@
     <orderEntry type="library" name="sbt: org.slf4j:jcl-over-slf4j:2.0.13:jar" level="project" />
     <orderEntry type="library" name="sbt: org.slf4j:jul-to-slf4j:2.0.13:jar" level="project" />
     <orderEntry type="library" name="sbt: org.slf4j:slf4j-api:2.0.13:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.typelevel:cats-core_3:2.10.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.typelevel:cats-core_sjs1_3:2.10.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.typelevel:cats-kernel_3:2.10.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.typelevel:cats-kernel_sjs1_3:2.10.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.typelevel:jawn-parser_3:1.5.1:jar" level="project" />
   </component>
 </module>

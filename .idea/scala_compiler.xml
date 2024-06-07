@@ -42,14 +42,14 @@
         <parameter value="-scalajs" />
       </parameters>
     </profile>
-    <profile name="sbt 6" modules="root.boards-client,root.boards-common.commonJS">
+    <profile name="sbt 6" modules="root.boards-client,root.boards-common.commonJS,root.boards-common.gamesJS">
       <option name="implicitConversions" value="true" />
       <option name="featureWarnings" value="true" />
       <parameters>
         <parameter value="-scalajs" />
       </parameters>
     </profile>
-    <profile name="sbt 7" modules="root.boards-common,root.boards-common.commonJVM">
+    <profile name="sbt 7" modules="root.boards-common,root.boards-common.commonJVM,root.boards-common.gamesJVM">
       <option name="implicitConversions" value="true" />
       <option name="featureWarnings" value="true" />
     </profile>

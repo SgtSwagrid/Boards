@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module external.linked.project.id="games-sources" external.linked.project.path="$MODULE_DIR$/../../games" external.root.project.path="$MODULE_DIR$/../.." external.system.id="SBT" external.system.module.type="nestedProject" type="SHARED_SOURCES_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <output url="file://$MODULE_DIR$/../../games/target/classes" />
+    <output-test url="file://$MODULE_DIR$/../../games/target/test-classes" />
+    <exclude-output />
+    <content url="file://$MODULE_DIR$/../../games">
+      <sourceFolder url="file://$MODULE_DIR$/../../games/src/main/scala" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/../../games/target" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="sbt: scala-sdk-3.4.2" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-lang:scala-library:2.13.12:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-lang:scala3-library_3:3.4.2:jar" level="project" />
+  </component>
+  <component name="SharedSourcesOwnerModules">
+    <option name="ownersModuleNames">
+      <list>
+        <option value="root.boards-common.gamesJVM" />
+        <option value="root.boards-common.gamesJS" />
+      </list>
+    </option>
+  </component>
+</module>

@@ -1,7 +1,0 @@
-<component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Boards Development Server" type="CompoundRunConfigurationType">
-    <toRun name="sbt_compile_js" type="ShConfigurationType" />
-    <toRun name="sbt_run_server" type="ShConfigurationType" />
-    <method v="2" />
-  </configuration>
-</component>
