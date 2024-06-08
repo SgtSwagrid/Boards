@@ -1,4 +1,7 @@
-GET /               controllers.Application.index
+GET /               controllers.Application.indexView
+
+GET /start         controllers.Application.startView
+GET /browse         controllers.Application.browseView
 
 GET /login          controllers.Auth.loginView
 

@@ -9,7 +9,7 @@ import com.raquo.laminar.nodes.{ReactiveElement, ReactiveHtmlElement}
 
 object Tabs:
   
-  def apply(tabs: Tab*): ReactiveElement.Base =
+  def apply(tabs: Tab*): HtmlElement =
     val active = Var[Int](0)
     div (
       div (
@@ -33,6 +33,6 @@ object Tabs:
     )
   
   case class Tab (
-    header: ReactiveHtmlElement[?],
-    content: ReactiveHtmlElement[?]
+    header: HtmlElement,
+    content: HtmlElement
   )

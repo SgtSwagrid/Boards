@@ -9,13 +9,11 @@ object InputField:
   
   def apply (
     name: String,
-    icon: ReactiveSvgElement[?],
+    icon: SvgElement,
     reference: Var[String],
     inputType: String = "text",
     focus: Boolean = false
-  ): ReactiveElement[?] =
-  
-    val x = Var("")
+  ): HtmlElement =
     
     label (
       className("input input-bordered flex items-center gap-2"),

@@ -18,5 +18,11 @@ class Application @Inject() (
   using ExecutionContext
 ) extends AbstractController(cc), HasDatabaseConfigProvider[JdbcProfile]:
   
-  def index = Action: (request: Request[AnyContent]) =>
+  def indexView = Action: (request: Request[AnyContent]) =>
     Ok(views.html.PageTemplate("IndexView"))
+    
+  def startView = Action: (request: Request[AnyContent]) =>
+    Ok(views.html.PageTemplate("StartView"))
+  
+  def browseView = Action: (request: Request[AnyContent]) =>
+    Ok(views.html.PageTemplate("BrowseView"))

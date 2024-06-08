@@ -29,12 +29,22 @@ object Footer:
     nav (
       className("grid-flow-col gap-4 md:place-self-center md:justify-self-end"),
       a (
-        img(width("25px"), height("25px"), src("/assets/images/ui/footer/github.svg")),
+        img (
+          className("hover:brightness-125"),
+          width("25px"),
+          height("25px"),
+          src("/assets/images/ui/footer/github.svg")
+        ),
         href("https://github.com/SgtSwagrid/Boards")
       ),
       a (
-        img(width("25px"), height("25px"), src("/assets/images/ui/footer/discord.svg")),
-        href("https://discord.gg/fx3P7P4fSK")
+        img (
+          className("hover:brightness-125"),
+          width("25px"),
+          height("25px"),
+          src("/assets/images/ui/footer/discord.svg")
+        ),
+        href("https://discord.com/invite/5UVjMYw43F")
       )
     )
   )

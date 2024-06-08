@@ -33,7 +33,7 @@ object LoginView extends View:
     val loginError = Var[Option[LoginError]](None)
     val registerError = Var[Option[RegistrationError]](None)
     div (
-      NavigationBar(),
+      Navbar(),
       div (paddingTop("100px"),
         div (className("card w-96 bg-neutral shadow-xl mx-auto"),
           div (className("card-body"),
