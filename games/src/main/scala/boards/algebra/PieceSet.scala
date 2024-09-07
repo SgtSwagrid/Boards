@@ -1,8 +1,10 @@
 package boards.algebra
 
 import boards.algebra.Piece.PieceType
-import boards.algebra.BoardState.given
-import util.math.Pos.Pos
+import boards.algebra.InstantaneousState.given
+import boards.graphics.Texture
+import util.math.Vec
+import util.math.Vec.{VecI, given}
 import util.structures.UniqueId
 
 import scala.collection.immutable.BitSet
@@ -13,7 +15,7 @@ import util.math.kernel.Kernel.given
 import scala.reflect.ClassTag
 
 case class PieceSet (
-  piecesByPos: Map[Pos, Piece] = Map.empty,
+  piecesByPos: Map[VecI, Piece] = Map.empty,
   selected: BitSet = BitSet.empty,
   
   playerFilter: Map[Int, BitSet] = Map.empty,
@@ -25,9 +27,9 @@ case class PieceSet (
   def actions: Rule = pieces.map(_.actions)
   
   export selected.{isEmpty, nonEmpty}
-  def contains(pos: Pos): Boolean =
+  def contains(pos: VecI): Boolean =
     board.contains(pos) && selected.contains(pos)
-  def get(pos: Pos): Option[Piece] =
+  def get(pos: VecI): Option[Piece] =
     if contains(pos) then Some(piecesByPos(pos)) else None
     
   def forall(f: Piece => Boolean): Boolean =
@@ -36,14 +38,14 @@ case class PieceSet (
   def exists(f: Piece => Boolean): Boolean =
     piecesByPos.values.exists(f)
     
-  def belongsTo(pos: Pos, players: Int*): Boolean =
+  def belongsTo(pos: VecI, players: Int*): Boolean =
     get(pos).exists(piece => players.contains(piece.owner))
-  def isFriendly(pos: Pos)(using state: BoardState): Boolean =
+  def isFriendly(pos: VecI)(using state: InstantaneousState): Boolean =
     belongsTo(pos, state.activePlayer)
-  def isEnemy(pos: Pos)(using state: BoardState): Boolean =
+  def isEnemy(pos: VecI)(using state: InstantaneousState): Boolean =
     belongsTo(pos, state.inactivePlayers*)
   
-  def isType[P <: PieceType](pos: Pos)(using C: ClassTag[P]): Boolean =
+  def isType[P <: PieceType](pos: VecI)(using C: ClassTag[P]): Boolean =
     get(pos).exists(_.getClass == C.runtimeClass)
   
   def ofPlayer(owners: Int*): PieceSet = copy (
@@ -52,11 +54,11 @@ case class PieceSet (
       .foldLeft(BitSet.empty)(_ | _) & selected
   )
   
-  def ofActivePlayer(using state: BoardState): PieceSet =
+  def ofActivePlayer(using state: InstantaneousState): PieceSet =
     ofPlayer(state.activePlayer)
-  def ofInactivePlayers(using state: BoardState): PieceSet =
+  def ofInactivePlayers(using state: InstantaneousState): PieceSet =
     ofPlayer(state.inactivePlayers*)
-  def ofNextPlayer(using state: BoardState): PieceSet =
+  def ofNextPlayer(using state: InstantaneousState): PieceSet =
     ofPlayer(state.nextPlayer)
   
   def ofType(pieceTypes: PieceType*): PieceSet = copy (
@@ -108,7 +110,7 @@ case class PieceSet (
     
   def insert
     (placements: (PieceType | Iterable[PieceType], Kernel[?])*)
-    (using state: BoardState)
+    (using state: InstantaneousState)
   : PieceSet =
     insert(state.activePlayer)(placements*)
     
@@ -138,13 +140,13 @@ case class PieceSet (
       typeFilter = typeFilter + (piece.pieceType.getClass -> (typeFilter.getOrElse(piece.pieceType.getClass, BitSet.empty) + piece.position))
     )
     
-  private def movePiece(from: Pos, to: Pos): PieceSet =
+  private def movePiece(from: VecI, to: VecI): PieceSet =
     if contains(from) && board.contains(to) then
       val piece = get(from).get
       removePiece(from).addPiece(piece.copy(position=to, hasMoved=true))
     else this
   
-  private def removePiece(pos: Pos): PieceSet =
+  private def removePiece(pos: VecI): PieceSet =
     get(pos) match
       case None => this
       case Some(piece) => copy (
@@ -158,14 +160,36 @@ object PieceSet:
   
   def empty(using Kernel[?]): PieceSet = PieceSet()
   
+  def diff(t1: PieceSet, t2: PieceSet): Seq[Diff] =
+    
+    val pieces1 = t1.pieces.map(p => p.id -> p).toMap
+    val pieces2 = t2.pieces.map(p => p.id -> p).toMap
+    
+    val appears = (pieces2.keySet -- pieces1.keySet).toSeq
+      .map(id => Diff.Appear(pieces2(id), pieces2(id).texture))
+    
+    val relocates = (pieces1.keySet & pieces2.keySet).toSeq
+      .filter(id => pieces1(id).position != pieces2(id).position)
+      .map(id => Diff.Relocate(pieces1(id).position, pieces2(id).position))
+    
+    val disappears = (pieces1.keySet -- pieces2.keySet).toSeq
+      .map(p => Diff.Disappear(pieces1(p).position))
+    
+    appears ++ relocates ++ disappears
+  
+  enum Diff(val target: VecI):
+    case Appear(pos: VecI, texture: Texture) extends Diff(pos)
+    case Relocate(from: VecI, to: VecI) extends Diff(from)
+    case Disappear(pos: VecI) extends Diff(pos)
+  
   given Conversion[PieceSet, Kernel[?]] with
     def apply(pieces: PieceSet): Kernel[?] = pieces.positions
     
   given Conversion[PieceSet, Rule] with
     def apply(pieces: PieceSet): Rule = pieces.actions
     
-  given (using state: BoardState): Conversion[PieceSet, BoardState] with
-    def apply(pieces: PieceSet): BoardState = state.withPieces(pieces)
+  given (using state: InstantaneousState): Conversion[PieceSet, InstantaneousState] with
+    def apply(pieces: PieceSet): InstantaneousState = state.withPieces(pieces)
   
   given (using state: GameState): Conversion[PieceSet, GameState] with
     def apply(pieces: PieceSet): GameState = state.withPieces(pieces)

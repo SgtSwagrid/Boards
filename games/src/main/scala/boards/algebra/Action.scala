@@ -3,49 +3,49 @@ package boards.algebra
 import boards.algebra.Piece.{*, given}
 import boards.algebra.Rule.{*, given}
 import boards.algebra.Generator.{*, given}
-import boards.algebra.BoardState.given
+import boards.algebra.InstantaneousState.given
 import util.math.kernel.{Kernel, Ray}
 import util.math.kernel.Kernel.{*, given}
-import util.math.Pos.{*, given}
 import util.extensions.Conversions.given
+import util.math.Vec.VecI
 
 import scala.annotation.{tailrec, targetName}
 
 sealed trait Action:
   
-  def enact(state: BoardState): BoardState
+  def enact(state: InstantaneousState): InstantaneousState
   
   @targetName("causes")
-  def ~> (state: BoardState): Rule = this.after(_ => state)
+  def ~> (state: InstantaneousState): Rule = this.after(_ => state)
 
 object Action:
-
+  
   case class Place (
     owner: Int,
     piece: PieceType,
-    position: Pos
+    position: VecI
   ) extends Action:
     
-    inline def enact(state: BoardState) =
-      given BoardState = state
+    def enact(state: InstantaneousState) =
+      given InstantaneousState = state
       state.pieces.insert(owner)(piece -> position)
       
     override def toString = s"$piece |-> $position"
   
   case class Move (
     piece: Piece,
-    from: Pos,
-    to: Pos
+    from: VecI,
+    to: VecI
   ) extends Action:
     
-    inline def enact(state: BoardState) =
-      given BoardState = state
+    def enact(state: InstantaneousState) =
+      given InstantaneousState = state
       state.pieces.relocate(from -> to)
     
-    inline def step: Pos = to - from
-    inline def direction: Pos = from.directionTo(to)
-    inline def path: Ray = Ray.between(from, to)
-    inline def midpoint: Pos = from.midpoint(to)
+    def step: VecI = to - from
+    def direction: VecI = from.directionTo(to)
+    def path: Ray = Ray.between(from, to)
+    def midpoint: VecI = from.midpoint(to)
     
     override def toString = s"$from |-> $to"
   
@@ -53,11 +53,10 @@ object Action:
     piece: Piece
   ) extends Action:
     
-    inline def enact(state: BoardState) =
-      given BoardState = state
+    def enact(state: InstantaneousState) =
+      given InstantaneousState = state
       state.pieces.remove(piece)
     
   case object NoOp extends Action:
-    inline def enact(state: BoardState) = state
+    def enact(state: InstantaneousState) = state
     
-  

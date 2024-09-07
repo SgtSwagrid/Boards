@@ -18,6 +18,7 @@
         <entry key="yaml" value="yaml" />
       </map>
     </option>
+    <option name="migrateConfigurationsNotificationShown" value="true" />
     <option name="scala3DisclaimerShown" value="true" />
   </component>
 </project>

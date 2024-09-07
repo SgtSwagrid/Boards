@@ -28,13 +28,17 @@ object Navbar:
     
     val user = Fetch.post("/auth/current").decode[Option[User]].map(_.data)
     
-    div (className("navbar bg-base-200"),
+    div (
+      className("navbar bg-base-200"),
+      position("fixed"),
+      width("100%"),
       height("70px"),
       paddingLeft("30px"),
       paddingRight("30px"),
       borderBottom("2px"),
       borderStyle("solid"),
       borderColor("#fbc531"),
+      zIndex("100"),
       div (className("navbar-start"),
         ExpandingButton("/assets/images/ui/navbar/start.svg", "Start Game"):
           Navigation.goto("/start")

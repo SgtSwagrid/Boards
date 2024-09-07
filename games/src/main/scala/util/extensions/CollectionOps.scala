@@ -48,7 +48,7 @@ object CollectionOps:
     : M[Y] =
       collection.traverse(f).map(_.last)
 
-  extension [K : Ordering, X] (m1: SortedMultiMap[K, X])
+  /*extension [K : Ordering, X] (m1: SortedMultiMap[K, X])
 
     @targetName("merge") @tailrec
     def +++ [Y] (
@@ -83,4 +83,4 @@ object CollectionOps:
 
     def unapply[K, X, T[A, +B] <: Map[A, B] & SortedMapOps[A, B, T, T[A, B]]]
       (x: T[K, X]): Option[(T[K, X], (K, X))] =
-      x.lastOption.map((x.init, _))
+      x.lastOption.map((x.init, _))*/

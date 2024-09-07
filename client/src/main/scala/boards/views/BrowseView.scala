@@ -1,5 +1,6 @@
 package boards.views
 
+import boards.Games
 import boards.components.{Tabs, *}
 import boards.components.Tabs.Tab
 import boards.protocol.UserProtocol.*
@@ -28,6 +29,5 @@ object BrowseView extends View:
   
   def content = div (
     Navbar(),
-    
     Footer()
   )

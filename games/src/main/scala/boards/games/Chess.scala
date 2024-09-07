@@ -3,26 +3,27 @@ import boards.GameImports.{*, given}
 
 object Chess extends Game:
   
-  val Board = Kernel.box(8, 8)
-    .paint(Pattern.Checkered(Colour.Black, Colour.White))
+  override val Board = Kernel.box(8, 8)
+    .paint(Pattern.Checkered(Colour.ChessDark, Colour.ChessLight))
   
-  case object Rook extends PieceType.WithTexture("white_rook", "black_rook"):
-    def actions(rook: Piece) =
-      rook.move(Dir.orthogonal.ray.toEnemy.untilFriendly)
+  case object Rook extends
+    PieceType.WithTexture(Texture.WhiteRook, Texture.BlackRook),
+    PieceType.WithRule(_.move(Dir.orthogonal.ray.toEnemy.untilFriendly))
   
-  case object Knight extends PieceType.WithTexture("white_knight", "black_knight"):
-    def actions(knight: Piece) =
-      knight.move(Dir.knight(1, 2).avoidFriendly)
+  case object Knight extends
+    PieceType.WithTexture(Texture.WhiteKnight, Texture.BlackKnight),
+    PieceType.WithRule(_.move(Dir.knight(1, 2).avoidFriendly))
   
-  case object Bishop extends PieceType.WithTexture("white_bishop", "black_bishop"):
-    def actions(bishop: Piece) =
-      bishop.move(Dir.diagonal.ray.toEnemy.untilFriendly)
+  case object Bishop extends
+    PieceType.WithTexture(Texture.WhiteBishop, Texture.BlackBishop),
+    PieceType.WithRule(_.move(Dir.diagonal.ray.toEnemy.untilFriendly))
   
-  case object Queen extends PieceType.WithTexture("white_queen", "black_queen"):
-    def actions(queen: Piece) =
-      queen.move(Dir.octagonal.ray.toEnemy.untilFriendly)
+  case object Queen extends
+    PieceType.WithTexture(Texture.WhiteQueen, Texture.BlackQueen),
+    PieceType.WithRule(_.move(Dir.octagonal.ray.toEnemy.untilFriendly))
   
-  case object King extends PieceType.WithTexture("white_king", "black_king"):
+  case object King
+    extends PieceType.WithTexture(Texture.WhiteKing, Texture.BlackKing):
     def actions(king: Piece) =
       
       val MOVE = king.move(Dir.octagonal.avoidFriendly)
@@ -42,7 +43,8 @@ object Chess extends Game:
       
       MOVE | CASTLE
   
-  case object Pawn extends PieceType.WithTexture("white_pawn", "black_pawn"):
+  case object Pawn
+    extends PieceType.WithTexture(Texture.WhitePawn, Texture.BlackPawn):
     def actions(pawn: Piece) =
       
       val forward = pawn.byOwner(Dir.up, Dir.down)
@@ -65,14 +67,14 @@ object Chess extends Game:
       (MOVE | CAPTURE | ENPASSANT) |> PROMOTE
   
   val homeRow = Seq(Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook)
-  def setup = Pieces
+  override def setup(numPlayers: Int) = Pieces
     .insert(owner=0)(homeRow -> Board.row(0), Pawn -> Board.row(1))
     .insert(owner=1)(homeRow -> Board.row(7), Pawn -> Board.row(6))
   
   def inCheck(using GameState) =
     Pieces.ofInactivePlayers.canAttack(Pieces.ofActivePlayer.ofType(King))
   
-  def rules = Rule.alternatingTurns:
+  override def rules = Rule.alternatingTurns:
     Pieces.ofActivePlayer.actions
       .require(!inCheck)
       .stopIfImpossible:

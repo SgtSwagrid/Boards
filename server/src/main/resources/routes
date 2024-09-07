@@ -1,0 +1,23 @@
+GET /                controllers.ApplicationController.indexView
+
+GET /start           controllers.ApplicationController.startView
++nocsrf
+POST /start          controllers.ApplicationController.startRoom
+
+GET /browse          controllers.ApplicationController.browseView
+
+GET /game/*id/socket controllers.GameController.gameSocket(id: String)
+GET /game/*id        controllers.GameController.gameView(id: String)
+
+GET /login           controllers.AuthController.loginView
+
++nocsrf
+POST /auth/login     controllers.AuthController.login
++nocsrf
+POST /auth/register  controllers.AuthController.register
++nocsrf
+POST /auth/logout    controllers.AuthController.logout
++nocsrf
+POST /auth/current   controllers.AuthController.current
+
+GET /assets/*file    controllers.Assets.versioned(path="/public", file: Asset)

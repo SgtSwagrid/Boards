@@ -10,7 +10,7 @@ trait Rule:
   def actions(state: NonFinalState): Iterator[Action]
   def updateGenerators(filter: PartialFunction[Generator, Rule]): Rule
   
-  def after(f: Stateful[BoardState]): Rule =
+  def after(f: Stateful[InstantaneousState]): Rule =
     TransformedRule(this, s => f(using s).lift(s).getOrElse(s))
     
   def require(f: Stateful[Boolean]): Rule =
@@ -99,7 +99,7 @@ object Rule:
   
   private class TransformedRule (
     base: Rule,
-    f: GameState => BoardState
+    f: GameState => InstantaneousState
   ) extends Rule:
     
     def next(state: NonFinalState) =
@@ -208,8 +208,9 @@ object Rule:
   given Conversion[Iterable[Rule], Rule] with
     def apply(rules: Iterable[Rule]): Rule = rules.foldLeft(Rule.none)(_ | _)
   
-  given [X <: Rule | BoardState | Boolean | Outcome | PieceSet]: Conversion[X, PartialFunction[GameState, X]] with
+  given [X <: Rule | InstantaneousState | Boolean | Outcome | PieceSet]: Conversion[X, PartialFunction[GameState, X]] with
     def apply(x: X): PartialFunction[GameState, X] = _ => x
     
-  given Conversion[PieceSet, PartialFunction[GameState, BoardState]] with
-    def apply(pieces: PieceSet): PartialFunction[GameState, BoardState] = pieces
+  given Conversion[PieceSet, PartialFunction[GameState, InstantaneousState]] with
+    def apply(pieces: PieceSet): PartialFunction[GameState, InstantaneousState] =
+      gameState => gameState.now.withPieces(pieces)

@@ -1,0 +1,23 @@
+@(content: String)
+
+<!DOCTYPE html>
+
+<HTML lang="en">
+  <HEAD>
+    <TITLE>Boards</TITLE>
+    <META charset="UTF-8">
+    <META name="viewport" content="width=device-width, initial-scale=1.0">
+    <SCRIPT type="text/javascript" src="/assets/boards-client-fastopt/main.js"></SCRIPT>
+    <SCRIPT src="https://cdn.tailwindcss.com"></SCRIPT>
+    <LINK href="https://cdn.jsdelivr.net/npm/daisyui@@4.11.1/dist/full.min.css" rel="stylesheet" type="text/css">
+    <SCRIPT src="https://cdn.tailwindcss.com"></SCRIPT>
+    <LINK rel="icon" type="image/x-icon" href="/assets/images/ui/icon.svg">
+  </HEAD>
+  <BODY style="height: 100vh">
+    <DIV id="root" style="width: 100%; height: 100%; position: absolute;"></DIV>
+  </BODY>
+
+  <SCRIPT type="text/javascript">
+    (@content).show();
+  </SCRIPT>
+</HTML>

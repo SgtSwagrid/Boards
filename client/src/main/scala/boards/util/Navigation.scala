@@ -21,3 +21,5 @@ object Navigation:
     
   def gotoNext(): Unit =
     goto(queryParams().getOrElse("next", "/"))
+    
+  def reload(): Unit = goto("/")

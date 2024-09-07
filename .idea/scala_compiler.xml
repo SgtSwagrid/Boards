@@ -15,7 +15,24 @@
     <option name="optimiseBytecode" value="true" />
     <option name="explainTypeErrors" value="true" />
     <option name="continuations" value="true" />
-    <profile name="sbt 1" modules="Boards,boards,root" />
+    <option name="separateProdTestSources" value="false" />
+    <profile name="sbt 1" modules="Boards,boards" />
+    <profile name="sbt 10" modules="root.boards-common.gamesJS,root.boards-common.gamesJVM">
+      <parameters>
+        <parameter value="-language:namedTuples" />
+        <parameter value="-Xmax-inlines" />
+        <parameter value="128" />
+        <parameter value="-scalajs" />
+        <parameter value="-scalajs-mapSourceURI:file:/C:/Users/alecd/IdeaProjects/Boards/games/src/main/scala/-&gt;../scala/7bc743/" />
+      </parameters>
+    </profile>
+    <profile name="sbt 11" modules="root">
+      <parameters>
+        <parameter value="-language:namedTuples" />
+        <parameter value="-Xmax-inlines" />
+        <parameter value="128" />
+      </parameters>
+    </profile>
     <profile name="sbt 2" modules="boards.server">
       <option name="deprecationWarnings" value="true" />
       <option name="uncheckedWarnings" value="true" />
@@ -42,25 +59,37 @@
         <parameter value="-scalajs" />
       </parameters>
     </profile>
-    <profile name="sbt 6" modules="root.boards-client,root.boards-common.commonJS,root.boards-common.gamesJS">
-      <option name="implicitConversions" value="true" />
-      <option name="featureWarnings" value="true" />
-      <parameters>
-        <parameter value="-scalajs" />
-      </parameters>
-    </profile>
-    <profile name="sbt 7" modules="root.boards-common,root.boards-common.commonJVM,root.boards-common.gamesJVM">
-      <option name="implicitConversions" value="true" />
-      <option name="featureWarnings" value="true" />
-    </profile>
-    <profile name="sbt 8" modules="root.boards-server">
-      <option name="implicitConversions" value="true" />
+    <profile name="sbt 6" modules="root.boards-server">
       <option name="deprecationWarnings" value="true" />
       <option name="uncheckedWarnings" value="true" />
-      <option name="featureWarnings" value="true" />
       <parameters>
+        <parameter value="-language:namedTuples" />
+        <parameter value="-Xmax-inlines" />
+        <parameter value="128" />
         <parameter value="-encoding" />
         <parameter value="utf8" />
+      </parameters>
+    </profile>
+    <profile name="sbt 7" modules="root.boards-common">
+      <option name="implicitConversions" value="true" />
+      <option name="featureWarnings" value="true" />
+    </profile>
+    <profile name="sbt 8" modules="root.boards-client">
+      <parameters>
+        <parameter value="-language:namedTuples" />
+        <parameter value="-Xmax-inlines" />
+        <parameter value="128" />
+        <parameter value="-scalajs" />
+        <parameter value="-scalajs-mapSourceURI:file:/C:/Users/alecd/IdeaProjects/Boards/client/src/main/scala/-&gt;../scala/5d8a0c/" />
+      </parameters>
+    </profile>
+    <profile name="sbt 9" modules="root.boards-common.commonJS,root.boards-common.commonJVM">
+      <parameters>
+        <parameter value="-language:namedTuples" />
+        <parameter value="-Xmax-inlines" />
+        <parameter value="128" />
+        <parameter value="-scalajs" />
+        <parameter value="-scalajs-mapSourceURI:file:/C:/Users/alecd/IdeaProjects/Boards/common/src/main/scala/-&gt;../scala/58571c/" />
       </parameters>
     </profile>
   </component>

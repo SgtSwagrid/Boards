@@ -1,12 +1,12 @@
 package util.math.kernel
 
 import Align.*
-import util.math.Pos.{*, given}
 import util.math.Vec
+import util.math.Vec.VecI
 
 sealed trait Align:
   
-  def relativeOffset(l: Pos, r: Pos): Pos =
+  def relativeOffset(l: VecI, r: VecI): VecI =
     Vec(
       (0 until Math.max(l.dim, r.dim)).map: d =>
         axisOffset(l(d), r(d), d)

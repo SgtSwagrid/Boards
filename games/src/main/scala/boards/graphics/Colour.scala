@@ -1,13 +1,20 @@
 package boards.graphics
 
-case class Colour private (hex: Int, name: String = ""):
+case class Colour(hex: Int, name: String = ""):
 
   val r: Int = hex >> 16
   val g: Int = (hex >> 8) & 255
   val b: Int = hex & 255
   
+  def lighten(amount: Int): Colour =
+    Colour.rgb(Math.min(r + amount, 255), Math.min(g + amount, 255), Math.min(b + amount, 255))
+  def darken(amount: Int): Colour = lighten(-amount)
+  
   def apply(string: String): String =
     f"$name$string\u001B[0m"
+    
+  def hexString: String = s"#${hex.toHexString.reverse.padTo(6, "0").reverse.mkString}"
+  override def toString: String = hexString
   
 object Colour:
   
@@ -29,5 +36,8 @@ object Colour:
   val Yellow : Colour = Colour.hex(0xFFFF00, colour(3))
   val Magenta: Colour = Colour.hex(0xFF00FF, colour(5))
   val Cyan   : Colour = Colour.hex(0x00FFFF, colour(6))
+  
+  val ChessDark : Colour = Colour.hex(0xD18B47)
+  val ChessLight: Colour = Colour.hex(0xFFCE9E)
   
   private def colour(n: Int): String = s"\u001B[3${n}m"
