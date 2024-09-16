@@ -1,15 +1,12 @@
 package boards.algebra
 
-import boards.algebra.GameState.{*, given}
-import Piece.{*, given}
-import boards.graphics.Texture
-import util.math.kernel.{Dir, Kernel}
-import util.extensions.Conversions.given
-import util.math.Vec.VecI
+import boards.imports.games.{*, given}
+import boards.imports.math.{*, given}
+
+import Piece.{PartialPiece, PieceType}
 
 import scala.annotation.targetName
 import scala.reflect.ClassTag
-
 import java.util.Random
 
 case class Piece (
@@ -32,7 +29,7 @@ case class Piece (
   def replace(piece: PieceType*): Rule = Generator.place(piece -> this.position)
   
   def relocate(to: VecI)(using pieces: PieceSet)(using Kernel[?]): PieceSet =
-    pieces.relocate(this -> to)
+    pieces.relocate(Kernel(this.position) -> Kernel(to))
   def remove(using pieces: PieceSet): PieceSet =
     pieces.remove(position)
     
@@ -42,9 +39,9 @@ object Piece:
   
   trait PieceType:
     def actions(piece: Piece): GameState ?=> Rule
-    def texture(piece: Piece): Texture =
+    def texture(piece: Piece): boards.graphics.Texture =
       textures(piece.owner % textures.size)
-    def textures: Seq[Texture] = Seq()
+    def textures: Seq[boards.graphics.Texture] = Seq()
     
   object PieceType:
     trait WithTexture(override val textures: Texture*) extends PieceType
@@ -60,15 +57,3 @@ object Piece:
       def position: VecI
     trait WithOwner extends PartialPiece:
       def owner: Int
-  
-  given Conversion[Piece, VecI] with
-    def apply(piece: Piece): VecI = piece.position
-  
-  given Conversion[Piece, Kernel.Shape] with
-    def apply(piece: Piece): Kernel.Shape = Kernel(piece.position)
-    
-  given Conversion[Piece, PieceType] with
-    def apply(piece: Piece): PieceType = piece.pieceType
-  
-  given Conversion[Piece, Rule] with
-    def apply(piece: Piece): Rule = piece.actions

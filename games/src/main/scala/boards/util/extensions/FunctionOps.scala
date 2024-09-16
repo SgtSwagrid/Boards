@@ -1,4 +1,4 @@
-package util.extensions
+package boards.util.extensions
 
 import scala.annotation.targetName
 import scala.collection.mutable
@@ -14,4 +14,4 @@ object FunctionOps:
     @targetName("not") def unary_! : X => Boolean = x => !f(x)
     @targetName("or") def || (g: X => Boolean): X => Boolean = x => f(x) || g(x)
     @targetName("and") def && (g: X => Boolean): X => Boolean = x => f(x) && g(x)
-    @targetName("zor") def ^ (g: X => Boolean): X => Boolean = x => f(x) ^ g(x)
+    @targetName("xor") def ^ (g: X => Boolean): X => Boolean = x => f(x) ^ g(x)

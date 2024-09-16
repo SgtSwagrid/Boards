@@ -4,10 +4,7 @@ import boards.games.Chess
 import boards.graphics.Scene
 import boards.protocol.GameProtocol.*
 import boards.protocol.GameProtocol.GameRequest.*
-import io.circe.*
-import io.circe.generic.auto.*
-import io.circe.syntax.*
-import io.circe.parser.*
+import boards.imports.circe.{*, given}
 import org.apache.pekko.actor.{*, given}
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.util.Timeout

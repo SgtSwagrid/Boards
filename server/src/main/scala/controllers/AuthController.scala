@@ -1,12 +1,7 @@
 package controllers
 
 import boards.protocol.UserProtocol.{LoginForm, RegistrationForm, User}
-import io.circe.*
-import io.circe.Encoder.encodeOption
-import io.circe.disjunctionCodecs.encodeEither
-import io.circe.parser.*
-import io.circe.syntax.*
-import io.circe.generic.auto.*
+import boards.imports.circe.{*, given}
 import models.UserModel
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import play.api.mvc.*

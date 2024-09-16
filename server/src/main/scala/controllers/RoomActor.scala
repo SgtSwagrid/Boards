@@ -46,7 +46,7 @@ extends Actor:
       
     case Update(me, TakeAction(hash)) =>
       for
-        _ <- Option.when(state.activePlayer == me)(())
+        _ <- Option.when(state.now.activePlayer == me)(())
         state <- state.takeActionByHash(hash)
       do for
         _ <- GameModel().takeAction(roomId, me, hash)

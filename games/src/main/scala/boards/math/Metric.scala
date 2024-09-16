@@ -1,42 +1,45 @@
-package util.math
+package boards.math
 
-import util.math.Vec.{*, given}
-import util.math.kernel.Kernel.{*, given}
-import util.math.kernel.Kernel
+import Algebra.{*, given}
+import Vec.{*, given}
+import boards.math.kernel.Kernel
+import Kernel.{*, given}
 
-trait Metric:
-  
-  def norm(p: VecI): Int
-  def ball(p: VecI, rmax: Int, rmin: Int = 0): Kernel[Unit]
-  
-  inline final def dist(p: VecI, q: VecI): Int = norm(q - p)
-  inline final def adjacent(p: VecI, q: VecI): Boolean = dist(p, q) == 1
-  inline final def neighbours(p: VecI): Kernel[Unit] = ball(p, 1, 1)
+trait Metric[X: Ring]:
+  def norm(p: Vec[X]): X
+  inline final def dist(p: Vec[X], q: Vec[X]): X = norm(q - p)
 
 object Metric:
-  
-  case object Manhattan extends Metric:
     
-    inline override def norm(p: VecI): Int =
+  object Euclidean extends Metric[Float]:
+    inline def norm(p: Vec[Float]): Float = Math.sqrt(p dot p).toFloat
+  
+  trait EnumerableMetric[X: Ring] extends Metric[X]:
+    def ball(p: Vec[X], rmax: Int, rmin: Int = 0): Kernel[Unit]
+    inline final def adjacent(p: Vec[X], q: Vec[X]): Boolean = dist(p, q) == 1
+    inline final def neighbours(p: Vec[X]): Kernel[Unit] = ball(p, 1, 1)
+  
+  object Manhattan extends EnumerableMetric[Int]:
+    
+    inline def norm(p: VecI): Int =
       p.map(_.abs).sum
     
     override def ball(p: VecI, rmax: Int, rmin: Int = 0): Kernel[Unit] =
       DiamondKernel(p.dim, rmax, rmin).translate(p)
   
-  case object EuclideanSquared extends Metric:
+  object EuclideanSquared extends EnumerableMetric[Int]:
     
-    inline override def norm(p: VecI): Int =
-      p.map(n => n * n).sum
+    inline def norm(p: VecI): Int = p dot p
     
-    override def ball(p: VecI, rmax: Int, rmin: Int = 0): Kernel[Unit] =
+    def ball(p: VecI, rmax: Int, rmin: Int = 0): Kernel[Unit] =
       CircleKernel(p.dim, rmax, rmin).translate(p)
   
-  case object Chebyshev extends Metric:
+  object Chebyshev extends EnumerableMetric[Int]:
     
-    inline override def norm(p: VecI): Int =
+    inline def norm(p: VecI): Int =
       p.map(_.abs).foldLeft(0)(Math.max)
     
-    override def ball(p: VecI, rmax: Int, rmin: Int = 0): Kernel[Unit] =
+    def ball(p: VecI, rmax: Int, rmin: Int = 0): Kernel[Unit] =
       SquareKernel(p.dim, rmax, rmin).translate(p)
   
   private trait NormKernel extends Shape:

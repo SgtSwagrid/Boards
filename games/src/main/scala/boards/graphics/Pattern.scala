@@ -1,6 +1,6 @@
 package boards.graphics
 
-import util.math.Vec
+import boards.imports.math.{*, given}
 
 object Pattern:
   

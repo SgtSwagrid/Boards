@@ -1,7 +1,6 @@
 package boards.algebra
 
-import boards.GameImports.{*, given}
-import boards.algebra.PieceSet.Diff
+import boards.imports.games.{*, given}
 import scala.annotation.targetName
 
 sealed trait GameState:
@@ -20,6 +19,27 @@ sealed trait GameState:
   def actions: Iterator[Action]
   def takeAction(action: Action): Option[NonInitialState] =
     next.find(_.action == action)
+    
+  def takeActionWhere(f: Action => Boolean): Option[NonInitialState] =
+    for
+      action <- actions.find(f)
+      result <- takeAction(action)
+    yield result
+    
+  def place(pos: VecI): Option[NonInitialState] =
+    takeActionWhere:
+      case p @ Place(_, _, `pos`) => true
+      case _ => false
+    
+  def move(from: VecI, to: VecI): Option[NonInitialState] =
+    takeActionWhere:
+      case m @ Move(_, `from`, `to`) => true
+      case _ => false
+      
+  def destroy(pos: VecI): Option[NonInitialState] =
+    takeActionWhere:
+      case d @ Destroy(piece) => piece.position == pos
+      case _ => false
   
   def actionHashes: Iterator[Int] = actions.map(_.hashCode)
   def findActionByHash(hash: Int): Option[Action] =
@@ -39,7 +59,6 @@ object GameState:
     val previous: NonFinalState
     def actionOption: Some[Action] = Some(action)
     def previousOption: Some[NonFinalState] = Some(previous)
-    def diff: Seq[Diff] = PieceSet.diff(previous.now.pieces, now.pieces)
   
   case class InitialState (
     now: InstantaneousState,

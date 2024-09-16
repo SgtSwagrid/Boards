@@ -1,4 +1,4 @@
-package util.structures
+package boards.util.structures
 
 case class StatefulFunction [S, +X] (
   private val f: S => (X, S)

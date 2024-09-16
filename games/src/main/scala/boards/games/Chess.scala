@@ -1,5 +1,7 @@
 package boards.games
-import boards.GameImports.{*, given}
+
+import boards.imports.games.{*, given}
+import boards.algebra.Shortcuts.{*, given}
 
 object Chess extends Game:
   
@@ -34,8 +36,8 @@ object Chess extends Game:
             !rook.hasMoved && rook.y == king.y
               && Pieces.regionIsEmpty(king.rayTo(rook).interior)
           .map: rook =>
-            val dir = king.directionTo(rook)
-            king.move(dir * 2).after(rook.relocate(king + dir))
+            king.move(Dir.between(king, rook) * 2)
+              .after(rook.relocate(king + king.directionTo(rook)))
       .require:
         case Following(move: Move) =>
           hypothetically(Pieces.insert(king -> move.path)):

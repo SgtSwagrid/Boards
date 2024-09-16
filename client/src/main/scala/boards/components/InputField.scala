@@ -1,9 +1,6 @@
 package boards.components
 
-import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
-import com.raquo.laminar.api.L.{href, img, small, src, *, given}
-import com.raquo.laminar.codecs.StringAsIsCodec
-import com.raquo.laminar.nodes.{ReactiveElement, ReactiveSvgElement}
+import boards.imports.laminar.{*, given}
 
 object InputField:
   

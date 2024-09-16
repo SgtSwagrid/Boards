@@ -1,6 +1,7 @@
 package boards.algebra
 
-import boards.GameImports.{*, given}
+import boards.imports.games.{*, given}
+
 import boards.algebra.Generator.*
 
 class Capability (
@@ -27,8 +28,8 @@ class Capability (
           Generator.move(from -> to)
     case Destroy(piece) => isPossible:
       case DestroyGenerator(kernel)
-        if kernel.contains(piece) =>
-          Generator.destroy(piece)
+        if kernel.contains(piece.position) =>
+          Generator.destroy(piece.position)
   
   def canAct: Boolean = isPossible(g => g)
   

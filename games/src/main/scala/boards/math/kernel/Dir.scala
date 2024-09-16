@@ -1,20 +1,13 @@
-package util.math.kernel
+package boards.math.kernel
 
-import util.math.Algebra.{*, given}
-import util.math.Number.*
-import util.math.Vec.VecI
-import util.math.{Metric, Vec}
-import util.math.kernel.Kernel
-import util.math.kernel.Kernel.given
-import util.math.kernel.Kernel.Shape
-
+import boards.imports.math.{*, given}
 import scala.annotation.targetName
 
 class Dir(val positions: Int => Kernel[?]):
   
   def toKernel (using
-                origin: VecI,
-                domain: Kernel[?] = Kernel.infinite
+    origin: VecI,
+    domain: Kernel[?] = Kernel.infinite
   ): Kernel[?] =
     from(origin)
   
@@ -25,8 +18,8 @@ class Dir(val positions: Int => Kernel[?]):
     positions(origin.dim).translate(origin)
   
   def ray (using
-           start: VecI = VecI.zero,
-           domain: Kernel[?] = Kernel.infinite
+    start: VecI = VecI.zero,
+    domain: Kernel[?] = Kernel.infinite
   ): Ray =
     Ray.from(start, this)
   
@@ -103,7 +96,3 @@ object Dir:
     
   given (using VecI): Conversion[Dir, Kernel[?]] with
     def apply(dir: Dir): Kernel[?] = dir.toKernel
-    
-  extension (pos: VecI)
-    @targetName("translate")
-    def + (dir: Dir): Kernel[?] = dir + pos

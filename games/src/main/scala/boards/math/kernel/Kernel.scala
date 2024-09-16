@@ -1,18 +1,13 @@
-package util.math.kernel
+package boards.math.kernel
 
-import util.math.Algebra.{*, given}
-import util.math.{Metric, Vec}
-import util.math.Vec.{*, given}
-import Kernel.{*, given}
+import boards.imports.math.{*, given}
+import Align.*
 import boards.graphics.Colour
-
-import io.circe.{Decoder, Encoder, Json, JsonObject}
-import io.circe.generic.auto.*
-import io.circe.syntax.*
 
 import scala.annotation.{tailrec, targetName}
 
 trait Kernel[+X]:
+  import Kernel.*
   
   def positions: Iterator[VecI]
   
@@ -107,10 +102,10 @@ trait Kernel[+X]:
         
   def zipWithPosition: Kernel[(VecI, X)] = paint((v, x) => (v, x))
   
-  def neighbours(v: VecI)(using M: Metric): Kernel[X] =
+  def neighbours(v: VecI)(using M: EnumerableMetric[Int]): Kernel[X] =
     (this & M.neighbours(v)).map(_(0))
     
-  def ball(v: VecI, rmax: Int, rmin: Int = 0)(using M: Metric): Kernel[X] =
+  def ball(v: VecI, rmax: Int, rmin: Int = 0)(using M: EnumerableMetric[Int]): Kernel[X] =
     (this & M.ball(v, rmax, rmin)).map(_(0))
     
   lazy val posById: IndexedSeq[VecI] = positions.toIndexedSeq
@@ -395,17 +390,3 @@ object Kernel:
     
   given (using kernel: Kernel[?]): Conversion[Int, VecI] with
     def apply(index: Int): VecI = kernel.posById(index)
-    
-  extension (pos: VecI)
-    @targetName("translate")
-    def + (kernel: Kernel[?]): Kernel[?] = kernel.translate(pos)
-    
-  private case class Entry[X](position: VecI, label: X)
-  
-  given [X: Encoder]: Encoder[Kernel[X]] =
-    summon[Encoder[Seq[Entry[X]]]].contramap[Kernel[X]]: k =>
-      k.positions.toSeq.map(v => Entry(v, k.label(v).get))
-    
-  given [X: Decoder]: Decoder[Kernel[X]] =
-    summon[Decoder[Seq[Entry[X]]]].map[Kernel[X]]: entries =>
-      Kernel[X](entries.map(e => (e.position, e.label))*)

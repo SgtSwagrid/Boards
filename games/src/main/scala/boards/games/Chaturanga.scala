@@ -1,5 +1,7 @@
 package boards.games
-import boards.GameImports.{*, given}
+
+import boards.imports.games.{*, given}
+import boards.algebra.Shortcuts.{*, given}
 
 object Chaturanga extends Game:
   

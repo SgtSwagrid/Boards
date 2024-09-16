@@ -1,13 +1,11 @@
 package boards.algebra
 
-import boards.algebra.Piece.{*, given}
-import boards.algebra.Rule.{*, given}
-import boards.algebra.Generator.{*, given}
-import boards.algebra.InstantaneousState.given
-import util.math.kernel.{Kernel, Ray}
-import util.math.kernel.Kernel.{*, given}
-import util.extensions.Conversions.given
-import util.math.Vec.VecI
+import boards.imports.games.{*, given}
+import boards.imports.math.{*, given}
+
+import boards.algebra.Shortcuts.given_Conversion_PieceSet_InstantaneousState
+import boards.algebra.Shortcuts.given_Conversion_Action_Rule
+import boards.algebra.Shortcuts.given_Kernel_
 
 import scala.annotation.{tailrec, targetName}
 
@@ -22,7 +20,7 @@ object Action:
   
   case class Place (
     owner: Int,
-    piece: PieceType,
+    piece: boards.algebra.Piece.PieceType,
     position: VecI
   ) extends Action:
     
@@ -55,7 +53,7 @@ object Action:
     
     def enact(state: InstantaneousState) =
       given InstantaneousState = state
-      state.pieces.remove(piece)
+      state.pieces.remove(piece.position)
     
   case object NoOp extends Action:
     def enact(state: InstantaneousState) = state

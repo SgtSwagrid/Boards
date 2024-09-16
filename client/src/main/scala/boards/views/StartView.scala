@@ -1,27 +1,10 @@
 package boards.views
 
 import boards.Games
-import boards.components.*
-import boards.components.Tabs.Tab
-import boards.protocol.GameProtocol.*
-import boards.protocol.UserProtocol.*
-import boards.util.Navigation
-import boards.util.Navigation.gotoNext
-import com.raquo.airstream.web.FetchOptions
-import org.scalajs.dom
-
-import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
-import com.raquo.laminar.api.L.{*, given}
-import com.raquo.laminar.nodes.ReactiveElement
-import com.raquo.laminar.api.features.unitArrows
-import com.raquo.laminar.keys.StyleVendorPrefixes.o
-import io.laminext.syntax.core.*
-import io.laminext.fetch.circe.*
-import io.circe.*
-import io.circe.syntax.*
-import io.circe.parser.*
-import io.circe.generic.auto.*
-import org.scalajs.dom.{KeyCode, KeyboardEvent}
+import boards.protocol.GameProtocol.{CreateRoomRequest, CreateRoomResponse}
+import boards.imports.laminar.{*, given}
+import com.raquo.laminar.api.L.*
+import boards.imports.circe.{*, given}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 

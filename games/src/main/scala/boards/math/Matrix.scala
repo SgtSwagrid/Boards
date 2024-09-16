@@ -1,7 +1,7 @@
-package util.math
+package boards.math
 
-import util.math.Algebra.{*, given}
-import util.math.Vec.{*, given}
+import Algebra.{*, given}
+import Vec.{*, given}
 
 import scala.annotation.targetName
 

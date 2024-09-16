@@ -1,9 +1,9 @@
-package util.math.kernel
+package boards.math.kernel
 
-import util.math.kernel.Kernel.{*, given}
-import util.extensions.FunctionOps.*
-import util.math.Number.*
-import util.math.Vec.VecI
+import Kernel.{*, given}
+import boards.util.extensions.FunctionOps.*
+import boards.math.Number.*
+import boards.math.Vec.VecI
 
 sealed trait Ray extends Shape:
   

@@ -1,17 +1,12 @@
 package boards.components
 
-import boards.components.Footer.aside
-import org.scalajs.dom
-import com.raquo.laminar.api.L.{a, br, button, href, img, small, src, *, given}
-import com.raquo.laminar.codecs.StringAsIsCodec
-import com.raquo.laminar.nodes.ReactiveElement
-import com.raquo.laminar.api.features.unitArrows
-import com.raquo.laminar.tags.HtmlTag
+import boards.imports.laminar.{*, given}
+import com.raquo.laminar.api.L.*
 
 object Footer:
   
-  private val aside = htmlTag("aside")
-  private val nav = htmlTag("nav")
+  private val aside = HtmlTag("aside")
+  private val nav = HtmlTag("nav")
   
   def apply() = footerTag (
     className("footer px-10 py-4 border-t bg-base-200 text-base-content border-base-300"),

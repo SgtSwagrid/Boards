@@ -1,4 +1,4 @@
-package util.math
+package boards.math
 
 import scala.annotation.targetName
 

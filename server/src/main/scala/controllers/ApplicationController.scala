@@ -1,8 +1,7 @@
 package controllers
 
 import boards.protocol.GameProtocol.{CreateRoomRequest, CreateRoomResponse}
-import io.circe.generic.auto.*
-import io.circe.syntax.*
+import boards.imports.circe.{*, given}
 import models.GameModel
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import play.api.mvc.*

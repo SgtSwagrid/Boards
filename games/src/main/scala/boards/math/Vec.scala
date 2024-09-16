@@ -1,17 +1,17 @@
-package util.math
+package boards.math
 
-import util.math.Algebra.{*, given}
-import util.math.Number.gcd
-import util.math.kernel.{Dir, Kernel, Ray}
-
-import io.circe.{Encoder, Decoder}
+import Algebra.{*, given}
+import Metric.*
+import Number.gcd
+import boards.math.kernel.{Dir, Kernel, Ray}
 
 import scala.annotation.targetName
+import scala.compiletime.erasedValue
 import scala.math.Ordered.orderingToOrdered
 
 case class Vec [@specialized X: Ring] (private val A: X*):
   
-  import Vec.*
+  import Vec.{*, given}
   
   inline def apply(i: Int, default: X = zero): X =
     if 0 <= i && i < A.length then A(i)
@@ -32,6 +32,13 @@ case class Vec [@specialized X: Ring] (private val A: X*):
   inline def / (d: X)(using D: Dividable[X]): Vec[X] = map(x => D.divide(x, d))
   @targetName("negate")
   inline def unary_- : Vec[X] = map(-_)
+  
+  @targetName("translate")
+  inline def + (dir: Dir)(using X =:= Int): Kernel[?] =
+    dir + thisAsVecI
+  @targetName("translate")
+  inline def + [Y] (kernel: Kernel[Y])(using X =:= Int): Kernel[Y] =
+    kernel.translate(thisAsVecI)
   
   @targetName("lessThan")
   inline def < (that: Vec[X])(using Ordering[X]): Boolean =
@@ -54,26 +61,33 @@ case class Vec [@specialized X: Ring] (private val A: X*):
   inline def y: X = apply(1)
   inline def z: X = apply(2)
   
-  inline def dot(v: Vec[X]): X = Vec(A.zip(v.A).map(_ * _)*).sum
-  inline def cross(v: Vec[X]): Vec[X] =
+  inline def width: X = apply(0)
+  inline def height: X = apply(1)
+  inline def depth: X = apply(2)
+  
+  inline infix def dot(v: Vec[X]): X = Vec(A.zip(v.A).map(_ * _)*).sum
+  inline infix def cross(v: Vec[X]): Vec[X] =
     Vec(y * v.z - z * v.y, z * v.x - x * v.z, x * v.y - y * v.x)
   
-  inline def norm(using M: Metric)(using X =:= Int): Int =
-    M.norm(this.asInstanceOf[VecI])
+  inline def norm(using M: Metric[X]): X =
+    M.norm(this)
+    
+  inline def normalise(using Metric[X], Dividable[X]): Vec[X] =
+    this / this.norm
     
   inline def ball
     (rmax: Int, rmin: Int = 0)
-    (using M: Metric)
+    (using M: EnumerableMetric[X])
     (using X =:= Int)
   : Kernel[?] =
-    M.ball(thisAsVecI, rmax, rmin)
+    M.ball(this, rmax, rmin)
     
-  inline def dist(that: VecI)(using M: Metric)(using X =:= Int): Int =
-    M.dist(thisAsVecI, that)
-  inline def adjacent(that: VecI)(using M: Metric)(using X =:= Int): Boolean =
-    M.adjacent(thisAsVecI, that)
-  inline def neighbours(using M: Metric)(using X =:= Int): Kernel[?] =
-    M.neighbours(thisAsVecI)
+  inline def dist(that: Vec[X])(using M: Metric[X]): X =
+    M.dist(this, that)
+  inline def adjacent(that: Vec[X])(using M: EnumerableMetric[X]): Boolean =
+    M.adjacent(this, that)
+  inline def neighbours(using M: EnumerableMetric[X]): Kernel[?] =
+    M.neighbours(this)
   inline def neighbours(direction: Dir)(using X =:= Int): Kernel[?] =
     direction.from(thisAsVecI)
   
@@ -108,11 +122,44 @@ case class Vec [@specialized X: Ring] (private val A: X*):
   
   inline def flip(axis: Int): Vec[X] =
     update(axis, -this(axis))
+  inline def flipX: Vec[X] = flip(0)
+  inline def flipY: Vec[X] = flip(1)
+  inline def flipZ: Vec[X] = flip(2)
     
   inline def rotate(from: Int, to: Int): Vec[X] =
     update(to, this(from)).update(from, -this(to))
+  inline def rotateXY: Vec[X] = rotate(0, 1)
+  inline def rotateYX: Vec[X] = rotate(1, 0)
+  inline def rotateXZ: Vec[X] = rotate(0, 2)
+  inline def rotateZX: Vec[X] = rotate(2, 0)
+  inline def rotateYZ: Vec[X] = rotate(1, 2)
+  inline def rotateZY: Vec[X] = rotate(2, 1)
+  
+  inline def proj(axis: Vec[X])(using Metric[X], Dividable[X]): Vec[X] =
+    (this dot axis.normalise) * axis.normalise
+  inline def proj(axis: Int): Vec[X] =
+    Vec.zero[X](dim).update(axis, apply(axis))
+  inline def projX: Vec[X] = proj(0)
+  inline def projY: Vec[X] = proj(1)
+  inline def projZ: Vec[X] = proj(2)
+  
+  inline def clamp(using Ordering[X]): Vec[X] = clamp(zero)
+  
+  inline def clamp(min: X = zero)(using Ordering[X]): Vec[X] =
+    map:
+      case x if x < min => min
+      case x => x
+  
+  inline def clamp(min: X, max: X)(using Ordering[X]): Vec[X] =
+    map:
+      case x if x < min => min
+      case x if x > max => max
+      case x => x
     
-  inline def absolute(using X =:= Int): VecI = thisAsVecI.map(_.abs)
+  inline def absolute(using S: Signed[X]): Vec[X] = map(S.abs)
+  
+  inline def toVecF(using X =:= Int): VecF = thisAsVecI.map(_.toFloat)
+  inline def toVecI(using X =:= Float): VecI = thisAsVecF.map(_.toInt)
   
   inline def first: X = apply(0)
   inline def last: X = apply(dim - 1)
@@ -141,15 +188,21 @@ case class Vec [@specialized X: Ring] (private val A: X*):
   
   inline override def toString: String = A.mkString("[", ", ", "]")
   
+  inline override def equals(that: Any): Boolean =
+    that match
+      case that: Vec[?] => A == that.A
+      case _ => false
+  
   private inline def zero: X = summon[Ring[X]].additiveIdentity
   private inline def one: X = summon[Ring[X]].multiplicativeIdentity
   private inline def thisAsVecI(using X =:= Int): VecI = this.asInstanceOf[VecI]
+  private inline def thisAsVecF(using X =:= Float): VecF = this.asInstanceOf[VecF]
     
 object Vec:
   
-  inline def zero[X: Ring]: Vec[X] = zero(0)
   inline def zero[X](d: Int = 0)(using R: Ring[X]): Vec[X] =
-    Vec(Seq.fill(d)(R.additiveIdentity)*)
+    Vec(Seq.fill(d)(R.additiveIdentity) *)
+  inline def zero[X: Ring]: Vec[X] = zero(0)
   
   inline def one[X](d: Int = 0)(using R: Ring[X]): Vec[X] =
     Vec(Seq.fill(d)(R.multiplicativeIdentity)*)
@@ -170,6 +223,8 @@ object Vec:
   inline def down[X](using R: Ring[X]): Vec[X] =
     Vec(R.additiveIdentity, -R.multiplicativeIdentity)
     
+  inline def fill[X: Ring](d: Int)(x: X): Vec[X] = Vec(Seq.fill(d)(x)*)
+    
   type VecI = Vec[Int]
   type VecF = Vec[Float]
   
@@ -186,6 +241,8 @@ object Vec:
     inline def right: VecI = Vec.right[Int]
     inline def up: VecI = Vec.up[Int]
     inline def down: VecI = Vec.down[Int]
+    
+    inline def fill(d: Int)(x: Int): VecI = Vec.fill(d)(x)
     
     inline def midpoint(v: VecI*): VecI = v.reduce(_ + _) / v.size
   
@@ -209,13 +266,22 @@ object Vec:
     inline def sum(x: Vec[X], y: Vec[X]): Vec[X] = x + y
     inline def additiveIdentity: Vec[X] = Vec.zero[X]
     inline def additiveInverse(x: Vec[X]): Vec[X] = -x
-    
+  
+  given Metric[Float] = Metric.Euclidean
+  
   trait Dividable[X]:
     def divide(x: X, y: X): X
   given [X: Field]: Dividable[X] with
     def divide(x: X, y: X): X = x / y
   given Dividable[Int] with
     def divide(x: Int, y: Int): Int = x / y
+    
+  trait Signed[X]:
+    def abs(x: X): X
+  given Signed[Int] with
+    def abs(x: Int): Int = x.abs
+  given Signed[Float] with
+    def abs(x: Float): Float = x.abs
   
-  given [X: Encoder]: Encoder[Vec[X]] = Encoder.encodeSeq[X].contramap(_.toSeq)
-  given [X: Decoder: Ring]: Decoder[Vec[X]] = Decoder.decodeSeq[X].map(Vec.apply)
+  given Conversion[VecI, VecF] with
+    def apply(v: VecI): VecF = v.toVecF

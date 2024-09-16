@@ -1,31 +1,18 @@
 package boards.components
 
 import boards.protocol.UserProtocol.{LoginResponse, User}
-import boards.util.Navigation
-import org.scalajs.dom
-
-import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
-import com.raquo.laminar.api.L.{borderColor, button, href, img, small, src, *, given}
-import com.raquo.laminar.codecs.StringAsIsCodec
-import com.raquo.laminar.nodes.ReactiveElement
-import com.raquo.laminar.api.features.unitArrows
-import com.raquo.laminar.modifiers.EventListener
-import io.laminext.syntax.core.*
-import io.laminext.fetch.circe.*
-import io.circe.*
-import io.circe.syntax.*
-import io.circe.parser.*
-import io.circe.generic.auto.*
-
-import scala.concurrent.ExecutionContext.Implicits.global
+import boards.imports.circe.{*, given}
+import boards.imports.laminar.{*, given}
+import com.raquo.laminar.api.L.*
 
 object Navbar:
   
   private val dataTip: HtmlProp[String, String] =
-    htmlProp("data-tip", StringAsIsCodec)
+    HtmlProp("data-tip", StringAsIsCodec)
   
   def apply() =
     
+    import scala.concurrent.ExecutionContext.Implicits.global
     val user = Fetch.post("/auth/current").decode[Option[User]].map(_.data)
     
     div (
@@ -55,12 +42,13 @@ object Navbar:
       ),
       div (className("navbar-end"),
       
-      child.maybe <-- user.optionMap: user =>
-        a (
-          className("btn btn-ghost text-sm"),
-          user.username,
-          onClick --> Navigation.goto(s"/user/${user.username}")
-        )
+      child.maybe <-- user.map: u =>
+        u.map: user =>
+          a (
+            className("btn btn-ghost text-sm"),
+            user.username,
+            onClick --> Navigation.goto(s"/user/${user.username}")
+          )
       ,
       
       child <-- user.map:
@@ -69,6 +57,6 @@ object Navbar:
             onClick.flatMapTo(Fetch.post("/auth/logout").raw) --> Navigation.goto("/")
         case None =>
           ExpandingButton("/assets/images/ui/navbar/login.svg", "Login or Register"):
-            Navigation.goto("/login", "next" -> dom.window.location.href)
+            Navigation.goto("/login", "next" -> window.location.href)
       )
     )

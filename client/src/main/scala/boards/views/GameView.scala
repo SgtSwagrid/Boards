@@ -1,35 +1,18 @@
 package boards.views
 
-import boards.algebra.PieceSet.Diff
-import boards.algebra.Rule
-import boards.components.*
-import boards.games.Chess
-import boards.graphics.Scene.{Input, InputType, Tile}
-import boards.graphics.{Scene, Texture}
-import boards.protocol.GameProtocol.*
-import util.math.Vec.{VecF, VecI}
-
-import scala.scalajs.js.annotation.JSExportTopLevel
-import com.raquo.laminar.api.L.{*, given}
-import com.raquo.laminar.api.features.unitArrows
-import io.laminext.websocket.*
-import io.laminext.websocket.circe.*
-import io.circe.*
-import io.circe.syntax.*
-import io.circe.parser.*
-import io.circe.generic.auto.*
-import org.scalajs.dom
-import org.scalajs.dom.KeyCode.{H, W}
-import org.scalajs.dom.{CanvasRenderingContext2D, DOMRect, HTMLImageElement, MouseEvent, document}
-import org.scalajs.dom.html.Canvas
-import util.math.Metric
+import boards.graphics.Scene
+import boards.graphics.Scene.{Input, PieceData, Tile}
+import boards.protocol.GameProtocol.GameRequest
+import boards.imports.laminar.{*, given}
+import boards.imports.circe.{*, given}
+import boards.imports.math.{*, given}
+import boards.imports.games.{*, given}
+import org.scalajs.dom.{CanvasRenderingContext2D, DOMRect, HTMLImageElement, MouseEvent}
 
 import scala.collection.mutable
 
 @JSExportTopLevel("GameView")
 object GameView extends View:
-  println(Chess.initial(2).actions.toSeq)
-  //println(Chess.initial(2).now.pieces.pieces)
   
   private val roomId: String =
     document.documentURI.split("/").last
@@ -62,35 +45,69 @@ object GameView extends View:
   
   private val socket: WebSocket[Scene, GameRequest] =
     WebSocket.path(s"/game/$roomId/socket").json.build()
-    
+  
   private val scene: Signal[Scene] =
     socket.received.startWith(Scene.empty)
   
+  /** The size in pixels of the total available drawing space. */
   private val canvasSize: Signal[VecI] =
-    windowEvents(_.onLoad).mergeWith(windowEvents(_.onResize)).map: _ =>
+    EventStream.merge(windowEvents(_.onLoad), windowEvents(_.onResize)).map: _ =>
       canvas.width = rect.width.toInt
       canvas.height = rect.height.toInt
+      canvas.oncontextmenu = e =>
+        e.preventDefault()
+        e.stopPropagation()
       VecI(rect.width.toInt, rect.height.toInt)
     .startWith(VecI.zero)
+    
+  /** The size in pixels of a single tile from the game board. */
+  private val scale: Signal[Int] =
+    Signal.combine(scene, canvasSize).map: (scene, canvasSize) =>
+      try (canvasSize * scene.board.size).toSeq.min / scene.board.size.product
+      catch case _ => 0
+      
+  /** The offset in pixels from the corner of the canvas to the corner of the game board. */
+  private val offset: Signal[VecI] =
+    Signal.combine(scene, canvasSize, scale).map: (scene, canvasSize, scale) =>
+      (canvasSize - (scene.board.size * scale)) / 2
   
+  /** Records all cursor movement events. */
   private val cursorBus: EventBus[MouseEvent] = new EventBus[MouseEvent]
   
+  /** The current position of the cursor in pixels relative to the canvas. */
   private val cursorPos: Signal[VecI] = cursorBus.stream
     .map(e => VecI(e.clientX.toInt, e.clientY.toInt))
     .startWith(VecI.zero)
     .map(m => VecI(m.x - rect.left.toInt, m.y - rect.top.toInt))
+  
+  private case class CanvasState (
+    canvasSize: VecI,
+    scale: Int,
+    offset: VecI,
+  )
+  
+  private val config: Signal[CanvasState] =
+    Signal.combine(canvasSize, scale, offset).map(CanvasState.apply.tupled)
     
-  private val scale: Signal[Int] =
-    scene.combineWith(canvasSize).map: (scene, canvasSize) =>
-      try Math.min(canvasSize.x * scene.board.height, canvasSize.y * scene.board.width) /
-        (scene.board.width * scene.board.height)
-      catch case _ => 0
+  private def canvasToGameCoords(pos: VecI, cfg: CanvasState): VecI =
+    try (pos.flipY + cfg.canvasSize.projY - cfg.offset) / cfg.scale
+    catch case _ => VecI.zero(2)
     
+  /** Get the position of the top-left corner of a tile in canvas (pixel) coordinates. */
+  private def gameToCanvasCornerCoords(pos: VecI, cfg: CanvasState): VecI =
+    (pos * cfg.scale + cfg.offset).flipY + cfg.canvasSize.projY - VecI(0, cfg.scale)
+  
+  /** Get the position of the center of a tile in canvas (pixel) coordinates. */
+  private def gameToCanvasCenterCoords(pos: VecI, cfg: CanvasState): VecI =
+    gameToCanvasCornerCoords(pos, cfg) + VecI.fill(2)(cfg.scale / 2)
+    
+  private def inBounds(pos: VecI, cfg: CanvasState): Boolean =
+    pos >= cfg.offset && pos <= (cfg.canvasSize - cfg.offset)
+  
+  /** The tile over which the cursor is currently hovering. */
   private val hover: Signal[Option[Tile]] =
-    scene.combineWith(canvasSize, cursorPos, scale)
-      .map: (scene, canvasSize, cursorPos, scale) =>
-        scene.board.labels.find: tile =>
-          tile.pos <= cursorPos && cursorPos <= (tile.pos + VecI(scale, scale))
+    Signal.combine(scene, config, cursorPos).map: (scene, cfg, cursorPos) =>
+      scene.board.label(canvasToGameCoords(cursorPos, cfg))
   
   private enum MouseButton:
     case Left, Right, Middle
@@ -102,6 +119,7 @@ object GameView extends View:
   
   private val clickBus: EventBus[ClickEvent] = new EventBus[ClickEvent]
   
+  /** The board tile currently being dragged from. */
   private val dragged: Signal[Option[Tile]] =
     clickBus.stream.filter(_.button == MouseButton.Left).map(_.action)
       .withCurrentValueOf(hover).map:
@@ -109,73 +127,111 @@ object GameView extends View:
         case (MouseAction.Up, _) => None
       .startWith(None)
     
+  /** The action the user might be about to take. */
   private val tentativeInput: Signal[Option[Input]] =
-    dragged.combineWith(hover).map: (from, to) =>
-      from.zip(to).flatMap: (from, to) =>
-        from.inputs.find: input =>
-          input.inputType match
-            case InputType.Click(v) => from == v && to == v
-            case InputType.Drag(u, v) => from == u && to == v
-            case _ => false
-            
-  private val diff: Signal[Map[VecI, Option[Diff]]] =
-    scene.combineWith(tentativeInput).map: (scene, input) =>
-      val home = scene.board.labels.map(t => t.pos -> None).toMap
-      input match
-        case None => home
-        case Some(input) =>
-          home ++ input.diff.map(d => d.target -> Some(d))
-          
-  private val targetPiecePositions: Signal[Map[VecI, VecI]] =
-    diff.combineWith(scale).map: (target, scale) =>
-      target.map:
-        case pos -> Some(Diff.Relocate(_, to)) => pos -> (to * scale)
-        case pos -> _ => pos -> (pos * scale)
+    Signal.combine(scene, dragged, config, cursorPos).map: (scene, dragged, cfg, cursorPos) =>
+      dragged.filter(_ => inBounds(cursorPos, cfg)).flatMap: dragged =>
+        val inputs = scene.inputsByOrigin.getOrElse(dragged.pos, Seq.empty)
+        val target = (inputs.map(_.to) :+ dragged.pos)
+          .minBy: pos =>
+            Metric.EuclideanSquared.dist(gameToCanvasCenterCoords(pos, cfg), cursorPos)
+        inputs.find: input =>
+          input.to == target
   
-  private val currentPiecePositions: Signal[Map[VecI, VecI]] =
-    scene.combineWith(scale).flatMapSwitch: (scene, scale) =>
+  private val pieceState: Signal[Map[Int, PieceData]] =
+    Signal.combine(scene, tentativeInput).map:
+      case (_, Some(input)) => input.result
+      case (scene, None) => scene.piecesById
+  
+  private case class PieceState (
+    pieceId: Int,
+    actualPos: VecF,
+    targetPos: VecF,
+    actualSize: Float,
+    isMoving: Boolean,
+    texture: Texture,
+  )
+  
+  private case class PieceSprite (
+    position: VecI,
+    size: VecI,
+    texture: Texture,
+  )
+  
+  private val pieces: Signal[Seq[PieceSprite]] =
+    config.flatMapSwitch { cfg =>
       
-      val initial = scene.board.labels
-        .filter(_.piece.nonEmpty)
-        .map(t => t.pos -> t.pos * scale).toMap
-      
-      EventStream.periodic(20)
-        .withCurrentValueOf(targetPiecePositions).map((_, p) => p)
-        .scanLeft(initial): (positions, targets) =>
-          positions.map: (home, current) =>
-            val target = targets(home)
-            home -> (
-              if current.dist(target)(using Metric.Chebyshev) < 100 then target
-              else current + ((target - current) / 100)
-            )
+      EventStream.periodic(5)
+        .withCurrentValueOf(pieceState).map((_, s) => s)
+        .scanLeft(Map.empty[Int, PieceState]) { (previous, pieceState) =>
+          
+          // Pieces which previously existed and still exist.
+          val existing = (previous.keySet & pieceState.keySet)
+            .map(id => (previous(id), pieceState(id))).map: (previous, pieceState) =>
+              val target: VecF = gameToCanvasCenterCoords(pieceState.pos, cfg)
+              previous.pieceId -> PieceState (
+                previous.pieceId,
+                previous.actualPos + ((target - previous.actualPos) * 0.2F),
+                target,
+                Math.min(previous.actualSize + (cfg.scale - previous.actualSize) * 0.1F, cfg.scale),
+                !(target - previous.actualPos).toVecI.isZero,
+                pieceState.texture,
+              )
+            .toMap
+          
+          // Pieces which were recently deleted.
+          val created = (previous.keySet -- pieceState.keySet)
+            .map(previous.apply).map: previous =>
+              previous.pieceId -> PieceState (
+                previous.pieceId,
+                previous.actualPos,
+                previous.actualPos,
+                previous.actualSize * 0.9F,
+                false,
+                previous.texture,
+              )
+            .filter((_, p) => p.actualSize.toInt > 0)
+            .toMap
+          
+          // Pieces which were newly created.
+          val deleted = (pieceState.keySet -- previous.keySet)
+            .map(pieceState.apply).map: pieceState =>
+              pieceState.pieceId -> PieceState (
+                pieceState.pieceId,
+                gameToCanvasCenterCoords(pieceState.pos, cfg),
+                gameToCanvasCenterCoords(pieceState.pos, cfg),
+                0.0F,
+                false,
+                pieceState.texture,
+              )
+            .toMap
+          
+          existing ++ created ++ deleted
+        }
+    }.map(_.values.toSeq.sortBy(_.isMoving).map: piece =>
+      val size = VecI(piece.actualSize.toInt, piece.actualSize.toInt)
+      PieceSprite (
+        (piece.actualPos - (size / 2)).toVecI,
+        size,
+        piece.texture,
+      )
+    )
     
-  private def draw(scene: Scene, positions: Map[VecI, VecI], canvasSize: VecI, cursorPos: VecI, scale: Int) =
+  private def draw(scene: Scene, pieces: Seq[PieceSprite], cfg: CanvasState) =
     
-    val square = VecI(scale, scale)
+    val square = VecI(cfg.scale, cfg.scale)
     
-    val (width, height) = (scale * scene.board.width, scale * scene.board.height)
-    val (h_offset, v_offset) = ((canvasSize.x - width) / 2, (canvasSize.y - height) / 2)
-    
-    clearRect(VecI.zero, canvasSize)
+    clearRect(VecI.zero, cfg.canvasSize)
     
     for (tile <- scene.board.labels) do
-      val pos = VecI (
-        tile.pos.x * scale + h_offset,
-        canvasSize.y - (tile.pos.y + 1) * scale - v_offset
-      )
+      val pos = gameToCanvasCornerCoords(tile.pos, cfg)
+      fillRect(pos, square, tile.colour.hexString)
       
-      if pos <= cursorPos && cursorPos <= (pos + square) then
-        println(tile)
-      
-      val colour = if pos <= cursorPos && cursorPos <= (pos + square) then
-        tile.colour.darken(20) else tile.colour
-      fillRect(pos, square, colour.hexString)
-      tile.piece.foreach(texture => drawImage(positions(tile.pos), square, texture))
+    for (piece <- pieces) do
+      drawImage(piece.position, piece.size, piece.texture)
   
-  private val updateStream: EventStream[(Scene, Map[VecI, VecI], VecI, VecI, Int)] =
-    scene.changes.mergeWith(canvasSize.changes, cursorPos.changes)
-      .withCurrentValueOf(scene, currentPiecePositions, canvasSize, cursorPos, scale)
-      .map((_, s, pos, cs, cp, sc) => (s, pos, cs, cp, sc))
+  private val updateStream: EventStream[(Scene, Seq[PieceSprite], CanvasState)] =
+    Signal.combine(scene, pieces, config).changes
   
   def content = div (
     socket.connect,
@@ -193,5 +249,5 @@ object GameView extends View:
         height("100%"),
       ),
     ),
-    Footer()
+    Footer(),
   )

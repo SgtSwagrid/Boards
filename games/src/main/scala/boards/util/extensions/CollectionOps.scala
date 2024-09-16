@@ -1,7 +1,6 @@
-package util.extensions
+package boards.util.extensions
 
-import util.structures.Monadic
-
+import boards.util.structures.Monadic
 import scala.annotation.{tailrec, targetName}
 import scala.collection.IterableOps
 import scala.collection.immutable.*

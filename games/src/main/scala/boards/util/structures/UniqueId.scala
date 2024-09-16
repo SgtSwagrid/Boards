@@ -1,4 +1,4 @@
-package util.structures
+package boards.util.structures
 
 trait UniqueId:
   

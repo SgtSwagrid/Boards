@@ -9,6 +9,9 @@
     <option name="useSbtShell" value="false" />
     <option name="vmparams" value="-Xms512M -Xmx1024M -Xss1M" />
     <option name="workingDir" value="$PROJECT_DIR$" />
+    <envs>
+      <env name="PATH" value="C:\Program Files\Java\jdk-21\bin" />
+    </envs>
     <method v="2" />
   </configuration>
 </component>

@@ -1,10 +1,9 @@
-package util.math.kernel
+package boards.math.kernel
 
-import Align.*
-import util.math.Vec
-import util.math.Vec.VecI
+import boards.imports.math.{*, given}
 
 sealed trait Align:
+  import Align.*
   
   def relativeOffset(l: VecI, r: VecI): VecI =
     Vec(

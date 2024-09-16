@@ -1,14 +1,7 @@
 package boards.components
 
-import boards.components.Footer.aside
-import org.scalajs.dom
-import com.raquo.laminar.api.L.{a, br, button, href, img, small, src, *, given}
-import com.raquo.laminar.codecs.StringAsIsCodec
-import com.raquo.laminar.nodes.ReactiveElement
-import com.raquo.laminar.api.features.unitArrows
-import com.raquo.laminar.modifiers.EventListener
-import com.raquo.laminar.tags.HtmlTag
-import org.scalajs.dom.MouseEvent
+import boards.imports.laminar.{*, given}
+import com.raquo.laminar.api.L.*
 
 object ExpandingButton:
   
@@ -22,7 +15,7 @@ object ExpandingButton:
       img(src(icon), className("h-5 w-5")),
       p (
         className("invisible w-0 group-hover:visible group-hover:w-24"),
-        text
+        text,
       ),
-      action
+      action,
     )

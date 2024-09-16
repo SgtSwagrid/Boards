@@ -1,7 +1,11 @@
 package boards.algebra
 
-import boards.GameImports.{*, given}
+import boards.imports.games.{*, given}
+
 import scala.annotation.{tailrec, targetName}
+
+import boards.algebra.Shortcuts.given_Conversion_Iterable_Rule
+import boards.algebra.Shortcuts.given_Conversion_X_PartialFunction
 
 trait Rule:
   import Rule.*
@@ -11,7 +15,7 @@ trait Rule:
   def updateGenerators(filter: PartialFunction[Generator, Rule]): Rule
   
   def after(f: Stateful[InstantaneousState]): Rule =
-    TransformedRule(this, s => f(using s).lift(s).getOrElse(s))
+    TransformedRule(this, s => f(using s).lift(s).getOrElse(s.now))
     
   def require(f: Stateful[Boolean]): Rule =
     FilteredRule(this, s => f(using s).lift(s).getOrElse(false))
@@ -95,7 +99,7 @@ object Rule:
         rule(state).repeatWhile(f)
         
   def alternatingTurns(rule: Stateful[Rule]): Rule =
-    Rule.when(rule).after(_.endTurn).repeatForever
+    Rule.when(rule).after(_.now.endTurn).repeatForever
   
   private class TransformedRule (
     base: Rule,
@@ -108,7 +112,7 @@ object Rule:
         case s @ InterimState(_, a, p, r)
           if r.from(s).isOptional =>
             InterimState(f(s), a, p, Rule.skip)
-        case s @ InterimState(_, a, p, r) => InterimState(s, a, p, r.after(f(_)))
+        case s @ InterimState(_, a, p, r) => InterimState(s.now, a, p, r.after(f(_)))
     
     export base.actions
     
@@ -125,7 +129,7 @@ object Rule:
         case s: FinalState => s
         case s @ InterimState(_, a, p, r)
           if r.from(s).isOptional && f(s).isDefined =>
-            FinalState(s, a, p, f(s).get)
+            FinalState(s.now, a, p, f(s).get)
         case InterimState(s, a, p, r) =>
           InterimState(s, a, p, HaltingRule(r, f))
     
@@ -201,16 +205,6 @@ object Rule:
       base.next(state).map:
         case s: FinalState => s
         case s @ InterimState(_, a, p, r) =>
-          InterimState(s, a, p, AccumulatedRule(r, f(value, s), f))
+          InterimState(s.now, a, p, AccumulatedRule(r, f(value, s), f))
           
     export base.{actions, updateGenerators}
-    
-  given Conversion[Iterable[Rule], Rule] with
-    def apply(rules: Iterable[Rule]): Rule = rules.foldLeft(Rule.none)(_ | _)
-  
-  given [X <: Rule | InstantaneousState | Boolean | Outcome | PieceSet]: Conversion[X, PartialFunction[GameState, X]] with
-    def apply(x: X): PartialFunction[GameState, X] = _ => x
-    
-  given Conversion[PieceSet, PartialFunction[GameState, InstantaneousState]] with
-    def apply(pieces: PieceSet): PartialFunction[GameState, InstantaneousState] =
-      gameState => gameState.now.withPieces(pieces)

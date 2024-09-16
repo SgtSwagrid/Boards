@@ -101,5 +101,4 @@ lazy val games = crossProject(JSPlatform, JVMPlatform)
   .in(file("games"))
   .settings (
     name := "boards-common",
-    Lib.circe,
   )

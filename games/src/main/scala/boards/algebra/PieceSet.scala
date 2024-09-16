@@ -1,25 +1,19 @@
 package boards.algebra
 
-import boards.algebra.Piece.PieceType
-import boards.algebra.InstantaneousState.given
-import boards.graphics.Texture
-import util.math.Vec
-import util.math.Vec.{VecI, given}
-import util.structures.UniqueId
+import boards.imports.games.{*, given}
+import boards.imports.math.{*, given}
 
 import scala.collection.immutable.BitSet
-import PieceSet.*
-import util.math.kernel.Kernel
-import util.math.kernel.Kernel.given
-
 import scala.reflect.ClassTag
+
+import boards.algebra.Shortcuts.given_Conversion_Iterable_Rule
 
 case class PieceSet (
   piecesByPos: Map[VecI, Piece] = Map.empty,
   selected: BitSet = BitSet.empty,
   
   playerFilter: Map[Int, BitSet] = Map.empty,
-  typeFilter: Map[Class[? <: PieceType], BitSet] = Map.empty
+  typeFilter: Map[Class[? <: boards.algebra.Piece.PieceType], BitSet] = Map.empty
 )(using board: Kernel[?]):
   
   def pieces: Set[Piece] = selected.unsorted.flatMap(piecesByPos.get)
@@ -127,7 +121,7 @@ case class PieceSet (
     yield piece -> to
     
     updates.foldLeft(this):
-      case (set, piece -> to) => set.movePiece(piece, to)
+      case (set, piece -> to) => set.movePiece(piece.position, to)
       
   def remove(positions: Kernel[?]*): PieceSet =
     positions.flatMap(_.positions).foldLeft(this)(_.removePiece(_))
@@ -157,43 +151,4 @@ case class PieceSet (
       )
       
 object PieceSet:
-  
   def empty(using Kernel[?]): PieceSet = PieceSet()
-  
-  def diff(t1: PieceSet, t2: PieceSet): Seq[Diff] =
-    
-    val pieces1 = t1.pieces.map(p => p.id -> p).toMap
-    val pieces2 = t2.pieces.map(p => p.id -> p).toMap
-    
-    val appears = (pieces2.keySet -- pieces1.keySet).toSeq
-      .map(id => Diff.Appear(pieces2(id), pieces2(id).texture))
-    
-    val relocates = (pieces1.keySet & pieces2.keySet).toSeq
-      .filter(id => pieces1(id).position != pieces2(id).position)
-      .map(id => Diff.Relocate(pieces1(id).position, pieces2(id).position))
-    
-    val disappears = (pieces1.keySet -- pieces2.keySet).toSeq
-      .map(p => Diff.Disappear(pieces1(p).position))
-    
-    appears ++ relocates ++ disappears
-  
-  enum Diff(val target: VecI):
-    case Appear(pos: VecI, texture: Texture) extends Diff(pos)
-    case Relocate(from: VecI, to: VecI) extends Diff(from)
-    case Disappear(pos: VecI) extends Diff(pos)
-  
-  given Conversion[PieceSet, Kernel[?]] with
-    def apply(pieces: PieceSet): Kernel[?] = pieces.positions
-    
-  given Conversion[PieceSet, Rule] with
-    def apply(pieces: PieceSet): Rule = pieces.actions
-    
-  given (using state: InstantaneousState): Conversion[PieceSet, InstantaneousState] with
-    def apply(pieces: PieceSet): InstantaneousState = state.withPieces(pieces)
-  
-  given (using state: GameState): Conversion[PieceSet, GameState] with
-    def apply(pieces: PieceSet): GameState = state.withPieces(pieces)
-    
-  given (using state: GameState): Conversion[PieceSet, Capability] with
-    def apply(pieces: PieceSet): Capability =
-      pieces.actions.from(state)

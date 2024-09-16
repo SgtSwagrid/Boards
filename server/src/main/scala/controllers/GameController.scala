@@ -10,10 +10,7 @@ import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.scaladsl.*
 import slick.jdbc.JdbcProfile
 import slick.jdbc.H2Profile.api.*
-import io.circe.*
-import io.circe.generic.auto.*
-import io.circe.syntax.*
-import io.circe.parser.*
+import boards.imports.circe.{*, given}
 import models.GameModel
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -34,7 +31,6 @@ class GameController @Inject() (
     Ok(views.html.PageTemplate("GameView"))
     
   def gameSocket(id: String) = WebSocket.acceptOrResult[String, String]: request =>
-    println("socket!")
     AuthController.currentUser(request)
       .zip(GameModel().getRoomById(id))
       .map: (user, room) =>

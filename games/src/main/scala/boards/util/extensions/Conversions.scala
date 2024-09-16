@@ -1,4 +1,4 @@
-package util.extensions
+package boards.util.extensions
 
 object Conversions:
   
