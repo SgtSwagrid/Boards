@@ -45,13 +45,14 @@ extends Actor:
       sender() ! Scene(state, players)
       
     case Update(me, TakeAction(hash)) =>
+      println(":)")
       for
-        _ <- Option.when(state.now.activePlayer == me)(())
+        //_ <- Option.when(state.now.activePlayer == me)(())
         state <- state.takeActionByHash(hash)
-      do for
-        _ <- GameModel().takeAction(roomId, me, hash)
       do
+        GameModel().takeAction(roomId, me, hash)
         this.state = state
+        println(this.state.time)
         render()
       
     case Update(me, InviteToRoom(user)) => ???

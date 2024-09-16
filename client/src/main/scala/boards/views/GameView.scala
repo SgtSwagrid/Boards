@@ -45,9 +45,9 @@ object GameView extends View:
   
   private val socket: WebSocket[Scene, GameRequest] =
     WebSocket.path(s"/game/$roomId/socket").json.build()
-  
-  private val scene: Signal[Scene] =
-    socket.received.startWith(Scene.empty)
+    
+  private val sceneBus: EventBus[Scene] = new EventBus[Scene]
+  private val scene: Signal[Scene] = sceneBus.events.startWith(Scene.empty)
   
   /** The size in pixels of the total available drawing space. */
   private val canvasSize: Signal[VecI] =
@@ -87,7 +87,7 @@ object GameView extends View:
   )
   
   private val config: Signal[CanvasState] =
-    Signal.combine(canvasSize, scale, offset).map(CanvasState.apply.tupled)
+    Signal.combine(canvasSize, scale, offset).map(CanvasState.apply.tupled).distinct
     
   private def canvasToGameCoords(pos: VecI, cfg: CanvasState): VecI =
     try (pos.flipY + cfg.canvasSize.projY - cfg.offset) / cfg.scale
@@ -121,7 +121,7 @@ object GameView extends View:
   
   /** The board tile currently being dragged from. */
   private val dragged: Signal[Option[Tile]] =
-    clickBus.stream.filter(_.button == MouseButton.Left).map(_.action)
+    clickBus.stream.delay(1).filter(_.button == MouseButton.Left).map(_.action)
       .withCurrentValueOf(hover).map:
         case (MouseAction.Down, hover) => hover
         case (MouseAction.Up, _) => None
@@ -137,10 +137,16 @@ object GameView extends View:
             Metric.EuclideanSquared.dist(gameToCanvasCenterCoords(pos, cfg), cursorPos)
         inputs.find: input =>
           input.to == target
+          
+  private val inputStream: EventStream[Input] =
+    clickBus.stream.filter(_.action == MouseAction.Up)
+      .withCurrentValueOf(tentativeInput)
+      .filter((_, input) => input.isDefined)
+      .map((_, input) => input.get)
   
   private val pieceState: Signal[Map[Int, PieceData]] =
     Signal.combine(scene, tentativeInput).map:
-      case (_, Some(input)) => input.result
+      case (_, Some(input)) => input.result.piecesById
       case (scene, None) => scene.piecesById
   
   private case class PieceState (
@@ -234,11 +240,18 @@ object GameView extends View:
     Signal.combine(scene, pieces, config).changes
   
   def content = div (
+    
     socket.connect,
+    socket.received --> sceneBus.writer,
+    inputStream.map(input => input.result) --> sceneBus.writer,
+    inputStream.map(input => GameRequest.TakeAction(input.actionHash)) --> socket.send,
+    
     onMouseMove --> cursorBus.writer,
     onMouseDown.map(e => ClickEvent(MouseButton.Left, MouseAction.Down)) --> clickBus,
     onMouseUp.map(e => ClickEvent(MouseButton.Left, MouseAction.Up)) --> clickBus,
+    
     updateStream --> draw.tupled,
+    
     Navbar(),
     div (
       position("absolute"),

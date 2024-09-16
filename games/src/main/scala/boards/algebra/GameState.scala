@@ -40,12 +40,16 @@ sealed trait GameState:
     takeActionWhere:
       case d @ Destroy(piece) => piece.position == pos
       case _ => false
+      
+  def inert: GameState
   
   def actionHashes: Iterator[Int] = actions.map(_.hashCode)
   def findActionByHash(hash: Int): Option[Action] =
     actions.find(_.hashCode == hash)
   def takeActionByHash(hash: Int): Option[NonInitialState] =
     next.find(_.action.hashCode == hash)
+    
+  val time: Int
   
 object GameState:
   
@@ -59,6 +63,7 @@ object GameState:
     val previous: NonFinalState
     def actionOption: Some[Action] = Some(action)
     def previousOption: Some[NonFinalState] = Some(previous)
+    val time: Int = previous.time + 1
   
   case class InitialState (
     now: InstantaneousState,
@@ -66,13 +71,16 @@ object GameState:
   ) extends NonFinalState:
     def actionOption: None.type = None
     def previousOption: None.type = None
+    def inert: InitialState = copy(rule = Rule.none)
+    val time: 0 = 0
   
   case class InterimState (
     now: InstantaneousState,
     action: Action,
     previous: NonFinalState,
     rule: Rule
-  ) extends NonInitialState, NonFinalState
+  ) extends NonInitialState, NonFinalState:
+    def inert: InterimState = copy(rule = Rule.none)
   
   case class FinalState (
     now: InstantaneousState,
@@ -82,6 +90,7 @@ object GameState:
   ) extends NonInitialState:
     def next: Iterator[Nothing] = Iterator.empty
     def actions: Iterator[Nothing] = Iterator.empty
+    def inert: FinalState = this
   
   enum Outcome:
     case Winner(player: Int)
