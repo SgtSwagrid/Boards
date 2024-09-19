@@ -126,7 +126,7 @@ case class PieceSet (
   def remove(positions: Kernel[?]*): PieceSet =
     positions.flatMap(_.positions).foldLeft(this)(_.removePiece(_))
   
-  private def addPiece(piece: Piece): PieceSet =
+  private def addPiece(piece: Piece): PieceSet =//
     removePiece(piece.position).copy (
       piecesByPos = piecesByPos + (piece.position -> piece),
       selected = selected + piece.position,
@@ -137,7 +137,7 @@ case class PieceSet (
   private def movePiece(from: VecI, to: VecI): PieceSet =
     if contains(from) && board.contains(to) then
       val piece = get(from).get
-      removePiece(from).addPiece(piece.copy(position=to, hasMoved=true))
+      removePiece(from).removePiece(to).addPiece(piece.copy(position=to, hasMoved=true))
     else this
   
   private def removePiece(pos: VecI): PieceSet =
