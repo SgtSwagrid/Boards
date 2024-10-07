@@ -3,7 +3,6 @@ package controllers
 import org.apache.pekko.actor.*
 
 import scala.collection.mutable
-import schema.RoomTable.RoomRow
 import slick.jdbc.H2Profile.api.Database
 
 class SystemActor(using Database) extends Actor:

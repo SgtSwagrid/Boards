@@ -7,7 +7,7 @@ object games:
   }
   export boards.algebra.Action.*
   
-  export boards.algebra.Game.*
+  export boards.algebra.Game.{WithMetadata => _, *}
   export boards.algebra.GameState.{
     InitialState, InterimState, FinalState, NonInitialState, NonFinalState,
     Outcome, /*~>, |>,*/ Following

@@ -8,12 +8,14 @@ object Footer:
   private val aside = HtmlTag("aside")
   private val nav = HtmlTag("nav")
   
+  val footerHeight = 80
+  
   def apply() = footerTag (
     className("footer px-10 py-4 border-t bg-base-200 text-base-content border-base-300"),
     position("fixed"),
     bottom("0px"),
     width("100%"),
-    height("80px"),
+    height(s"${footerHeight}px"),
     aside (
       className("items-center grid-flow-col"),
       img(width("50px"), height("50px"), src("/assets/images/ui/icon.svg")),

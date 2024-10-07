@@ -1,16 +1,14 @@
 package boards
 
+import boards.algebra.Game
 import boards.games.*
 
 object Games:
   
-  def all = Seq (
-    Chess,
-    Chaturanga,
-    Chess,
-    Chaturanga,
-    Chess,
-    Chaturanga,
+  val all = Seq (
     Chess,
     Chaturanga,
   )
+  
+  val byName: Map[String, Game] =
+    all.map(g => g.data.name -> g).toMap

@@ -3,7 +3,11 @@ package boards.games
 import boards.imports.games.{*, given}
 import boards.algebra.Shortcuts.{*, given}
 
-object Chaturanga extends Game:
+object Chaturanga extends Game.WithMetadata (
+  name = "Chaturanga",
+  numPlayers = Seq(2),
+  playerNames = Seq("White, Black"),
+):
   
   override val Board = Kernel.box(8, 8)
     .paint(Pattern.Checkered(Colour.Black, Colour.White))
@@ -50,4 +54,4 @@ object Chaturanga extends Game:
     Pieces.ofActivePlayer.actions
       .require(!inCheck)
       .stopIfImpossible(Winner(State.nextPlayer))
-      .stopIf(Pieces.ofNextPlayer.forall(_.is(Raja)))(Winner(State.activePlayer))
+      .stopIf(Pieces.ofNextPlayer.forall(_.is(Raja)))(Winner(State.now.activePlayer))

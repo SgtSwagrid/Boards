@@ -1,5 +1,6 @@
 package boards.graphics
 
+import boards.Games
 import boards.protocol.GameProtocol.*
 import boards.graphics.Scene.*
 import boards.imports.circe.{*, given}
@@ -7,6 +8,8 @@ import boards.imports.math.{*, given}
 import boards.imports.games.{*, given}
 
 case class Scene (
+  room: Room = Room.empty,
+  participant: Participant = Unregistered,
   board: Kernel[Tile] = Kernel.empty,
   pieces: Seq[PieceData] = Seq.empty,
   inputs: Seq[Input] = Seq.empty,
@@ -15,6 +18,7 @@ case class Scene (
   lazy val inputsByOrigin = inputs.groupBy(_.from)
   lazy val piecesById = pieces.map(p => p.pieceId -> p).toMap
   lazy val piecesByPos = pieces.map(p => p.pos -> p).toMap
+  export room.{game, status}
 
 object Scene:
   import Scene.*
@@ -39,7 +43,7 @@ object Scene:
     texture: Texture,
   ) derives Codec.AsObject
   
-  def apply(state: GameState, players: Seq[Player]): Scene =
+  def apply(state: GameState, players: Seq[Player], room: Room, spectator: Participant): Scene =
     
     val board = state.now.board.paint: (pos, colour) =>
       Tile (
@@ -52,15 +56,17 @@ object Scene:
     val pieces = state.now.pieces.pieces.toSeq.map: piece =>
       PieceData(piece.id, piece.position, piece.texture)
     
-    val inputs = state.next.toSeq.map: successor =>
-      val (from, to) = successor.action match
-        case Place(_, _, pos) => (pos, pos)
-        case Move(_, from, to) => (from, to)
-        case Destroy(piece) => (piece.position, piece.position)
-        case NoOp => throw new IllegalStateException
-      val result = Scene(successor.inert, players)
-      Input(from, to, successor.action.hashCode(), result)
+    val inputs =
+      if !room.status.isActive || !spectator.isActivePlayer(state.activePlayer) then Seq() else
+        state.next.toSeq.map: successor =>
+          val (from, to) = successor.action match
+            case Place(_, _, pos) => (pos, pos)
+            case Move(_, from, to) => (from, to)
+            case Destroy(piece) => (piece.position, piece.position)
+            case NoOp => throw new IllegalStateException
+          val result = Scene(successor.inert, players, room, spectator)
+          Input(from, to, successor.action.hashCode(), result)
     
-    new Scene(board, pieces.toSeq, inputs, players)
+    new Scene(room, spectator, board, pieces.toSeq, inputs, players)
     
   def empty: Scene = new Scene()

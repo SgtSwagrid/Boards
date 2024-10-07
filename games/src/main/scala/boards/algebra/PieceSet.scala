@@ -126,7 +126,7 @@ case class PieceSet (
   def remove(positions: Kernel[?]*): PieceSet =
     positions.flatMap(_.positions).foldLeft(this)(_.removePiece(_))
   
-  private def addPiece(piece: Piece): PieceSet =//
+  private def addPiece(piece: Piece): PieceSet =
     removePiece(piece.position).copy (
       piecesByPos = piecesByPos + (piece.position -> piece),
       selected = selected + piece.position,

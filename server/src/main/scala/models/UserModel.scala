@@ -72,3 +72,11 @@ class UserModel(using db: Database, ec: ExecutionContext):
     
   private def hashPassword(password: String): String =
     BCrypt.hashpw(password, BCrypt.gensalt())
+    
+  object Action:
+    
+    def getUserById(userId: Int): DBIO[UserRow] =
+      getUserOptionById(userId).map(_.get)
+      
+    def getUserOptionById(userId: Int): DBIO[Option[UserRow]] =
+      UserTable.users.filter(_.id === userId).result.headOption

@@ -4,13 +4,13 @@ import boards.imports.games.{*, given}
 import scala.annotation.targetName
 
 sealed trait GameState:
-  def now: InstantaneousState
+  val now: InstantaneousState
   def actionOption: Option[Action]
   def previousOption: Option[NonFinalState]
   
   def withBoard(board: InstantaneousState): GameState =
     lazy val newState: GameState = this match
-      case InitialState(_, r) => InitialState(board, r)
+      case InitialState(g, _, r) => InitialState(g, board, r)
       case InterimState(_, a, p, r) => InterimState(board, a, p, r)
       case FinalState(_, a, p, o) => FinalState(board, a, p, o)
     newState
@@ -50,6 +50,9 @@ sealed trait GameState:
     next.find(_.action.hashCode == hash)
     
   val time: Int
+  val game: Game
+  
+  export now.activePlayer
   
 object GameState:
   
@@ -64,10 +67,12 @@ object GameState:
     def actionOption: Some[Action] = Some(action)
     def previousOption: Some[NonFinalState] = Some(previous)
     val time: Int = previous.time + 1
+    val game: Game = previous.game
   
   case class InitialState (
+    game: Game,
     now: InstantaneousState,
-    rule: Rule
+    rule: Rule,
   ) extends NonFinalState:
     def actionOption: None.type = None
     def previousOption: None.type = None
@@ -97,13 +102,14 @@ object GameState:
     case Draw
   
   def initial (
+    game: Game,
     board: InstantaneousState,
     rule: Rule
   ): InitialState =
-    InitialState(board, rule)
+    InitialState(game, board, rule)
     
   def empty: InitialState =
-    InitialState(InstantaneousState.empty, Rule.none)
+    InitialState(Game.none, InstantaneousState.empty, Rule.none)
   
   /*@targetName("cause") object ~> :
     def unapply (

@@ -9,17 +9,18 @@ object Navbar:
   
   private val dataTip: HtmlProp[String, String] =
     HtmlProp("data-tip", StringAsIsCodec)
+    
+  val navbarHeight: Int = 80
   
   def apply() =
     
-    import scala.concurrent.ExecutionContext.Implicits.global
     val user = Fetch.post("/auth/current").decode[Option[User]].map(_.data)
     
     div (
       className("navbar bg-base-200"),
       position("fixed"),
       width("100%"),
-      height("70px"),
+      height(s"${navbarHeight}px"),
       paddingLeft("30px"),
       paddingRight("30px"),
       borderBottom("2px"),

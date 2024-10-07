@@ -3,7 +3,11 @@ package boards.games
 import boards.imports.games.{*, given}
 import boards.algebra.Shortcuts.{*, given}
 
-object Chess extends Game:
+object Chess extends Game.WithMetadata (
+  name = "Chess",
+  numPlayers = Seq(2),
+  playerNames = Seq("White", "Black"),
+):
   
   override val Board = Kernel.box(8, 8)
     .paint(Pattern.Checkered(Colour.ChessDark, Colour.ChessLight))

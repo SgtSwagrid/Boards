@@ -21,7 +21,7 @@ object StartView extends View:
       Games.all.map: game =>
         div (
           onClick.flatMapTo:
-            Fetch.post("/start", body=CreateRoomRequest(game.id))
+            Fetch.post("/start", body=CreateRoomRequest(game.name))
               .decode[CreateRoomResponse].map(_.data)
           --> (response => Navigation.goto(s"/game/${response.roomId}")),
           className("card bg-neutral shadow-xl hover:brightness-125 active:brightness-150"),
@@ -38,7 +38,7 @@ object StartView extends View:
             className("card-body"),
             div (
               className("flex justify-between"),
-              p(className("text-lg font-bold"), game.getClass.getSimpleName.replace("$", "")),
+              p(className("text-lg font-bold"), game.name),
               img(src("/assets/images/ui/navbar/start.svg"), className("h-5 w-5"), right("0px"))
             )
           )
