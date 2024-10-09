@@ -15,6 +15,8 @@ sealed trait Action:
   
   @targetName("causes")
   def ~> (state: InstantaneousState): Rule = this.after(_ => state)
+  
+  def hash: String
 
 object Action:
   
@@ -29,6 +31,8 @@ object Action:
       state.pieces.insert(owner)(piece -> position)
       
     override def toString = s"$piece |-> $position"
+    
+    def hash: String = s"P ${piece.hash} $position"
   
   case class Move (
     piece: Piece,
@@ -46,6 +50,8 @@ object Action:
     def midpoint: VecI = from.midpoint(to)
     
     override def toString = s"$from |-> $to"
+    
+    def hash: String = s"M $from $to"
   
   case class Destroy (
     piece: Piece
@@ -54,7 +60,9 @@ object Action:
     def enact(state: InstantaneousState) =
       given InstantaneousState = state
       state.pieces.remove(piece.position)
+      
+    def hash: String = s"D ${piece.position}"
     
   case object NoOp extends Action:
     def enact(state: InstantaneousState) = state
-    
+    def hash: String = "N"

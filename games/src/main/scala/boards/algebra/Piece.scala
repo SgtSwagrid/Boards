@@ -42,6 +42,7 @@ object Piece:
     def texture(piece: Piece): boards.graphics.Texture =
       textures(piece.owner % textures.size)
     def textures: Seq[boards.graphics.Texture] = Seq()
+    def hash: String = getClass.getSimpleName
     
   object PieceType:
     trait WithTexture(override val textures: Texture*) extends PieceType

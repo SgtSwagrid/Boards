@@ -107,9 +107,9 @@ class GameModel(using db: Database, ec: ExecutionContext):
       if room.game.numPlayers.contains(numPlayers)
       _ <- Query.room(roomId).map(_.status).update(Status.Active)
     yield room.copy(status = Status.Active)
-    db.run(action.transactionally.asTry.map{x => println(x); x.getOrElse(Room("", "", Status.Complete))})
+    db.run(action.transactionally)
     
-  def takeAction(roomId: String, userId: Int, actionHash: Int): Future[ActionRow] =
+  def takeAction(roomId: String, userId: Int, actionHash: String): Future[ActionRow] =
     val action = for
       room <- Action.getRoom(roomId)
       if room.status.isActive
@@ -118,7 +118,7 @@ class GameModel(using db: Database, ec: ExecutionContext):
       action = ActionRow(roomId, actions.size, userId, actionHash, time)
       _ <- ActionTable.actions += action
     yield action
-    db.run(action)
+    db.run(action.transactionally)
     
   def getGameState(roomId: String): Future[GameState] =
     val action = for

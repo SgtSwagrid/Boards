@@ -6,7 +6,7 @@ import boards.Games
 object GameProtocol:
   
   enum GameRequest:
-    case TakeAction(actionHash: Int)
+    case TakeAction(actionHash: String)
     case InviteToRoom(userId: Int)
     case RemovePlayer(userId: Int)
     case ReorderPlayer(userId: Int)

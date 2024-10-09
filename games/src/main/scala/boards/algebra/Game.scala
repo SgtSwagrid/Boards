@@ -23,7 +23,7 @@ trait Game:
   
 object Game:
   
-  def none: Game = new Game.WithMetadata:
+  def none: Game = new Game.WithMetadata(name = "Game"):
     def setup(numPlayers: Int) = InstantaneousState.empty
     def rules = Rule.none
     val Board = Kernel.empty

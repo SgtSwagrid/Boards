@@ -43,11 +43,11 @@ sealed trait GameState:
       
   def inert: GameState
   
-  def actionHashes: Iterator[Int] = actions.map(_.hashCode)
-  def findActionByHash(hash: Int): Option[Action] =
-    actions.find(_.hashCode == hash)
-  def takeActionByHash(hash: Int): Option[NonInitialState] =
-    next.find(_.action.hashCode == hash)
+  def actionHashes: Iterator[String] = actions.map(_.hash)
+  def findActionByHash(hash: String): Option[Action] =
+    actions.find(_.hash == hash)
+  def takeActionByHash(hash: String): Option[NonInitialState] =
+    next.find(_.action.hash == hash)
     
   val time: Int
   val game: Game

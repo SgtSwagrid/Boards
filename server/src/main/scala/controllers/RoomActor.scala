@@ -37,7 +37,7 @@ extends Actor:
     room <- GameModel().getRoomById(roomId)
     state <- GameModel().getGameState(roomId)
     players <- GameModel().getPlayers(roomId)
-  do
+  yield
     this.room = room.get
     this.state = state
     this.players = players

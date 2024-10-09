@@ -69,6 +69,7 @@ object GameView extends View:
   def content = div (
     socket.connect,
     socket.received --> sceneBus.writer,
+    socket.received --> {x => println(x)},
     
     Navbar(),
     

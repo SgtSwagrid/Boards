@@ -33,7 +33,7 @@ object Scene:
   case class Input (
     from: VecI,
     to: VecI,
-    actionHash: Int,
+    actionHash: String,
     result: Scene,
   ) derives Codec.AsObject
   
@@ -65,7 +65,7 @@ object Scene:
             case Destroy(piece) => (piece.position, piece.position)
             case NoOp => throw new IllegalStateException
           val result = Scene(successor.inert, players, room, spectator)
-          Input(from, to, successor.action.hashCode(), result)
+          Input(from, to, successor.action.hash, result)
     
     new Scene(room, spectator, board, pieces.toSeq, inputs, players)
     

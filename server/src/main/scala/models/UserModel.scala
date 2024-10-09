@@ -39,7 +39,7 @@ class UserModel(using db: Database, ec: ExecutionContext):
         case Right(_) => createUser(form).map(Right.apply)
     yield user
     
-    db.run(action)
+    db.run(action.transactionally)
   
   private def validateRegistration(form: RegistrationForm): DBIO[Either[RegistrationError, Unit]] =
     
@@ -68,7 +68,8 @@ class UserModel(using db: Database, ec: ExecutionContext):
     
   private def createUser(form: RegistrationForm): DBIO[Int] =
     val RegistrationForm(username, email, password) = form
-    UserTable.users += UserRow(-1, username, email, hashPassword(password))
+    UserTable.users.returning(UserTable.users.map(_.id)) +=
+      UserRow(-1, username, email, hashPassword(password))
     
   private def hashPassword(password: String): String =
     BCrypt.hashpw(password, BCrypt.gensalt())
