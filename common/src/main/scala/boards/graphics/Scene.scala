@@ -14,10 +14,14 @@ case class Scene (
   pieces: Seq[PieceData] = Seq.empty,
   inputs: Seq[Input] = Seq.empty,
   players: Seq[Player] = Seq.empty,
+  activePlayerId: Int = 0,
 ) derives Codec.AsObject:
   lazy val inputsByOrigin = inputs.groupBy(_.from)
   lazy val piecesById = pieces.map(p => p.pieceId -> p).toMap
   lazy val piecesByPos = pieces.map(p => p.pos -> p).toMap
+  def activePlayer = players(activePlayerId)
+  def activePlayerName = game.playerNames(activePlayerId)
+  def activePlayerColour = game.playerColours(activePlayerId)
   export room.{game, status}
 
 object Scene:
@@ -67,6 +71,6 @@ object Scene:
           val result = Scene(successor.inert, players, room, spectator)
           Input(from, to, successor.action.hash, result)
     
-    new Scene(room, spectator, board, pieces.toSeq, inputs, players)
+    new Scene(room, spectator, board, pieces.toSeq, inputs, players, state.activePlayer)
     
   def empty: Scene = new Scene()

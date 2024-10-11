@@ -3,11 +3,13 @@ package boards.components.game
 import boards.graphics.Scene
 import boards.graphics.Scene.{Input, PieceData, Tile}
 import boards.imports.laminar.HtmlProp
-import boards.protocol.GameProtocol.{GameRequest, Player, Status, Unregistered, Spectator}
+import boards.protocol.GameProtocol.{GameRequest, Player, Spectator, Status, Unregistered}
 import boards.views.GameView.{scene, sceneBus, socket}
 import com.raquo.laminar.codecs.StringAsIsCodec
 import com.raquo.laminar.modifiers.RenderableText
+import io.circe.Decoder.state
 import jdk.jfr.internal.event.EventWriter
+import org.scalajs.dom.Audio
 
 import scala.scalajs.js.annotation.JSExportTopLevel
 //import boards.imports.laminar.{*, given}
@@ -72,15 +74,45 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
   private lazy val ctx = canvas.getContext("2d").asInstanceOf[CanvasRenderingContext2D]
   private def rect: DOMRect = canvas.getBoundingClientRect()
   
-  def fillRect(pos: VecI, size: VecI, style: String) =
-    ctx.fillStyle = style
+  val sound = Audio("/assets/audio/place.mp3")
+  
+  def fillRect(pos: VecI, size: VecI, colour: Colour, alpha: Float = 1.0) =
+    ctx.fillStyle = colour.hexString
+    ctx.globalAlpha = alpha
     ctx.fillRect(pos.x, pos.y, size.x, size.y)
+    
+  def fillCircle(centre: VecI, radius: Float, colour: Colour, alpha: Float = 1.0) =
+    ctx.fillStyle = colour.hexString
+    ctx.globalAlpha = alpha
+    ctx.beginPath()
+    ctx.arc(centre.x, centre.y, radius, 0, 2 * Math.PI)
+    ctx.fill()
+  
+  def drawCircle(centre: VecI, radius: Float, colour: Colour, thickness: Float, alpha: Float = 1.0) =
+    ctx.strokeStyle = colour.hexString
+    ctx.lineWidth = thickness
+    ctx.globalAlpha = alpha
+    ctx.beginPath()
+    ctx.arc(centre.x, centre.y, radius, 0, 2 * Math.PI)
+    ctx.stroke()
+    
+  def drawCross(centre: VecI, radius: Float, colour: Colour, thickness: Float, alpha: Float = 1.0F) =
+    ctx.strokeStyle = colour.hexString
+    ctx.lineWidth = thickness
+    ctx.globalAlpha = alpha
+    ctx.beginPath()
+    ctx.moveTo(centre.x - radius, centre.y - radius)
+    ctx.lineTo(centre.x + radius, centre.y + radius)
+    ctx.moveTo(centre.x - radius, centre.y + radius)
+    ctx.lineTo(centre.x + radius, centre.y - radius)
+    ctx.stroke()
   
   def clearRect(pos: VecI, size: VecI) =
     ctx.clearRect(pos.x, pos.y, size.x, size.y)
   
-  def drawImage(pos: VecI, size: VecI, image: Texture) =
+  def drawImage(pos: VecI, size: VecI, image: Texture, alpha: Float = 1.0F) =
     loadTexture(s"/assets/images/games/${image.file}"): img =>
+      ctx.globalAlpha = alpha
       ctx.drawImage(img, pos.x, pos.y, size.x, size.y)
   
   private val canvasSize: Signal[VecI] =
@@ -184,7 +216,7 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
       case (_, Some(input)) => input.result.piecesById
       case (scene, None) => scene.piecesById
   
-  private case class PieceState(
+  private case class PieceState (
     pieceId: Int,
     actualPos: VecF,
     targetPos: VecF,
@@ -193,7 +225,7 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
     texture: Texture,
   )
   
-  private case class PieceSprite(
+  private case class PieceSprite (
     position: VecI,
     size: VecI,
     texture: Texture,
@@ -249,16 +281,26 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
           
           existing ++ created ++ deleted
         }
-    }.map(_.values.toSeq.sortBy(_.isMoving).map: piece =>
-      val size = VecI(piece.actualSize.toInt, piece.actualSize.toInt)
-      PieceSprite(
-        (piece.actualPos - (size / 2)).toVecI,
-        size,
-        piece.texture,
-      )
+    }.map(_.values.toSeq
+      .sortBy(_.isMoving)
+      .sortBy(_.actualSize)
+      .map: piece =>
+        val size = VecI(piece.actualSize.toInt, piece.actualSize.toInt)
+        PieceSprite(
+          (piece.actualPos - (size / 2)).toVecI,
+          size,
+          piece.texture,
+        )
     )
   
-  private def draw(scene: Scene, pieces: Seq[PieceSprite], cfg: CanvasState) =
+  private def draw (
+    scene: Scene,
+    pieces: Seq[PieceSprite],
+    hover: Option[Tile],
+    dragged: Option[Tile],
+    tentativeInput: Option[Input],
+    cfg: CanvasState,
+  ) =
     
     val square = VecI.fill(2)(cfg.scale)
     
@@ -266,10 +308,27 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
     
     for tile <- scene.board.labels do
       val pos = gameToCanvasCornerCoords(tile.pos, cfg)
-      fillRect(pos, square, tile.colour.hexString)
+      val colour =
+        if dragged.exists(_.pos == tile.pos) then Colour.British.Seabrook
+        else if hover.exists(_.pos == tile.pos) then tile.colour.darken(15)
+        else tile.colour
+      fillRect(pos, square, colour)
+      
+    if dragged.isEmpty then
+      for origin <- scene.inputsByOrigin.keys do
+        val pos = gameToCanvasCenterCoords(origin, cfg)
+        fillCircle(pos, cfg.scale * 0.4F, Colour.British.LynxWhite, 0.4F)
     
     for piece <- pieces do
       drawImage(piece.position, piece.size, piece.texture)
+
+    dragged.foreach: dragged =>
+      for input <- scene.inputsByOrigin.getOrElse(dragged.pos, Seq.empty) do
+        if !tentativeInput.exists(_.to == input.to) then
+          val pos = gameToCanvasCenterCoords(input.to, cfg)
+          if scene.piecesByPos.contains(input.to)
+          then drawCross(pos, cfg.scale * 0.15F, Colour.British.NasturcianFlower, cfg.scale * 0.05F, 0.6F)
+          else fillCircle(pos, cfg.scale * 0.1F, Colour.British.LynxWhite, 0.6F)
   
   def apply: HtmlElement = canvasTag (
     
@@ -278,7 +337,7 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
     height("100%"),
     
     // Redraw the board when something changes.
-    Signal.combine(scene, pieces, config).changes --> draw.tupled,
+    Signal.combine(scene, pieces, hover, dragged, tentativeInput, config).changes --> draw.tupled,
     
     // Respond to mouse input.
     onMouseMove --> cursorBus.writer,
@@ -288,4 +347,7 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
     // Tell the server when the user takes an action.
     inputStream.map(input => input.result) --> sceneBus.writer,
     inputStream.map(input => GameRequest.TakeAction(input.actionHash)) --> response,
+    
+    // Play a sound when a piece moves.
+    scene.map(_.pieces).changes.distinct --> {_ => sound.play()},
   )

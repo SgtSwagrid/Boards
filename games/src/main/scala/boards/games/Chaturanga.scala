@@ -3,10 +3,11 @@ package boards.games
 import boards.imports.games.{*, given}
 import boards.algebra.Shortcuts.{*, given}
 
-object Chaturanga extends Game.WithMetadata (
+object Chaturanga extends Game (
   name = "Chaturanga",
   numPlayers = Seq(2),
   playerNames = Seq("White, Black"),
+  playerColours = Seq(Colour.White, Colour.Black)
 ):
   
   override val Board = Kernel.box(8, 8)

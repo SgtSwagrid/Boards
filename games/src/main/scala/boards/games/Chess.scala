@@ -3,14 +3,15 @@ package boards.games
 import boards.imports.games.{*, given}
 import boards.algebra.Shortcuts.{*, given}
 
-object Chess extends Game.WithMetadata (
+object Chess extends Game (
   name = "Chess",
   numPlayers = Seq(2),
   playerNames = Seq("White", "Black"),
+  playerColours = Seq(Colour.British.LynxWhite, Colour.British.Naval),
 ):
   
   override val Board = Kernel.box(8, 8)
-    .paint(Pattern.Checkered(Colour.ChessDark, Colour.ChessLight))
+    .paint(Pattern.Checkered(Colour.Chess.Dark, Colour.Chess.Light))
   
   case object Rook extends
     PieceType.WithTexture(Texture.WhiteRook, Texture.BlackRook),

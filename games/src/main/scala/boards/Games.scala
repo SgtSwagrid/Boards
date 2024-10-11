@@ -11,4 +11,4 @@ object Games:
   )
   
   val byName: Map[String, Game] =
-    all.map(g => g.data.name -> g).toMap
+    all.map(g => g.name -> g).toMap

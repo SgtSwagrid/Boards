@@ -15,6 +15,7 @@ import scala.scalajs.js.annotation.JSExportTopLevel
 import boards.imports.circe.{*, given}
 import boards.imports.math.{*, given}
 import boards.imports.games.{*, given}
+import boards.util.extensions.ColourOps.{*, given}
 import com.raquo.laminar.nodes.ChildNode
 import org.scalajs.dom.{CanvasRenderingContext2D, DOMRect, HTMLImageElement, MouseEvent}
 
@@ -84,13 +85,20 @@ class GameSidebar(scene: Signal[Scene], response: Observer[GameRequest]):
     div (
       top("0"), left("0"), right("0"),
       height("50px"),
-      paddingLeft("20px"), paddingTop("10px"),
+      paddingLeft("20px"), paddingTop("10px"), paddingRight("20px"),
       backgroundColor("#2f3640"),
       child <-- scene.map: scene =>
         scene.room.status match
-          case Status.Pending => p("● Waiting to start", className("text-warning"))
-          case Status.Active => p("● In progress", className("text-success"))
-          case Status.Complete => p("● Game ended", className("text-info"))
+          case Status.Pending => p("Waiting to start", className("text-warning"), textAlign("center"))
+          case Status.Active => p (
+            textAlign("center"),
+            b (
+              scene.activePlayerColour.textColour,
+              scene.activePlayerName,
+            ),
+            " to play",
+          )
+          case Status.Complete => p("Game ended", className("text-info"), textAlign("center"))
     ),
     div (
       top("0"), left("0"), right("0"),
@@ -117,12 +125,13 @@ class GameSidebar(scene: Signal[Scene], response: Observer[GameRequest]):
                 player.username,
               ),
               p (
+                span(scene.game.playerColours(player.position).textColour, "⦿ "),
                 fontSize("14px"),
                 scene.game.playerNames(player.position),
               )
             ),
             
-            Option.when(scene.participant.isPlayer && scene.status.isPending):
+            Option.when(scene.status.isPending && scene.participant.isPlayer):
               div (
                 className("tooltip"),
                 display("inline-block"),
@@ -134,6 +143,16 @@ class GameSidebar(scene: Signal[Scene], response: Observer[GameRequest]):
                   SVG.Cross,
                   onClick.mapTo(GameRequest.RemovePlayer(player.userId)) --> response,
                 ),
+              ),
+            
+            Option.when(scene.status.isActive && player.position == scene.activePlayerId):
+              img (
+                display("inline-block"),
+                float("right"),
+                src("/assets/images/ui/game/active.svg"),
+                width("30px"), height("30px"),
+                verticalAlign("top"),
+                marginTop("10px"),
               )
           )
         .interweave:
@@ -152,12 +171,7 @@ class GameSidebar(scene: Signal[Scene], response: Observer[GameRequest]):
                     dataTip := s"Swap ${player1.username} and ${player2.username}",
                     button (
                       className("btn btn-circle btn-outline btn-sm btn-warning"),
-                      img (
-                        display("inline-block"),
-                        src("/assets/images/ui/game/swap.svg"),
-                        className("btn-warning"),
-                        //minWidth("30px"), height("30px"),
-                      ),
+                      SVG.Swap,
                       onClick.mapTo(GameRequest.ReorderPlayer(player2.userId)) --> response,
                     )
                   ),

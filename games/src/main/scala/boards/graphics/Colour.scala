@@ -48,7 +48,38 @@ object Colour:
   val Magenta: Colour = Colour.hex(0xFF00FF, colour(5))
   val Cyan   : Colour = Colour.hex(0x00FFFF, colour(6))
   
-  val ChessDark : Colour = Colour.hex(0xD18B47)
-  val ChessLight: Colour = Colour.hex(0xFFCE9E)
+  object Chess:
+    val Dark : Colour = Colour.hex(0xD18B47)
+    val Light: Colour = Colour.hex(0xFFCE9E)
+  
+  object British:
+    val ProtossPylon = Colour.hex(0x00a8ff)
+    val Periwinkle = Colour.hex(0x9c88ff)
+    val RiseNShine = Colour.hex(0xfbc531)
+    val DownloadProgress = Colour.hex(0x4cd137)
+    val Seabrook = Colour.hex(0x487eb0)
+    val VanadylBlue = Colour.hex(0x0097e6)
+    val MattPurple = Colour.hex(0x8c7ae6)
+    val NanohanachaGold = Colour.hex(0xe1b12c)
+    val SkirretGreen = Colour.hex(0x44bd32)
+    val Naval = Colour.hex(0x40739e)
+    val NasturcianFlower = Colour.hex(0xe84118)
+    val LynxWhite = Colour.hex(0xf5f6fa)
+    val BlueberrySoda = Colour.hex(0x7f8fa6)
+    val MazarineBlue = Colour.hex(0x273c75)
+    val BlueNights = Colour.hex(0x353b48)
+    val HarleyDavidsonOrange = Colour.hex(0xc23616)
+    val HintOfPensive = Colour.hex(0xdcdde1)
+    val ChainGangGrey = Colour.hex(0x718093)
+    val PicoVoid = Colour.hex(0x192a56)
+    val Electromagnetic = Colour.hex(0x2f3640)
+    
+  object French:
+    val Livid = Colour.hex(0x6a89cc)
+    val ParadiseGreen = Colour.hex(0xb8e99)
+    val AuroraGreen = Colour.hex(0x78e08f)
+    
+  object Swedish:
+    val BlackPearl = Colour.hex(0x1e272e)
   
   private def colour(n: Int): String = s"\u001B[3${n}m"

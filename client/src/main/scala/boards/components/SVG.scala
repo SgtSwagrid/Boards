@@ -52,3 +52,18 @@ object SVG:
       svg.d("M6 18L18 6M6 6l12 12"),
     ),
   )
+  
+  def Swap = svg.svg (
+    svg.xmlns("http://www.w3.org/2000/svg"),
+    svg.width("24"),
+    svg.height("24"),
+    svg.x("0"),
+    svg.y("0"),
+    svg.viewBox("0 0 24 24"),
+    svg.style("enable-background:new 0 0 512 512"),
+    svg.xmlSpace("preserve"),
+    svg.path (
+      svg.fill("currentColor"),
+      svg.d("M8 16H4l6 6V2H8zm6-11v17h2V8h4l-6-6z"),
+    )
+  )

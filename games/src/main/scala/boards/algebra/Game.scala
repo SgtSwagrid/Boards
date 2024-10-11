@@ -1,8 +1,27 @@
 package boards.algebra
 
 import boards.imports.games.{*, given}
+import boards.graphics.Colour
 
-trait Game:
+abstract class Game (
+  data: Game.Metadata
+):
+  
+  def this (
+    name: String = "",
+    numPlayers: Seq[Int] = Seq(2),
+    playerNames: Seq[String] = Seq.empty,
+    playerColours: Seq[Colour] = Seq.empty,
+  ) =
+    this(Game.Metadata(
+      if name.isEmpty then getClass.getSimpleName else name,
+      numPlayers,
+      if playerNames.isEmpty then (1 to numPlayers.max)
+        .map(i => s"Player $i") else playerNames,
+      if playerColours.isEmpty then Seq.fill(numPlayers.max)(Colour.White) else playerColours,
+    ))
+  
+  export data.*
   
   protected type GameBoard = Kernel[Colour]
   protected val Board: GameBoard
@@ -13,17 +32,11 @@ trait Game:
   def initial(numPlayers: Int): InitialState =
     val genesis = InstantaneousState.initial(Board, numPlayers)
     GameState.initial(this, setup(numPlayers)(using genesis), rules)
-    
-  val data: Game.Metadata = Game.Metadata (
-    name = getClass.getSimpleName,
-    numPlayers = Seq(2),
-    playerNames = Seq("Player 1", "Player 2"),
-  )
-  export data.*
+  
   
 object Game:
   
-  def none: Game = new Game.WithMetadata(name = "Game"):
+  def none: Game = new Game(name = "Game"):
     def setup(numPlayers: Int) = InstantaneousState.empty
     def rules = Rule.none
     val Board = Kernel.empty
@@ -32,20 +45,10 @@ object Game:
     name: String,
     numPlayers: Seq[Int],
     playerNames: Seq[String],
+    playerColours: Seq[Colour],
   )
-  
-  abstract class WithMetadata (
-    name: String = "",
-    numPlayers: Seq[Int] = Seq.empty,
-    playerNames: Seq[String] = Seq.empty,
-  ) extends Game:
     
-    private val _name = if name.isEmpty then getClass.getSimpleName else name
-    private val _numPlayers = if numPlayers.isEmpty then Seq(2) else numPlayers
-    private val _playerNames = if playerNames.isEmpty then (1 to _numPlayers.max).map(i => s"Player $i") else playerNames
-    
-    override val data = Metadata (
-      _name,
-      _numPlayers,
-      _playerNames,
-    )
+  case class PlayerData (
+    name: String,
+    colour: Colour,
+  )
