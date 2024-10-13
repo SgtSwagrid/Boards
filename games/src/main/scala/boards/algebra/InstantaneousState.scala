@@ -34,6 +34,9 @@ case class InstantaneousState (
       .mkString
     .reverse.mkString("\n")
     
+  def diff(that: InstantaneousState): Iterator[VecI] =
+    board.positions.filter(v => pieces.piecesByPos.get(v) != that.pieces.piecesByPos.get(v))
+    
 object InstantaneousState:
   
   def initial(board: Kernel[Colour], numPlayers: Int): InstantaneousState =

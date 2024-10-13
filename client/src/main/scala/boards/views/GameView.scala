@@ -56,7 +56,10 @@ import boards.components.{
 object GameView extends View:
   
   private val roomId: String =
-    document.documentURI.split("/").last
+    document.documentURI.split("/").dropWhile(_ != "game").drop(1).head
+    
+  private val autoJoin: Boolean =
+    document.documentURI.split("/").contains("join")
   
   private val socket: WebSocket[Scene, GameRequest] =
     WebSocket.path(s"/game/$roomId/socket").json.build()
@@ -68,6 +71,7 @@ object GameView extends View:
   
   def content = div (
     socket.connect,
+    socket.connected.filter(_ => autoJoin).mapTo(GameRequest.JoinRoom) --> socket.send,
     socket.received --> sceneBus.writer,
     socket.received --> {x => println(x)},
     

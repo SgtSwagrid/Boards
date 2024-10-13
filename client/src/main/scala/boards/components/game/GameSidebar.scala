@@ -5,6 +5,7 @@ import boards.graphics.Scene
 import boards.graphics.Scene.{Input, PieceData, Tile}
 import boards.imports.laminar.HtmlProp
 import boards.protocol.GameProtocol.{GameRequest, Player, Spectator, Status, Unregistered}
+import boards.util.Navigation
 import boards.views.GameView.{scene, socket}
 import com.raquo.laminar.api.L.img
 import com.raquo.laminar.codecs.StringAsIsCodec
@@ -211,6 +212,13 @@ class GameSidebar(scene: Signal[Scene], response: Observer[GameRequest]):
                 "Join Game",
                 onClick.mapTo(GameRequest.JoinRoom) --> response,
               )
-            case Unregistered => div()
+            case Unregistered =>
+              button (
+                className("btn btn-info"),
+                width("100%"),
+                margin("0 0 10px 0"),
+                "Join Game",
+                onClick --> (_ => Navigation.goto("/login", "next" -> s"/game/${scene.room.id}/join")),
+              )
     )
   )

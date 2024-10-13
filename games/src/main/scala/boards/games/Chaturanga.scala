@@ -6,7 +6,7 @@ import boards.algebra.Shortcuts.{*, given}
 object Chaturanga extends Game (
   name = "Chaturanga",
   numPlayers = Seq(2),
-  playerNames = Seq("White, Black"),
+  playerNames = Seq("White", "Black"),
   playerColours = Seq(Colour.White, Colour.Black)
 ):
   

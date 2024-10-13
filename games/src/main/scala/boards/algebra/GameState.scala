@@ -49,6 +49,21 @@ sealed trait GameState:
   def takeActionByHash(hash: String): Option[NonInitialState] =
     next.find(_.action.hash == hash)
     
+  def turnStart: GameState =
+    previousOption match
+      case Some(prev) if prev.now.activePlayer == now.activePlayer => prev.turnStart
+      case _ => this
+      
+  def actionDiff: Iterator[VecI] =
+    previousOption match
+      case Some(prev) => now.diff(prev.now)
+      case None => Iterator.empty
+        
+  def turnDiff: Iterator[VecI] =
+    previousOption match
+      case Some(prev) => now.diff(prev.turnStart.now)
+      case None => Iterator.empty
+  
   val time: Int
   val game: Game
   

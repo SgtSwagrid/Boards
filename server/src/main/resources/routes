@@ -6,8 +6,9 @@ POST /start          controllers.ApplicationController.startRoom
 
 GET /browse          controllers.ApplicationController.browseView
 
-GET /game/*id/socket controllers.GameController.gameSocket(id: String)
-GET /game/*id        controllers.GameController.gameView(id: String)
+GET /game/:id        controllers.GameController.gameView(id: String, join: Boolean = false)
+GET /game/:id/join   controllers.GameController.gameView(id: String, join: Boolean = true)
+GET /game/:id/socket controllers.GameController.gameSocket(id: String)
 
 GET /login           controllers.AuthController.loginView
 

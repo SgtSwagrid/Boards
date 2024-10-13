@@ -68,7 +68,7 @@ object AuthController:
     for
       user: Option[UserRow] <- currentUser(request)
       result = user match
-        case None => Redirect("...")
+        case None => Redirect(s"/login?next=${request.uri}")
         case Some(user) => f(user)
       result <- toFuture(result)
     yield result

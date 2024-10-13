@@ -27,8 +27,14 @@ class GameController @Inject() (
   
   val system = summon[ActorSystem].actorOf(SystemActor.props, "system")
   
-  def gameView(id: String) = Action: (request: Request[AnyContent]) =>
-    Ok(views.html.PageTemplate("GameView"))
+  def gameView(id: String, join: Boolean) =
+    if join then
+      Action.async: (request: Request[AnyContent]) =>
+        AuthController.withUser(request): _ =>
+          Ok(views.html.PageTemplate("GameView"))
+    else
+      Action: (request: Request[AnyContent]) =>
+        Ok(views.html.PageTemplate("GameView"))
     
   def gameSocket(id: String) = WebSocket.acceptOrResult[String, String]: request =>
     AuthController.currentUser(request)

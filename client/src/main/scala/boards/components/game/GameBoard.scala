@@ -308,10 +308,11 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
     
     for tile <- scene.board.labels do
       val pos = gameToCanvasCornerCoords(tile.pos, cfg)
-      val colour =
-        if dragged.exists(_.pos == tile.pos) then Colour.British.Seabrook
-        else if hover.exists(_.pos == tile.pos) then tile.colour.darken(15)
+      val baseColour =
+        if dragged.exists(_.pos == tile.pos) then tile.colour.mix(Colour.British.RiseNShine, 0.75F)
+        else if scene.diffSet.contains(tile.pos) then tile.colour.mix(Colour.British.Naval, 0.75F)
         else tile.colour
+      val colour = if hover.exists(_.pos == tile.pos) then baseColour.darken(15) else baseColour
       fillRect(pos, square, colour)
       
     if dragged.isEmpty then
