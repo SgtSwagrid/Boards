@@ -3,9 +3,9 @@ package boards.algebra
 import boards.imports.games.{*, given}
 import boards.imports.math.{*, given}
 
-import boards.algebra.Shortcuts.given_Conversion_PieceSet_InstantaneousState
-import boards.algebra.Shortcuts.given_Conversion_Action_Rule
-import boards.algebra.Shortcuts.given_Kernel_
+import boards.algebra.shortcuts.given_Conversion_PieceSet_InstantaneousState
+import boards.algebra.shortcuts.given_Conversion_Action_Rule
+import boards.algebra.shortcuts.given_Kernel_
 
 import scala.annotation.{tailrec, targetName}
 
@@ -21,7 +21,7 @@ sealed trait Action:
 object Action:
   
   case class Place (
-    owner: Int,
+    owner: Game.PlayerId,
     piece: boards.algebra.Piece.PieceType,
     position: VecI
   ) extends Action:

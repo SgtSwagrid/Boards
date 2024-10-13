@@ -2,6 +2,7 @@ package boards.algebra
 
 import boards.imports.games.{*, given}
 import boards.imports.math.{*, given}
+import boards.algebra.Game.{*, given}
 
 import scala.collection.immutable.BitSet
 import scala.reflect.ClassTag
@@ -9,18 +10,21 @@ import scala.reflect.ClassTag
 case class InstantaneousState (
   board: Kernel[boards.graphics.Colour],
   pieces: PieceSet,
-  numPlayers: Int,
-  activePlayer: Int = 0,
+  config: GameConfig,
+  activePlayer: Game.PlayerId = PlayerId(0),
 ):
   
+  given InstantaneousState = this
   export board.contains as inBounds
   
   def endTurn(skip: Int = 1): InstantaneousState =
-    copy(activePlayer = (activePlayer + skip) % numPlayers)
+    copy(activePlayer = activePlayer + skip)
   def endTurn: InstantaneousState = endTurn()
   
-  def inactivePlayers: Seq[Int] = Seq.range(0, numPlayers).filter(_ != activePlayer)
-  def nextPlayer: Int = (activePlayer + 1) % numPlayers
+  def inactivePlayers: Seq[PlayerId] = Seq.range(0, config.numPlayers)
+    .map(PlayerId.apply)
+    .filter(_ != activePlayer)
+  def nextPlayer: PlayerId = activePlayer + 1
   
   def withPieces(pieces: PieceSet): InstantaneousState = copy(pieces = pieces)
   
@@ -39,8 +43,10 @@ case class InstantaneousState (
     
 object InstantaneousState:
   
-  def initial(board: Kernel[Colour], numPlayers: Int): InstantaneousState =
-    InstantaneousState(board, PieceSet.empty(using board), numPlayers)
+  def initial(board: Kernel[boards.graphics.Colour], config: GameConfig): InstantaneousState =
+    InstantaneousState(board, PieceSet.empty(using board), config)
     
   def empty: InstantaneousState =
-    new InstantaneousState(Kernel.empty, PieceSet.empty(using Kernel.empty), 0)
+    new InstantaneousState(Kernel.empty, PieceSet.empty(using Kernel.empty), GameConfig(0))
+    
+  given (using state: InstantaneousState): GameConfig = state.config

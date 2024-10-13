@@ -1,7 +1,7 @@
 package boards.games
 
 import boards.imports.games.{*, given}
-import boards.algebra.Shortcuts.{*, given}
+import boards.algebra.shortcuts.{*, given}
 
 object Chess extends Game (
   name = "Chess",
@@ -74,9 +74,9 @@ object Chess extends Game (
       (MOVE | CAPTURE | ENPASSANT) |> PROMOTE
   
   val homeRow = Seq(Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook)
-  override def setup(numPlayers: Int) = Pieces
-    .insert(owner=0)(homeRow -> Board.row(0), Pawn -> Board.row(1))
-    .insert(owner=1)(homeRow -> Board.row(7), Pawn -> Board.row(6))
+  override def setup(config: GameConfig) = Pieces
+    .insert(PlayerId(0))(homeRow -> Board.row(0), Pawn -> Board.row(1))
+    .insert(PlayerId(1))(homeRow -> Board.row(7), Pawn -> Board.row(6))
   
   def inCheck(using GameState) =
     Pieces.ofInactivePlayers.canAttack(Pieces.ofActivePlayer.ofType(King))

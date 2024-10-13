@@ -22,8 +22,8 @@
   <component name="SharedSourcesOwnerModules">
     <option name="ownersModuleNames">
       <list>
-        <option value="root.boards-common.gamesJVM" />
         <option value="root.boards-common.gamesJS" />
+        <option value="root.boards-common.gamesJVM" />
         <option value="root.boards-server" />
       </list>
     </option>

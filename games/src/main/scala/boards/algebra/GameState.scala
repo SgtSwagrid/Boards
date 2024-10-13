@@ -49,6 +49,14 @@ sealed trait GameState:
   def takeActionByHash(hash: String): Option[NonInitialState] =
     next.find(_.action.hash == hash)
     
+  def isInitial: Boolean = this match
+    case _: InitialState => true
+    case _ => false
+    
+  def isFinal: Boolean = this match
+    case _: FinalState => true
+    case _ => false
+    
   def turnStart: GameState =
     previousOption match
       case Some(prev) if prev.now.activePlayer == now.activePlayer => prev.turnStart
@@ -113,7 +121,7 @@ object GameState:
     def inert: FinalState = this
   
   enum Outcome:
-    case Winner(player: Int)
+    case Winner(player: Game.PlayerId)
     case Draw
   
   def initial (

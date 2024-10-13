@@ -7,13 +7,17 @@ object games:
   }
   export boards.algebra.Action.*
   
-  export boards.algebra.Game.{WithMetadata => _, *}
+  export boards.algebra.Game.{PlayerId, *, given}
   export boards.algebra.GameState.{
     InitialState, InterimState, FinalState, NonInitialState, NonFinalState,
     Outcome, /*~>, |>,*/ Following
   }
+  
   export boards.algebra.GameState.Outcome.{Winner, Draw}
+  
   export boards.algebra.Generator.given
+  
+  export boards.algebra.InstantaneousState.given
   export boards.algebra.Piece.PieceType
   
   export boards.graphics.{Colour, Pattern, Texture, Shape}

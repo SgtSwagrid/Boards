@@ -5,14 +5,15 @@ import boards.imports.math.{*, given}
 
 import scala.collection.immutable.BitSet
 import scala.reflect.ClassTag
+import boards.algebra.shortcuts.given_Conversion_Iterable_Rule
 
-import boards.algebra.Shortcuts.given_Conversion_Iterable_Rule
+import scala.runtime.LazyVals.Names.state
 
 case class PieceSet (
   piecesByPos: Map[VecI, Piece] = Map.empty,
   selected: BitSet = BitSet.empty,
   
-  playerFilter: Map[Int, BitSet] = Map.empty,
+  playerFilter: Map[Game.PlayerId, BitSet] = Map.empty,
   typeFilter: Map[Class[? <: boards.algebra.Piece.PieceType], BitSet] = Map.empty
 )(using board: Kernel[?]):
   
@@ -32,21 +33,26 @@ case class PieceSet (
   def exists(f: Piece => Boolean): Boolean =
     piecesByPos.values.exists(f)
     
-  def belongsTo(pos: VecI, players: Int*): Boolean =
+  def belongsTo(pos: VecI, players: PlayerId*): Boolean =
     get(pos).exists(piece => players.contains(piece.owner))
-  def isFriendly(pos: VecI)(using state: InstantaneousState): Boolean =
-    belongsTo(pos, state.activePlayer)
-  def isEnemy(pos: VecI)(using state: InstantaneousState): Boolean =
-    belongsTo(pos, state.inactivePlayers*)
+  def isFriendly(pos: VecI)(using owner: PlayerId): Boolean =
+    belongsTo(pos, owner)
+  def isEnemy(pos: VecI)(using owner: PlayerId): Boolean =
+    belongsTo(pos, (playerFilter.keySet - owner).toSeq*)
   
   def isType[P <: PieceType](pos: VecI)(using C: ClassTag[P]): Boolean =
     get(pos).exists(_.getClass == C.runtimeClass)
   
-  def ofPlayer(owners: Int*): PieceSet = copy (
+  def ofPlayer(owners: PlayerId*): PieceSet = copy (
     selected = owners
       .flatMap(playerFilter.get)
       .foldLeft(BitSet.empty)(_ | _) & selected
   )
+  
+  def ofFriendlyPlayer(using owner: PlayerId): PieceSet =
+    ofPlayer(owner)
+  def ofEnemyPlayers(using owner: PlayerId): PieceSet =
+    ofPlayer((playerFilter.keySet - owner).toSeq*)
   
   def ofActivePlayer(using state: InstantaneousState): PieceSet =
     ofPlayer(state.activePlayer)
@@ -86,7 +92,7 @@ case class PieceSet (
     pieces.map(f)
     
   def insert
-    (owner: Int)
+    (owner: PlayerId)
     (placements: (PieceType | Iterable[PieceType], Kernel[?])*)
     (using board: Kernel[?])
   : PieceSet =

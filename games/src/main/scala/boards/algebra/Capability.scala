@@ -30,6 +30,7 @@ class Capability (
       case DestroyGenerator(kernel)
         if kernel.contains(piece.position) =>
           Generator.destroy(piece.position)
+    case NoOp => false
   
   def canAct: Boolean = isPossible(g => g)
   

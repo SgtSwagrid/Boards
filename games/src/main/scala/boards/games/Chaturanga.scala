@@ -1,7 +1,7 @@
 package boards.games
 
 import boards.imports.games.{*, given}
-import boards.algebra.Shortcuts.{*, given}
+import boards.algebra.shortcuts.{*, given}
 
 object Chaturanga extends Game (
   name = "Chaturanga",
@@ -44,9 +44,9 @@ object Chaturanga extends Game (
           Pieces.insert(Mantri -> to)
       
   val homeRow = Seq(Ratha, Ashva, Gaja, Mantri, Raja, Gaja, Ashva, Ratha)
-  override def setup(numPlayers: Int) = Pieces
-    .insert(owner=0)(homeRow -> Board.row(0), Padati -> Board.row(1))
-    .insert(owner=1)(homeRow -> Board.row(7), Padati -> Board.row(6))
+  override def setup(config: GameConfig) = Pieces
+    .insert(PlayerId(0))(homeRow -> Board.row(0), Padati -> Board.row(1))
+    .insert(PlayerId(1))(homeRow -> Board.row(7), Padati -> Board.row(6))
   
   def inCheck(using GameState) =
     Pieces.ofInactivePlayers.canAttack(Pieces.ofActivePlayer.ofType(Raja))

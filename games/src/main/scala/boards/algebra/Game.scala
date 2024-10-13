@@ -26,18 +26,17 @@ abstract class Game (
   protected type GameBoard = Kernel[Colour]
   protected val Board: GameBoard
   
-  def setup(numPlayers: Int): InstantaneousState ?=> InstantaneousState
+  final def initial(config: GameConfig): InitialState =
+    val genesis = InstantaneousState.initial(Board, config)
+    GameState.initial(this, setup(config)(using genesis), rules)
+  def setup(config: GameConfig): InstantaneousState ?=> InstantaneousState
   
   def rules: Rule
-  def initial(numPlayers: Int): InitialState =
-    val genesis = InstantaneousState.initial(Board, numPlayers)
-    GameState.initial(this, setup(numPlayers)(using genesis), rules)
-  
   
 object Game:
   
   def none: Game = new Game(name = "Game"):
-    def setup(numPlayers: Int) = InstantaneousState.empty
+    def setup(config: GameConfig) = InstantaneousState.empty
     def rules = Rule.none
     val Board = Kernel.empty
   
@@ -52,3 +51,19 @@ object Game:
     name: String,
     colour: Colour,
   )
+  
+  case class GameConfig (
+    numPlayers: Int,
+  )
+  
+  opaque type PlayerId = Int
+  
+  object PlayerId:
+    def apply(id: Int): PlayerId = id
+    
+  extension (id: PlayerId)
+    def + (x: Int)(using config: GameConfig): PlayerId = (id + x) % config.numPlayers
+    def - (x: Int)(using config: GameConfig): PlayerId = (id - x) % config.numPlayers
+    def next(using GameConfig): PlayerId = id + 1
+    def prev(using GameConfig): PlayerId = id - 1
+    def toInt: Int = id

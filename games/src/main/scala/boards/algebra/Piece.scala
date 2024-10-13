@@ -2,8 +2,7 @@ package boards.algebra
 
 import boards.imports.games.{*, given}
 import boards.imports.math.{*, given}
-
-import Piece.{PartialPiece, PieceType}
+import Piece.*
 
 import scala.annotation.targetName
 import scala.reflect.ClassTag
@@ -12,15 +11,16 @@ import java.util.Random
 case class Piece (
   pieceType: PieceType,
   position: VecI,
-  owner: Int = -1,
+  owner: Game.PlayerId = PlayerId(-1),
   hasMoved: Boolean = false,
   id: Int = (new Random).nextInt(),
 ) extends PartialPiece.WithPosition, PartialPiece.WithOwner:
+  given PlayerId = owner
   export pieceType.{actions as _, *}
   def actions: Rule = Rule(pieceType.actions(this))
   
-  def ownedBy(player: Int): Boolean = owner == player
-  def byOwner[X](x: X*): X = x(owner)
+  def ownedBy(player: PlayerId): Boolean = owner == player
+  def byOwner[X](x: X*): X = x(owner.toInt)
   def is(pieceType: Any): Boolean = pieceType == pieceType
   def is[Q](using C: ClassTag[Q]): Boolean =
     pieceType.getClass == C.runtimeClass
@@ -38,16 +38,16 @@ case class Piece (
 object Piece:
   
   trait PieceType:
-    def actions(piece: Piece): GameState ?=> Rule
+    def actions(piece: Piece): (GameState, Game.PlayerId) ?=> Rule
     def texture(piece: Piece): boards.graphics.Texture =
-      textures(piece.owner % textures.size)
+      textures(piece.owner.toInt % textures.size)
     def textures: Seq[boards.graphics.Texture] = Seq()
     def hash: String = getClass.getSimpleName
     
   object PieceType:
     trait WithTexture(override val textures: Texture*) extends PieceType
-    trait WithRule(val rule: Piece => GameState ?=> Rule) extends PieceType:
-      def actions(piece: Piece): GameState ?=> Rule = rule(piece)
+    trait WithRule(val rule: Piece => (GameState, PlayerId) ?=> Rule) extends PieceType:
+      def actions(piece: Piece): (GameState, PlayerId) ?=> Rule = rule(piece)
     abstract class Immobile extends WithRule(_ => Rule.none)
       
   trait PartialPiece:
@@ -57,4 +57,4 @@ object Piece:
     trait WithPosition extends PartialPiece:
       def position: VecI
     trait WithOwner extends PartialPiece:
-      def owner: Int
+      def owner: PlayerId

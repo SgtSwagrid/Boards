@@ -15,23 +15,23 @@ sealed trait Generator extends Rule:
 
 object Generator:
   
-  import boards.algebra.Shortcuts.given_Conversion_Iterable_Rule
+  import boards.algebra.shortcuts.given_Conversion_Iterable_Rule
   
   def none: Generator = EmptyGenerator
   def skip: Generator = SkipGenerator
   
   def place
-    (owner: Int)
-    (placements: (boards.algebra.Piece.PieceType | Iterable[boards.algebra.Piece.PieceType], Kernel[?])*)
+    (owner: PlayerId)
+    (placements: (Piece.PieceType | Iterable[Piece.PieceType], Kernel[?])*)
   : Rule =
     
     placements.map: (pieces, kernel) =>
       val pieceSet = pieces match
-        case p: boards.algebra.Piece.PieceType => Set(p)
-        case p: Iterable[?] => p.toSet.asInstanceOf[Set[boards.algebra.Piece.PieceType]]
+        case p: Piece.PieceType => Set(p)
+        case p: Iterable[?] => p.toSet.asInstanceOf[Set[Piece.PieceType]]
       PlaceGenerator(owner, pieceSet, kernel)
   
-  def place(placements: (boards.algebra.Piece.PieceType | Iterable[boards.algebra.Piece.PieceType], Kernel[?])*): Rule =
+  def place(placements: (Piece.PieceType | Iterable[Piece.PieceType], Kernel[?])*): Rule =
     Rule.when(state => place(state.now.activePlayer)(placements*))
   
   def move(moves: (Kernel[?], Kernel[?])*): Rule =
@@ -48,8 +48,8 @@ object Generator:
     override def updateGenerators(filter: PartialFunction[Generator, Rule]) = this
   
   case class PlaceGenerator (
-    owner: Int,
-    pieces: Set[boards.algebra.Piece.PieceType],
+    owner: PlayerId,
+    pieces: Set[Piece.PieceType],
     kernel: Kernel[?]
   ) extends Generator:
     

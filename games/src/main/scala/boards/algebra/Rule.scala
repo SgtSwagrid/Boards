@@ -4,8 +4,8 @@ import boards.imports.games.{*, given}
 
 import scala.annotation.{tailrec, targetName}
 
-import boards.algebra.Shortcuts.given_Conversion_Iterable_Rule
-import boards.algebra.Shortcuts.given_Conversion_X_PartialFunction
+import boards.algebra.shortcuts.given_Conversion_Iterable_Rule
+import boards.algebra.shortcuts.given_Conversion_X_PartialFunction
 
 trait Rule:
   import Rule.*

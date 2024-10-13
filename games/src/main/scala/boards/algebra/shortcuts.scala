@@ -3,7 +3,7 @@ package boards.algebra
 import boards.imports.games.{*, given}
 import boards.imports.math.{*, given}
 
-object Shortcuts:
+object shortcuts:
   
   object State
   
@@ -29,10 +29,10 @@ object Shortcuts:
     def toEmpty(using InstantaneousState): Ray =
       ray.takeTo(!Pieces.contains)
     
-    def toFriendly(using InstantaneousState): Ray =
+    def toFriendly(using InstantaneousState, PlayerId): Ray =
       ray.takeTo(Pieces.isFriendly)
     
-    def toEnemy(using InstantaneousState): Ray =
+    def toEnemy(using InstantaneousState, PlayerId): Ray =
       ray.takeTo(Pieces.isEnemy)
     
     def untilPiece(using InstantaneousState): Ray =
@@ -41,10 +41,10 @@ object Shortcuts:
     def untilEmpty(using InstantaneousState): Ray =
       ray.takeTo(!Pieces.contains)
     
-    def untilFriendly(using InstantaneousState): Ray =
+    def untilFriendly(using InstantaneousState, PlayerId): Ray =
       ray.takeUntil(Pieces.isFriendly)
     
-    def untilEnemy(using InstantaneousState): Ray =
+    def untilEnemy(using InstantaneousState, PlayerId): Ray =
       ray.takeUntil(Pieces.isEnemy)
   
   extension [T](kernel: Kernel[T])
@@ -55,20 +55,19 @@ object Shortcuts:
     def ontoEmpty(using InstantaneousState): Kernel[T] =
       kernel.erode(Pieces.contains)
     
-    def ontoFriendly(using InstantaneousState): Kernel[T] =
+    def ontoFriendly(using InstantaneousState, PlayerId): Kernel[T] =
       kernel.erode(Pieces.isFriendly)
     
-    def ontoEnemy(using InstantaneousState): Kernel[T] =
+    def ontoEnemy(using InstantaneousState, PlayerId): Kernel[T] =
       kernel.erode(Pieces.isEnemy)
     
-    def avoidFriendly(using InstantaneousState): Kernel[T] =
+    def avoidFriendly(using InstantaneousState, PlayerId): Kernel[T] =
       kernel.erode(!Pieces.isFriendly)
     
-    def avoidEnemy(using InstantaneousState): Kernel[T] =
+    def avoidEnemy(using InstantaneousState, PlayerId): Kernel[T] =
       kernel.erode(!Pieces.isEnemy)
   
-  def byPlayer[X](x: X*)(using state: InstantaneousState): X =
-    x(state.activePlayer)
+  def byPlayer[X](x: X*)(using player: PlayerId): X = x(player.toInt)
   
   given Conversion[GameState, InstantaneousState] with
     def apply(state: GameState): InstantaneousState = state.now
@@ -103,8 +102,8 @@ object Shortcuts:
   given Conversion[Piece, Kernel.Shape] with
     def apply(piece: Piece): Kernel.Shape = Kernel(piece.position)
   
-  given Conversion[Piece, PieceType] with
-    def apply(piece: Piece): PieceType = piece.pieceType
+  given Conversion[Piece, Piece.PieceType] with
+    def apply(piece: Piece): Piece.PieceType = piece.pieceType
   
   given Conversion[Piece, Rule] with
     def apply(piece: Piece): Rule = piece.actions

@@ -109,7 +109,7 @@ class GameModel(using db: Database, ec: ExecutionContext):
     yield room.copy(status = Status.Active)
     db.run(action.transactionally)
     
-  def takeAction(roomId: String, userId: Int, actionHash: String): Future[ActionRow] =
+  def takeAction(roomId: String, userId: Int, actionHash: String, end: Boolean = false): Future[ActionRow] =
     val action = for
       room <- Action.getRoom(roomId)
       if room.status.isActive
@@ -117,6 +117,9 @@ class GameModel(using db: Database, ec: ExecutionContext):
       time = System.currentTimeMillis()
       action = ActionRow(roomId, actions.size, userId, actionHash, time)
       _ <- ActionTable.actions += action
+      _ <- if end
+        then Query.room(roomId).map(_.status).update(Status.Complete)
+        else DBIO.successful(())
     yield action
     db.run(action.transactionally)
     
@@ -126,7 +129,7 @@ class GameModel(using db: Database, ec: ExecutionContext):
       numPlayers <- Action.getNumPlayers(roomId)
       actions <- Action.getActions(roomId)
       requiredPlayers = room.game.numPlayers.filter(_ >= numPlayers).min
-      initial = room.game.initial(requiredPlayers)
+      initial = room.game.initial(Game.GameConfig(requiredPlayers))
       current = actions.foldLeft[GameState](initial): (state, action) =>
         state.takeActionByHash(action.actionHash).get
     yield current

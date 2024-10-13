@@ -63,7 +63,7 @@ object Scene:
       PieceData(piece.id, piece.position, piece.texture)
     
     val inputs =
-      if !room.status.isActive || !spectator.isActivePlayer(state.activePlayer) then Seq() else
+      if !room.status.isActive || !spectator.isActivePlayer(state.activePlayer.toInt) then Seq() else
         state.next.toSeq.map: successor =>
           val (from, to) = successor.action match
             case Place(_, _, pos) => (pos, pos)
@@ -73,6 +73,17 @@ object Scene:
           val result = Scene(successor.inert, players, room, spectator)
           Input(from, to, successor.action.hash, result)
     
-    new Scene(room, spectator, board, pieces, inputs, state.turnDiff.toSeq, players, state.activePlayer)
+    val inCheck = boards.games.Chess.inCheck(using state)
+    
+    new Scene (
+      if state.isFinal then room.copy(status = Status.Complete) else room,
+      spectator,
+      board,
+      pieces,
+      inputs,
+      state.turnDiff.toSeq,
+      players,
+      state.activePlayer.toInt
+    )
     
   def empty: Scene = new Scene()

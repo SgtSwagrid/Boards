@@ -46,8 +46,7 @@ extends Actor:
   updatePlayers()
   
   private def canTakeAction(spectator: Participant): Boolean =
-    room.status.isActive &&
-      spectator.isActivePlayer(state.activePlayer)
+    room.status.isActive && spectator.isActivePlayer(state.activePlayer.toInt)
   
   def receive =
     case Subscribe(me, out) =>
