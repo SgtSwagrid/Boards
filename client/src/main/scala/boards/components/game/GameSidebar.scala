@@ -4,7 +4,7 @@ import boards.components.game.GameBoard
 import boards.graphics.Scene
 import boards.graphics.Scene.{Input, PieceData, Tile}
 import boards.imports.laminar.HtmlProp
-import boards.protocol.GameProtocol.{GameRequest, Player, Spectator, Status, Unregistered}
+import boards.protocol.GameProtocol.*
 import boards.util.Navigation
 import boards.views.GameView.{scene, socket}
 import com.raquo.laminar.api.L.img
@@ -89,15 +89,15 @@ class GameSidebar(scene: Signal[Scene], response: Observer[GameRequest]):
       paddingLeft("20px"), paddingTop("10px"), paddingRight("20px"),
       backgroundColor("#2f3640"),
       child <-- scene.map: scene =>
-        scene.room.status match
+        scene.status match
           case Status.Pending => p("Waiting to start", className("text-warning"), textAlign("center"))
           case Status.Active => p (
             textAlign("center"),
             b (
               scene.activePlayerColour.textColour,
-              if scene.isMyTurn then "Your" else scene.activePlayerName,
+              if scene.isExclusivelyMyTurn then "Your" else scene.activePlayerName,
             ),
-            if scene.isMyTurn then " Turn" else " to Play",
+            if scene.isExclusivelyMyTurn then " Turn" else " to Play",
           )
           case Status.Complete =>
             scene.outcome.get match
@@ -109,6 +109,7 @@ class GameSidebar(scene: Signal[Scene], response: Observer[GameRequest]):
                   else "text-info"
                 ),
                 if scene.iWon then "You Won"
+                else if scene.isHotseat then s"${scene.playerNames(winner)} Won"
                 else s"${scene.players(winner).username} Won",
               )
               case Draw => p(textAlign("center"), className("text-warning"), "Draw")
@@ -144,7 +145,7 @@ class GameSidebar(scene: Signal[Scene], response: Observer[GameRequest]):
               )
             ),
             
-            Option.when(scene.status.isPending && scene.participant.isPlayer):
+            when(scene.status.isPending && scene.participant.isPlaying):
               div (
                 className("tooltip"),
                 display("inline-block"),
@@ -152,13 +153,13 @@ class GameSidebar(scene: Signal[Scene], response: Observer[GameRequest]):
                 float("right"),
                 dataTip := s"Remove ${player.username}",
                 button (
-                  className("btn btn-circle btn-outline btn-sm btn-error"),
+                  className("btn btn-circle btn-ghost btn-sm"),
                   SVG.Cross,
-                  onClick.mapTo(GameRequest.RemovePlayer(player.userId)) --> response,
+                  onClick.mapTo(GameRequest.RemovePlayers(player.position)) --> response,
                 ),
               ),
             
-            Option.when(scene.status.isActive && player.position == scene.activePlayerId):
+            when(scene.status.isActive && player.position == scene.activePlayerId):
               img (
                 display("inline-block"),
                 float("right"),
@@ -171,21 +172,21 @@ class GameSidebar(scene: Signal[Scene], response: Observer[GameRequest]):
         .interweave:
           scene.players.sliding(2).filter(_.size == 2).toSeq.map:
             case player1 :: player2 :: Nil =>
-              val canSetup = scene.participant.isPlayer && scene.status.isPending
+              val canSetup = scene.participant.isPlaying && scene.status.isPending
               div (
                 className("divider"),
                 marginTop(if canSetup then "20px" else "10px"),
                 marginBottom(if canSetup then "20px" else "10px"),
-                Option.when(canSetup):
+                when(canSetup):
                   div (
                     className("tooltip"),
                     display("inline-block"),
                     float("right"),
                     dataTip := s"Swap ${player1.username} and ${player2.username}",
                     button (
-                      className("btn btn-circle btn-outline btn-sm btn-warning"),
+                      className("btn btn-circle btn-ghost btn-sm"),
                       SVG.Swap,
-                      onClick.mapTo(GameRequest.ReorderPlayer(player2.userId)) --> response,
+                      onClick.mapTo(GameRequest.ReorderPlayer(player2.position)) --> response,
                     )
                   ),
               )
@@ -195,42 +196,45 @@ class GameSidebar(scene: Signal[Scene], response: Observer[GameRequest]):
       padding("20px"),
       position("absolute"),
       backgroundColor("#2f3640"),
-      child.maybe <-- scene.map: scene =>
-        Option.when(scene.status.isPending):
-          scene.participant match
-            case player: Player =>
-              div (
-                button (
-                  className("btn btn-error"),
-                  width("100%"),
-                  marginBottom("10px"),
-                  "Leave Game",
-                  onClick.mapTo(GameRequest.RemovePlayer(player.userId)) --> response,
-                ),
-                Option.when(scene.game.numPlayers.contains(scene.players.size)):
+      child <-- scene.map ( scene =>
+        div (
+          when(scene.isPending) (
+            scene.participant match
+              case participant: RegisteredParticipant if participant.isPlaying =>
+                div (
                   button (
-                    className("btn btn-accent"),
+                    className("btn btn-error"),
                     width("100%"),
-                    margin("0 0 10px 0"),
-                    "Start Game",
-                    onClick.mapTo(GameRequest.StartGame) --> response,
-                  )
-              )
-            case Spectator(_, _) =>
+                    marginBottom("10px"),
+                    "Leave Game",
+                    onClick.mapTo(GameRequest.RemovePlayers(participant.positions*)) --> response,
+                  ),
+                  when(scene.canStart):
+                    button (
+                      className("btn btn-accent"),
+                      width("100%"),
+                      margin("0 0 10px 0"),
+                      "Start Game",
+                      onClick.mapTo(GameRequest.StartGame) --> response,
+                    )
+                )
+              case _ => div()
+            ,
+            when(!scene.isFull) (
               button (
                 className("btn btn-info"),
                 width("100%"),
                 margin("0 0 10px 0"),
-                "Join Game",
-                onClick.mapTo(GameRequest.JoinRoom) --> response,
+                if scene.participant.isPlaying then "Add Hotseat Player" else "Join Game",
+                scene.participant match
+                  case _: RegisteredParticipant =>
+                    onClick.mapTo(GameRequest.JoinRoom) --> response
+                  case UnregisteredParticipant =>
+                    onClick --> (_ => Navigation.goto("/login", "next" -> s"/game/${scene.room.id}/join"))
               )
-            case Unregistered =>
-              button (
-                className("btn btn-info"),
-                width("100%"),
-                margin("0 0 10px 0"),
-                "Join Game",
-                onClick --> (_ => Navigation.goto("/login", "next" -> s"/game/${scene.room.id}/join")),
-              )
+            ),
+          )
+        )
+      )
     )
   )

@@ -4,9 +4,9 @@ import PlayerTable.*
 import slick.jdbc.H2Profile.api.*
 
 class PlayerTable(tag: Tag) extends Table[PlayerRow](tag, "PLAYERS"):
-  def userId = column[Int]("USER_ID", O.PrimaryKey)
+  def userId = column[Int]("USER_ID")
   def roomId = column[String]("ROOM_ID", O.PrimaryKey)
-  def position = column[Int]("POSITION")
+  def position = column[Int]("POSITION", O.PrimaryKey)
   def isOwner = column[Boolean]("IS_OWNER")
   def * = (userId, roomId, position, isOwner).mapTo[PlayerRow]
   def user = foreignKey("USER_FK", userId, UserTable.users)(_.id)

@@ -9,13 +9,14 @@ import boards.graphics.Scene
 import boards.protocol.GameProtocol.*
 import boards.protocol.GameProtocol.GameRequest.*
 import models.GameModel
-import org.apache.pekko.actor.{Status => _, *}
+import org.apache.pekko.actor.{Status as _, *}
 import schema.RoomTable.rooms
 import schema.UserTable.UserRow
 import slick.jdbc.H2Profile.api.Database
+import slick.lifted.Functions.user
 
 import scala.collection.mutable
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 class RoomActor
   (roomId: String)
@@ -46,7 +47,7 @@ extends Actor:
   updatePlayers()
   
   private def canTakeAction(spectator: Participant): Boolean =
-    room.status.isActive && spectator.isActivePlayer(state.activePlayer)
+    room.status.isActive && spectator.isPlayer(state.activePlayer)
   
   def receive =
     case Subscribe(me, out) =>
@@ -68,41 +69,41 @@ extends Actor:
       
     case Update(me, InviteToRoom(user)) => ???
     
-    case Update(me, RemovePlayer(user)) =>
-      for _ <- GameModel().leaveRoom(roomId, user) do
-        updatePlayers()
+    case Update(me, RemovePlayers(positions*)) =>
+      if me.isPlaying then
+        println(positions)
+        for _ <- GameModel().leaveRoom(roomId)(positions*)
+        do updatePlayers()
     
-    case Update(me, ReorderPlayer(user)) =>
-      for _ <- GameModel().reorderPlayer(roomId, user) do
-        updatePlayers()
+    case Update(me, ReorderPlayer(player)) =>
+      if me.isPlaying then
+        for _ <- GameModel().reorderPlayer(roomId, player)
+        do updatePlayers()
       
     case Update(me, PromotePlayer(user)) => ???
     case Update(me, ChangeGame(game)) => ???
     
     case Update(me, JoinRoom) =>
-      for
-        userId <- me.userIdOption
-      do for
-        _ <- GameModel().joinRoom(roomId, userId)
-      do
-        updatePlayers()
+      for userId <- me.userIdOption
+      do for _ <- GameModel().joinRoom(roomId, userId)
+      do updatePlayers()
     
     case Update(me, StartGame) =>
-      for room <- GameModel().startGame(roomId) do
-        this.room = room
-        render()
+      if me.isPlaying then
+        for room <- GameModel().startGame(roomId) do
+          this.room = room
+          render()
     
     case Update(me, CancelRoom) => ???
     
   def updatePlayers() =
     for players <- GameModel().getPlayers(roomId) do
       this.players = players
-      val playersById = players.map(p => p.userId -> p).toMap
       val subs = subscribers.map:
-        case Subscriber(session, Spectator(id, _)) if playersById.contains(id) =>
-          Subscriber(session, playersById(id))
-        case Subscriber(session, Player(id, _, _, _, name)) if !playersById.contains(id) =>
-          Subscriber(session, Spectator(id, name))
+        case Subscriber(session, participant: RegisteredParticipant) =>
+          Subscriber(session, participant.copy(
+            positions = players.filter(_.userId == participant.userId).map(_.position)
+          ))
         case sub => sub
       subscribers.clear()
       subscribers ++= subs

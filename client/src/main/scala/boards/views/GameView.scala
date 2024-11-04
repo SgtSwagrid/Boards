@@ -4,7 +4,7 @@ import boards.components.game.{GameBoard, GameSidebar}
 import boards.graphics.Scene
 import boards.graphics.Scene.{Input, PieceData, Tile}
 import boards.imports.laminar.HtmlProp
-import boards.protocol.GameProtocol.{GameRequest, Player, Status, Unregistered, Spectator}
+import boards.protocol.GameProtocol.*
 import com.raquo.laminar.codecs.StringAsIsCodec
 import com.raquo.laminar.modifiers.RenderableText
 

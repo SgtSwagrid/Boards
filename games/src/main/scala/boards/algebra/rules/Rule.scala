@@ -6,14 +6,12 @@ import boards.algebra.state.GameState
 import boards.imports.games.{*, given}
 import boards.imports.math.{*, given}
 import boards.algebra.rules.Effect.{MapEffect, TerminalEffect}
+import Rule.Query
 
 /**
  * A compositional procedure for generating legal successor states given some current state.
  */
-trait Rule: //extends
-  //Sequenceable[Rule[?], [L, R <: Rule[?]] =>> R]:
-  
-  import Rule.*
+trait Rule:
   
   /**
    * @param state the current game state.
@@ -29,8 +27,6 @@ trait Rule: //extends
    */
   def actions(state: GameState, query: Query) =
     next(state, query).flatMap(_.actionOption)
-    
-  def toString(state: GameState, depth: Int = 5): String
   
   /**
    * A <b>sequencing</b> operator for requiring the user to perform multiple actions in order.
@@ -238,7 +234,6 @@ object Rule:
     def next(state: GameState, query: Query): Iterator[GameState] = Iterator.empty
     override def | (that: => Rule): Rule = that
     override def |> (that: => Rule): Rule = this
-    def toString(state: GameState, depth: Int): String = "∅"
   
   /**
    * Generates a single skip action.
@@ -250,7 +245,6 @@ object Rule:
       case state: NonFinalState =>
         Iterator.single(InterimState(state.now, Action.skip, state, Rule.skip))
     override def |> (that: => Rule): Rule = that
-    def toString(state: GameState, depth: Int): String = "⏵"
   
   type Query = PartialFunction[Generator, Generator]
   

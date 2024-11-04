@@ -32,8 +32,6 @@ object Combinator:
     // Optimisation: Not required for correctness!
     override def actions(state: GameState, query: Query) =
       branch(state).actions(state, query)
-      
-    def toString(state: GameState, depth: Int): String = branch(state).toString(state, depth)
   
   /**
    * A rule representing the union composition of two other rules.
@@ -55,8 +53,6 @@ object Combinator:
     override def actions(state: GameState, query: Query): Iterator[Action] =
       (left.actions(state, query) ++ right.actions(state, query))
         .distinct
-      
-    def toString(state: GameState, depth: Int): String = s"(${left.toString(state, depth)} | ${right.toString(state, depth)})"
   
   /**
    * A rule representing the sequential composition of two other rules.
@@ -74,10 +70,6 @@ object Combinator:
       left.next(state, query)
         .map(_.updateRule(_ |> right))
         //.map(_.flattenFutureSkips)
-      
-    def toString(state: GameState, depth: Int): String =
-      if depth >= 0 then s"(${left.toString(state, depth - 1)} |> ${right.toString(state, depth - 1)})"
-      else "..."
   
   /**
    * A rule for conditionally disallowing some successor states.
@@ -96,5 +88,3 @@ object Combinator:
         .map: state =>
           if state.actionOption.contains(Action.skip) then state
           else state.updateRule(_.require(condition(summon[GameState])))
-    
-    def toString(state: GameState, depth: Int): String = base.toString(state, depth)

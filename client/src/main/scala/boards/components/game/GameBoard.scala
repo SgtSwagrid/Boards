@@ -3,7 +3,7 @@ package boards.components.game
 import boards.graphics.Scene
 import boards.graphics.Scene.{Input, PieceData, Tile}
 import boards.imports.laminar.HtmlProp
-import boards.protocol.GameProtocol.{GameRequest, Player, Spectator, Status, Unregistered}
+import boards.protocol.GameProtocol.{GameRequest, Player, RegisteredParticipant, UnregisteredParticipant, Status}
 import boards.views.GameView.{scene, sceneBus, socket}
 import com.raquo.laminar.codecs.StringAsIsCodec
 import com.raquo.laminar.modifiers.RenderableText

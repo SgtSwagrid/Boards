@@ -11,8 +11,7 @@ import boards.algebra.rules.Rule.Query
  * A transformer works similarly to a generator,
  * except in response to fictitious 'skip' actions instead of actual player-caused actions.
  */
-trait Effect extends Rule:
-  def toString(state: GameState, depth: Int): String = "."
+trait Effect extends Rule
 
 object Effect:
   

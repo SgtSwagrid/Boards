@@ -4,7 +4,8 @@ import boards.Games
 import boards.algebra.{Action, Game}
 import boards.algebra.Game.PlayerId
 import boards.algebra.state.GameState
-import boards.protocol.GameProtocol.{Player, Spectator, Room, Participant, Status, Unregistered}
+import boards.protocol.GameProtocol.*
+import boards.protocol.UserProtocol.User
 import org.mindrot.jbcrypt.BCrypt
 import slick.dbio.{DBIO, DBIOAction}
 import slick.jdbc.H2Profile.api.*
@@ -44,37 +45,47 @@ class GameModel(using db: Database, ec: ExecutionContext):
       if room.status.isPending
       players <- Action.getAllPlayers(roomId)
       if players.size < room.game.numPlayers.max
-      if !players.exists(_.userId == userId)
       player = PlayerRow(userId, room.id, players.size, false)
       _ <- PlayerTable.players += player
     yield player
     db.run(action)
     
-  def leaveRoom(roomId: String, userId: Int): Future[Boolean] =
-    val action = for
-      room <- Action.getRoom(roomId)
-      if room.status.isPending
-      player <- Action.getPlayer(roomId, userId)
-      _ <- Query.player(roomId, userId).delete
-      updates <- Query.playersAfter(roomId, player.position).result
-        .map(_.map(p => p.copy(position = p.position - 1)))
-      _ <- Query.playersAfter(roomId, player.position).delete
-      _ <- PlayerTable.players ++= updates
-    yield true
-    db.run(action.transactionally.asTry.map(_.getOrElse(false)))
+  def leaveRoom(roomId: String)(positions: PlayerId*): Future[Unit] =
     
-  def reorderPlayer(roomId: String, userId: Int): Future[Unit] =
+    def f(A: Seq[Int], x: Int): Seq[Int] = A match
+      case head :: tail => (if head > x then head - 1 else head) +: f(tail, x)
+      case Nil => Nil
+      
+    def g(A: Seq[Int]): Seq[Int] = A match
+      case head :: tail => head +: g(f(tail, head))
+      case Nil => Nil
+    
+    val action = DBIO.seq (
+      g(positions.map(_.toInt)).map: position =>
+        for
+          room <- Action.getRoom(roomId)
+          if room.status.isPending
+          player <- Action.getPlayerByPos(roomId, position)
+          _ <- Query.playerByPos(roomId, position).delete
+          updates <- Query.playersAfter(roomId, position).result
+            .map(_.map(p => p.copy(position = p.position - 1)))
+          _ <- Query.playersAfter(roomId, position).delete
+          _ <- PlayerTable.players ++= updates
+        yield ()
+    *)
+    db.run(action).map(_ => ())
+    
+  def reorderPlayer(roomId: String, position: Int): Future[Boolean] =
     val action = for
       room <- Action.getRoom(roomId)
+      if position > 0
       if room.status.isPending
-      player <- Action.getPlayer(roomId, userId)
-      if player.position > 0
-      previous <- Action.getPlayerByPos(roomId, player.position - 1)
-      _ <- Query.players(roomId, userId, previous.userId).delete
-      _ <- PlayerTable.players ++= Seq (
-        player.copy(position = previous.position),
-        previous.copy(position = player.position),
-      )
+      player <- Action.getPlayerByPos(roomId, position)
+      previous <- Action.getPlayerByPos(roomId, position - 1)
+      _ <- Query.playerByPos(roomId, position).delete
+      _ <- Query.playerByPos(roomId, position - 1).delete
+      _ <- PlayerTable.players += player.copy(position = position - 1)
+      _ <- PlayerTable.players += previous.copy(position = position)
     yield true
     db.run(action.transactionally.asTry.map(_.getOrElse(false)))
     
@@ -89,16 +100,15 @@ class GameModel(using db: Database, ec: ExecutionContext):
     
   def getParticipant(roomId: String, userId: Option[Int]): Future[Participant] =
     userId match
-      case None => Future.successful(Unregistered)
+      case None => Future.successful(UnregisteredParticipant)
       case Some(userId) =>
         val action = for
           user <- UserModel().Action.getUserOptionById(userId)
-          player <- Action.getPlayerOption(roomId, userId)
-        yield (user, player) match
-          case (None, _) => Unregistered
-          case (Some(user), None) => Spectator(user.id, user.username)
-          case (Some(user), Some(player)) =>
-            Player(user.id, roomId, PlayerId(player.position), player.isOwner, user.username)
+          players <- Action.getPlayersByUser(roomId, userId)
+        yield (user, players) match
+          case (None, _) => UnregisteredParticipant
+          case (Some(user), players) =>
+            RegisteredParticipant(roomId, user.id, user.username, players.map(p => PlayerId(p.position)))
         db.run(action)
     
   def startGame(roomId: String): Future[Room] =
@@ -145,11 +155,8 @@ class GameModel(using db: Database, ec: ExecutionContext):
     def getNumPlayers(roomId: String): DBIO[Int] =
       getAllPlayers(roomId).map(_.size)
     
-    def getPlayer(roomId: String, userId: Int): DBIO[PlayerRow] =
-      getPlayerOption(roomId, userId).map(_.get)
-    
-    def getPlayerOption(roomId: String, userId: Int): DBIO[Option[PlayerRow]] =
-      Query.player(roomId, userId).result.headOption
+    def getPlayersByUser(roomId: String, userId: Int): DBIO[Seq[PlayerRow]] =
+      Query.playersByUser(roomId, userId).result
       
     def getPlayerByPos(roomId: String, position: Int): DBIO[PlayerRow] =
       getPlayerByPosOption(roomId, position).map(_.get)
@@ -173,10 +180,10 @@ class GameModel(using db: Database, ec: ExecutionContext):
         .filter(_.roomId === roomId)
         .sortBy(_.position)
     
-    def player(roomId: String, userId: Int): Query[PlayerTable, PlayerRow, Seq] =
+    def playersByUser(roomId: String, userId: Int): Query[PlayerTable, PlayerRow, Seq] =
       allPlayers(roomId).filter(_.userId === userId)
       
-    def players(roomId: String, userIds: Int*): Query[PlayerTable, PlayerRow, Seq] =
+    def players(roomId: String)(userIds: Int*): Query[PlayerTable, PlayerRow, Seq] =
       allPlayers(roomId).filter(_.userId.inSet(userIds))
       
     def playerByPos(roomId: String, position: Int): Query[PlayerTable, PlayerRow, Seq] =
@@ -194,5 +201,5 @@ class GameModel(using db: Database, ec: ExecutionContext):
     def room(roomId: String): Query[RoomTable, Room, Seq] =
       RoomTable.rooms.filter(_.id === roomId)
     
-  private def generateRoomId(): String =
-    Random.between(0, 1 << (4 * 5)).toHexString.toUpperCase.padTo(5, '0')
+  private def generateRoomId(length: Int = 5): String =
+    Random.between(0, 1 << (4 * length)).toHexString.toUpperCase.padTo(length, '0')

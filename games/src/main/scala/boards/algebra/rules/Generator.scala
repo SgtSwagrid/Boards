@@ -21,8 +21,6 @@ trait Generator extends Rule:
         query.lift(this).map(_.generate(state)).getOrElse(Iterator.empty)
     
   protected def generate(state: GameState): Iterator[Action]
-  
-  def toString(state: GameState, depth: Int): String = "⏺"
 
 object Generator:
   

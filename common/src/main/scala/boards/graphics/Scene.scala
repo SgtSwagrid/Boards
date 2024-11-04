@@ -9,7 +9,7 @@ import boards.imports.games.{*, given}
 
 case class Scene (
   room: Room = Room.empty,
-  participant: Participant = Unregistered,
+  participant: Participant = UnregisteredParticipant,
   board: Kernel[Tile] = Kernel.empty,
   pieces: Seq[PieceData] = Seq.empty,
   inputs: Seq[Input] = Seq.empty,
@@ -26,15 +26,26 @@ case class Scene (
   def activePlayerName = game.playerNames(activePlayerId)
   def activePlayerColour = game.playerColours(activePlayerId)
   
-  def isMyTurn: Boolean = participant match
-    case player: Player => player.position == activePlayerId
+  def isMyTurn: Boolean = participant.isPlayer(activePlayerId)
+  def isExclusivelyMyTurn: Boolean = isMyTurn && participant.isPlayingExclusively
+  
+  def iWon: Boolean = outcome match
+    case Some(Winner(winner)) => participant.isPlayerExclusively(winner)
     case _ => false
-  def iWon: Boolean = (participant, outcome) match
-    case (player: Player, Some(Winner(winner))) => player.position == winner
+    
+  def iLost: Boolean = participant.isPlaying && (outcome match
+    case Some(Winner(winner)) => !participant.isPlayer(winner)
     case _ => false
-  def iLost: Boolean = participant.isPlayer && isComplete && !iWon
+  )
+    
+  def isFull: Boolean = players.size >= game.numPlayers.max
+  def canStart: Boolean = game.numPlayers.contains(players.size)
+  
+  def isHotseat: Boolean = players.map(_.userId).distinct.size < players.size
+  
   export room.{game, status}
   export status.{isPending, isActive, isComplete}
+  export game.{playerNames, playerColours}
 
 object Scene:
   import Scene.*
@@ -73,7 +84,7 @@ object Scene:
       PieceData(piece.id, piece.position, piece.texture)
     
     val inputs =
-      if !room.status.isActive || !spectator.isActivePlayer(state.activePlayer) then Seq() else
+      if !room.status.isActive || !spectator.isPlayer(state.activePlayer) then Seq() else
         state.next.toSeq.map: successor =>
           val (from, to) = successor.actionOption.get match
             case Place(_, _, pos) => (pos, pos)
@@ -82,8 +93,6 @@ object Scene:
             case Skip => ???
           val result = Scene(successor.inert, players, room, spectator)
           Input(from, to, successor.actionOption.get.hash, result)
-    
-    val inCheck = boards.games.Chess.inCheck(using state)
     
     new Scene (
       if state.isFinal then room.copy(status = Status.Complete) else room,
