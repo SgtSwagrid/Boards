@@ -91,8 +91,5 @@ object Dir:
   def between(from: VecI, to: VecI): Dir =
     Dir(from.directionTo(to))
     
-  given Conversion[VecI, Dir] with
-    def apply(pos: VecI): Dir = Dir(pos)
-    
-  given (using VecI): Conversion[Dir, Kernel[?]] with
-    def apply(dir: Dir): Kernel[?] = dir.toKernel
+  given Conversion[VecI, Dir] = v => Dir(v)
+  given (using VecI): Conversion[Dir, Kernel[?]] = _.toKernel

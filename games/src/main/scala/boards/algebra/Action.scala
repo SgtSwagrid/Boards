@@ -1,11 +1,11 @@
 package boards.algebra
 
+import boards.algebra.rules.Rule
+import boards.algebra.rules.Rule
 import boards.imports.games.{*, given}
 import boards.imports.math.{*, given}
-
-import boards.algebra.shortcuts.given_Conversion_PieceSet_InstantaneousState
-import boards.algebra.shortcuts.given_Conversion_Action_Rule
-import boards.algebra.shortcuts.given_Kernel_
+import boards.algebra.shortcuts.{given_Conversion_Action_Rule, given_Kernel_}
+import boards.algebra.state.{InstantaneousState, Piece}
 
 import scala.annotation.{tailrec, targetName}
 
@@ -14,35 +14,41 @@ sealed trait Action:
   def enact(state: InstantaneousState): InstantaneousState
   
   @targetName("causes")
-  def ~> (state: InstantaneousState): Rule = this.after(_ => state)
+  def ~> (state: InstantaneousState): Rule = ???//toRule |> R.setState(state)
+  
+  def toRule: Rule
   
   def hash: String
+  
+  def isSkip: Boolean = false
 
 object Action:
   
+  def skip: Skip.type = Skip
+  
   case class Place (
     owner: Game.PlayerId,
-    piece: boards.algebra.Piece.PieceType,
-    position: VecI
+    piece: Piece.PieceType,
+    position: VecI,
   ) extends Action:
     
     def enact(state: InstantaneousState) =
-      given InstantaneousState = state
-      state.pieces.insert(owner)(piece -> position)
+      state.updatePieces(_.withPiece(Piece(piece, position, owner)))
       
     override def toString = s"$piece |-> $position"
+    
+    def toRule: Rule = Generator.place(owner)(piece -> position)
     
     def hash: String = s"P ${piece.hash} $position"
   
   case class Move (
     piece: Piece,
     from: VecI,
-    to: VecI
+    to: VecI,
   ) extends Action:
     
     def enact(state: InstantaneousState) =
-      given InstantaneousState = state
-      state.pieces.relocate(from -> to)
+      state.updatePieces(_.withMove(from, to))
     
     def step: VecI = to - from
     def direction: VecI = from.directionTo(to)
@@ -50,6 +56,8 @@ object Action:
     def midpoint: VecI = from.midpoint(to)
     
     override def toString = s"$from |-> $to"
+    
+    def toRule: Rule = Generator.move(from -> to)
     
     def hash: String = s"M $from $to"
   
@@ -59,10 +67,14 @@ object Action:
     
     def enact(state: InstantaneousState) =
       given InstantaneousState = state
-      state.pieces.remove(piece.position)
-      
+      state.updatePieces(_.withoutPiece(piece.position))
+    
+    def toRule: Rule = Generator.destroy(piece.position)
+    
     def hash: String = s"D ${piece.position}"
     
-  case object NoOp extends Action:
+  case object Skip extends Action:
     def enact(state: InstantaneousState) = state
-    def hash: String = "N"
+    def toRule: Rule = Rule.skip
+    def hash: String = "S"
+    override def isSkip: true = true

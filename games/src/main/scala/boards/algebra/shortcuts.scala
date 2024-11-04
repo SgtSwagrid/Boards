@@ -1,127 +1,98 @@
 package boards.algebra
 
+import boards.algebra.rules.{Generator, Effect, Rule}
+import boards.algebra.state.{GameState, Piece, PieceSet}
 import boards.imports.games.{*, given}
 import boards.imports.math.{*, given}
 
 object shortcuts:
   
-  object State
+  export Rule.*
+  export Generator.*
+  export Effect.*
   
-  given (using state: GameState): Conversion[State.type, GameState] with
-    def apply(s: State.type): GameState = state
-  
-  given (using state: GameState): Conversion[State.type, InstantaneousState] with
-    def apply(s: State.type): InstantaneousState = state.now
-  
-  object Pieces
-  
-  given (using state: InstantaneousState): Conversion[Pieces.type, PieceSet] with
-    def apply(p: Pieces.type): PieceSet = state.pieces
+  def state(using state: GameState): GameState = state
+  def pieces(using pieces: PieceSet): PieceSet = pieces
   
   def hypothetically[T](state: GameState)(f: GameState ?=> T): T =
     f(using state)
+    
+  def hypothetically[T](rule: Rule)(f: GameState ?=> T)(using state: GameState): T =
+    f(using state.withRule(rule).flattenFutureSkips)
   
   extension (ray: Ray)
     
-    def toPiece(using InstantaneousState): Ray =
-      ray.takeTo(Pieces.contains)
+    def toPiece(using PieceSet): Ray =
+      ray.takeTo(pieces.contains)
     
-    def toEmpty(using InstantaneousState): Ray =
-      ray.takeTo(!Pieces.contains)
+    def toEmpty(using PieceSet): Ray =
+      ray.takeTo(!pieces.contains)
     
     def toFriendly(using InstantaneousState, PlayerId): Ray =
-      ray.takeTo(Pieces.isFriendly)
+      ray.takeTo(pieces.isFriendly)
     
     def toEnemy(using InstantaneousState, PlayerId): Ray =
-      ray.takeTo(Pieces.isEnemy)
+      ray.takeTo(pieces.isEnemy)
     
-    def untilPiece(using InstantaneousState): Ray =
-      ray.takeUntil(Pieces.contains)
+    def untilPiece(using PieceSet): Ray =
+      ray.takeUntil(pieces.contains)
     
     def untilEmpty(using InstantaneousState): Ray =
-      ray.takeTo(!Pieces.contains)
+      ray.takeTo(!pieces.contains)
     
     def untilFriendly(using InstantaneousState, PlayerId): Ray =
-      ray.takeUntil(Pieces.isFriendly)
+      ray.takeUntil(pieces.isFriendly)
     
     def untilEnemy(using InstantaneousState, PlayerId): Ray =
-      ray.takeUntil(Pieces.isEnemy)
+      ray.takeUntil(pieces.isEnemy)
   
   extension [T](kernel: Kernel[T])
     
-    def ontoPiece(using InstantaneousState): Kernel[T] =
-      kernel.erode(!Pieces.contains)
+    def ontoPiece(using PieceSet): Kernel[T] =
+      kernel.erode(!pieces.contains)
     
-    def ontoEmpty(using InstantaneousState): Kernel[T] =
-      kernel.erode(Pieces.contains)
+    def ontoEmpty(using PieceSet): Kernel[T] =
+      kernel.erode(pieces.contains)
     
     def ontoFriendly(using InstantaneousState, PlayerId): Kernel[T] =
-      kernel.erode(Pieces.isFriendly)
+      kernel.erode(pieces.isFriendly)
     
     def ontoEnemy(using InstantaneousState, PlayerId): Kernel[T] =
-      kernel.erode(Pieces.isEnemy)
+      kernel.erode(pieces.isEnemy)
     
     def avoidFriendly(using InstantaneousState, PlayerId): Kernel[T] =
-      kernel.erode(!Pieces.isFriendly)
+      kernel.erode(!pieces.isFriendly)
     
     def avoidEnemy(using InstantaneousState, PlayerId): Kernel[T] =
-      kernel.erode(!Pieces.isEnemy)
+      kernel.erode(!pieces.isEnemy)
+      
+    def pieces(using pieces: PieceSet): PieceSet =
+      pieces.ofRegion(kernel)
   
   def byPlayer[X](x: X*)(using player: PlayerId): X = x(player.toInt)
   
-  given Conversion[GameState, InstantaneousState] with
-    def apply(state: GameState): InstantaneousState = state.now
-  
-  given (using state: GameState): Conversion[InstantaneousState, GameState] with
-    def apply(board: InstantaneousState): GameState = state.withBoard(board)
-    
-  given (using state: GameState): Conversion[PieceSet, GameState] with
-    def apply(pieces: PieceSet): GameState = state.withBoard(state.now.withPieces(pieces))
-  
   given (using state: GameState): InstantaneousState = state.now
-  
   given (using state: InstantaneousState): Kernel[?] = state.board
   given (using state: InstantaneousState): PieceSet = state.pieces
   
-  given Conversion[PieceSet, Kernel[?]] with
-    def apply(pieces: PieceSet): Kernel[?] = pieces.positions
+  given (using state: InstantaneousState): PlayerId = state.activePlayer
   
-  given Conversion[PieceSet, Rule] with
-    def apply(pieces: PieceSet): Rule = pieces.actions
+  given Conversion[GameState, InstantaneousState] = _.now
+  given (using state: GameState): Conversion[InstantaneousState, GameState] = state.withBoard
   
-  given (using state: InstantaneousState): Conversion[PieceSet, InstantaneousState] with
-    def apply(pieces: PieceSet): InstantaneousState = state.withPieces(pieces)
+  given Conversion[InstantaneousState, PieceSet] = _.pieces
+  //given (using state: InstantaneousState): Conversion[PieceSet, InstantaneousState] = state.withPieces
+  //given (using state: GameState): Conversion[PieceSet, GameState] = state.withBoard
   
-  given (using state: GameState): Conversion[PieceSet, Capability] with
-    def apply(pieces: PieceSet): Capability =
-      pieces.actions.from(state)
+  given Conversion[PieceSet, Kernel[?]] = _.positions
+  given Conversion[PieceSet, Rule] = _.actions
+  given (using state: GameState): Conversion[PieceSet, Capability] = _.actions.from(state)
   
-  given Conversion[Piece, VecI] with
-    def apply(piece: Piece): VecI = piece.position
+  given Conversion[Piece, VecI] = _.position
+  given Conversion[Piece, Kernel.Shape] = p => Kernel(p.position)
+  given Conversion[Piece, Piece.PieceType] = _.pieceType
+  given Conversion[Piece, Rule] = _.actions
   
-  given Conversion[Piece, Kernel.Shape] with
-    def apply(piece: Piece): Kernel.Shape = Kernel(piece.position)
+  given Conversion[Iterable[Rule], Rule] = _.foldLeft(Rule.none)(_ | _)
   
-  given Conversion[Piece, Piece.PieceType] with
-    def apply(piece: Piece): Piece.PieceType = piece.pieceType
-  
-  given Conversion[Piece, Rule] with
-    def apply(piece: Piece): Rule = piece.actions
-  
-  given Conversion[Iterable[Rule], Rule] with
-    def apply(rules: Iterable[Rule]): Rule = rules.foldLeft(Rule.none)(_ | _)
-  
-  given [X <: Rule | InstantaneousState | Boolean | Outcome | PieceSet]: Conversion[X, PartialFunction[GameState, X]] with
-    def apply(x: X): PartialFunction[GameState, X] = _ => x
-  
-  given Conversion[PieceSet, PartialFunction[GameState, InstantaneousState]] with
-    def apply(pieces: PieceSet): PartialFunction[GameState, InstantaneousState] =
-      gameState => gameState.now.withPieces(pieces)
-  
-  given Conversion[Action, Rule] with
-    def apply(action: Action): Rule =
-      action match
-        case Place(owner, piece, pos) => Generator.place(owner)(piece -> pos)
-        case Move(_, from, to) => Generator.move(from -> to)
-        case Destroy(piece) => Generator.destroy(piece)
-        case NoOp => Generator.skip
+  given Conversion[Action, Rule] = _.toRule

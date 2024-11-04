@@ -95,11 +95,23 @@ class GameSidebar(scene: Signal[Scene], response: Observer[GameRequest]):
             textAlign("center"),
             b (
               scene.activePlayerColour.textColour,
-              scene.activePlayerName,
+              if scene.isMyTurn then "Your" else scene.activePlayerName,
             ),
-            " to play",
+            if scene.isMyTurn then " Turn" else " to Play",
           )
-          case Status.Complete => p("Game ended", className("text-info"), textAlign("center"))
+          case Status.Complete =>
+            scene.outcome.get match
+              case Winner(winner) => p (
+                textAlign("center"),
+                className (
+                  if scene.iWon then "text-success"
+                  else if scene.iLost then "text-error"
+                  else "text-info"
+                ),
+                if scene.iWon then "You Won"
+                else s"${scene.players(winner).username} Won",
+              )
+              case Draw => p(textAlign("center"), className("text-warning"), "Draw")
     ),
     div (
       top("0"), left("0"), right("0"),

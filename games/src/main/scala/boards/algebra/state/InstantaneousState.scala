@@ -1,8 +1,8 @@
-package boards.algebra
+package boards.algebra.state
 
+import boards.algebra.Game.GameConfig
 import boards.imports.games.{*, given}
 import boards.imports.math.{*, given}
-import boards.algebra.Game.{*, given}
 
 import scala.collection.immutable.BitSet
 import scala.reflect.ClassTag
@@ -27,6 +27,7 @@ case class InstantaneousState (
   def nextPlayer: PlayerId = activePlayer + 1
   
   def withPieces(pieces: PieceSet): InstantaneousState = copy(pieces = pieces)
+  def updatePieces(f: PieceSet => PieceSet): InstantaneousState = copy(pieces = f(pieces))
   
   def draw: String =
     board.offset.y.until(board.extent.y).map: y =>

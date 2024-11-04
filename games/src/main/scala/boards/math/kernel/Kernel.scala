@@ -39,7 +39,7 @@ trait Kernel[+X]:
     
   def window(offset: VecI, size: VecI): Kernel[X] =
     if offset <= this.offset && offset + size >= extent then this
-    else IntersectionKernel(Kernel.box(size).translate(offset), this).map(_(1))
+    else IntersectionKernel(Kernel.box(size).translate(offset), this).paintLabels(_(1))
     
   def slice(dim: Int, min: Int, max: Int): Kernel[X] =
     window(offset.update(dim, min), size.update(dim, max - min + 1))
@@ -80,6 +80,8 @@ trait Kernel[+X]:
   //@targetName("translate")
   //def + (v: Pos): Kernel[X] = translate(v)
   
+  def map(f: VecI => VecI): Kernel[X] = MappedKernel(this, f)
+  
   def filter(f: (VecI, X) => Boolean): Kernel[X] = FilteredKernel(this, f)
   def erode(f: VecI => Boolean): Kernel[X] = filter((v, _) => f(v))
   def filterLabels(f: X => Boolean): Kernel[X] = filter((_, x) => f(x))
@@ -92,7 +94,7 @@ trait Kernel[+X]:
   
   def paintSolid[Y](y: Y): Kernel[Y] = paint((_, _) => y)
   
-  def map[Y](f: X => Y): Kernel[Y] = paint((_, x) => f(x))
+  def paintLabels[Y](f: X => Y): Kernel[Y] = paint((_, x) => f(x))
   
   def replace[Y](y: (Kernel[?], Y)*): Kernel[X | Y] =
     y.foldLeft[Kernel[X | Y]](this):
@@ -103,10 +105,10 @@ trait Kernel[+X]:
   def zipWithPosition: Kernel[(VecI, X)] = paint((v, x) => (v, x))
   
   def neighbours(v: VecI)(using M: EnumerableMetric[Int]): Kernel[X] =
-    (this & M.neighbours(v)).map(_(0))
+    (this & M.neighbours(v)).paintLabels(_(0))
     
   def ball(v: VecI, rmax: Int, rmin: Int = 0)(using M: EnumerableMetric[Int]): Kernel[X] =
-    (this & M.ball(v, rmax, rmin)).map(_(0))
+    (this & M.ball(v, rmax, rmin)).paintLabels(_(0))
     
   lazy val posById: IndexedSeq[VecI] = positions.toIndexedSeq
   lazy val indexOf: Map[VecI, Int] = posById.zipWithIndex.toMap
@@ -132,6 +134,8 @@ object Kernel:
   def apply[X](v: (VecI, X)*): Kernel[X] =
     val colours = Map(v*)
     Kernel(v.map(_(0))).paint(colours.apply)
+    
+  def point(v: VecI): Shape = VecKernel(v)
   
   def box(size: VecI): Shape = BoxKernel(size)
   def box(size: Int*): Shape = box(VecI(size*))
@@ -161,16 +165,25 @@ object Kernel:
     val size: VecI = VecI.zero
   
   private case class EmptyKernel (
-    size: VecI = VecI.zero
+    size: VecI = VecI.zero,
   ) extends Kernel[Nothing]:
     
     def positions: Iterator[VecI] = Iterator.empty
     def contains(v: VecI): Boolean = false
     def label(v: VecI): None.type = None
     val offset: VecI = VecI.zero
+    
+  private class VecKernel (
+    vec: VecI,
+  ) extends Shape:
+    
+    def positions: Iterator[VecI] = Iterator(vec)
+    def contains(v: VecI): Boolean = v == vec
+    def offset: VecI = vec
+    def size: VecI = VecI.one(vec.dim)
   
   private case class BoxKernel (
-    size: VecI
+    size: VecI,
   ) extends Shape:
     
     def positions: Iterator[VecI] =
@@ -191,7 +204,7 @@ object Kernel:
   private case class RotatedKernel[+X] (
     base: Kernel[X],
     from: Int,
-    to: Int
+    to: Int,
   ) extends Kernel[X]:
     
     def positions: Iterator[VecI] =
@@ -215,7 +228,7 @@ object Kernel:
     
   private case class FlippedKernel[+X] (
     base: Kernel[X],
-    axis: Int
+    axis: Int,
   ) extends Kernel[X]:
     
     def positions: Iterator[VecI] =
@@ -238,7 +251,7 @@ object Kernel:
   private case class JoinedKernel[X, Y] (
     base1: Kernel[X],
     base2: Kernel[Y],
-    align: Align
+    align: Align,
   ) extends Kernel[X | Y]:
     
     private val right_offset: VecI =
@@ -264,7 +277,7 @@ object Kernel:
       
   private case class ShiftedKernel[X, K[Z] <: Kernel[Z]] (
     base: Kernel[X],
-    shift: VecI
+    shift: VecI,
   ) extends Kernel[X]:
 
     def positions: Iterator[VecI] =
@@ -300,7 +313,7 @@ object Kernel:
     
   private case class UnionKernel[X, Y] (
     base1: Kernel[X],
-    base2: Kernel[Y]
+    base2: Kernel[Y],
   ) extends Kernel[(Option[X], Option[Y])]:
   
     def positions: Iterator[VecI] =
@@ -320,7 +333,7 @@ object Kernel:
     
   private case class IntersectionKernel[X, Y] (
     base1: Kernel[X],
-    base2: Kernel[Y]
+    base2: Kernel[Y],
   ) extends Kernel[(X, Y)]:
     
     def positions: Iterator[VecI] =
@@ -339,7 +352,7 @@ object Kernel:
   
   private case class DifferenceKernel[X, Y](
     base1: Kernel[X],
-    base2: Kernel[Y]
+    base2: Kernel[Y],
   ) extends Kernel[X]:
     
     def positions: Iterator[VecI] =
@@ -352,10 +365,27 @@ object Kernel:
       Option.when(contains(v))(base1.label(v)).flatten
     
     export base1.{offset, size}
+  
+  private case class MappedKernel[X] (
+    base: Kernel[X],
+    f: VecI => VecI,
+  ) extends Kernel[X]:
+    
+    def positions: Iterator[VecI] =
+      base.positions.map(f).distinct
+      
+    def contains(v: VecI): Boolean =
+      positions.contains(v)
+      
+    def label(v: VecI): Option[X] =
+      base.positions.find(f(_) == v).flatMap(base.label)
+    
+    lazy val offset: VecI = positions.reduce(_.zip(_)(Math.min))
+    lazy val size: VecI = positions.reduce(_.zip(_)(Math.max)).map(_ + 1) - offset
     
   private case class PaintedKernel[X, Y] (
     base: Kernel[X],
-    f: (VecI, => X) => Y
+    f: (VecI, => X) => Y,
   ) extends Kernel[Y]:
     
     export base.{positions, contains, offset, size}
@@ -367,7 +397,7 @@ object Kernel:
       base.paint((v, x) => g(v - base.offset, f(v - base.offset, x)))
       
   private case class SetKernel (
-    private val pos: Iterable[VecI]
+    private val pos: Iterable[VecI],
   ) extends Shape:
     
     def positions: Iterator[VecI] = pos.iterator
@@ -379,14 +409,13 @@ object Kernel:
     lazy val size = positions.reduceOption(_.zip(_)(Math.max)).getOrElse(VecI.zero)
       + VecI.one(dim) - offset
   
-  given Conversion[VecI, Kernel[Unit]] with
-    def apply(v: VecI): Kernel[Unit] = SetKernel(Set(v))
+  type Ker = Kernel[?]
+  
+  given Conversion[VecI, Shape] = Kernel.point
+  given Conversion[Iterable[VecI], Kernel[Unit]] = vs => SetKernel(vs.toSet)
+  
+  extension (v: VecI) (using k: Kernel[?])
+    def toId: Int = k.indexOf(v)
     
-  given Conversion[Iterable[VecI], Kernel[Unit]] with
-    def apply(v: Iterable[VecI]): Kernel[Unit] = SetKernel(v.toSet)
-    
-  given (using kernel: Kernel[?]): Conversion[VecI, Int] with
-    def apply(pos: VecI): Int = kernel.indexOf(pos)
-    
-  given (using kernel: Kernel[?]): Conversion[Int, VecI] with
-    def apply(index: Int): VecI = kernel.posById(index)
+  extension (i: Int) (using k: Kernel[?])
+    def toVec: VecI = k.posById(i)

@@ -8,6 +8,7 @@ import boards.math.kernel.{Dir, Kernel, Ray}
 import scala.annotation.targetName
 import scala.compiletime.erasedValue
 import scala.math.Ordered.orderingToOrdered
+import scala.runtime.RichInt
 
 case class Vec [@specialized X: Ring] (private val A: X*):
   
@@ -92,7 +93,7 @@ case class Vec [@specialized X: Ring] (private val A: X*):
     direction.from(thisAsVecI)
   
   inline def directionTo(that: VecI)(using X =:= Int): VecI =
-    (that - thisAsVecI) / gcd((that - thisAsVecI).absolute.toSeq*)
+    (that - thisAsVecI) / gcd((that - thisAsVecI).abs.toSeq*)
   inline def midpoint(that: VecI)(using X =:= Int): VecI =
     VecI.midpoint(thisAsVecI, that)
   
@@ -156,7 +157,7 @@ case class Vec [@specialized X: Ring] (private val A: X*):
       case x if x > max => max
       case x => x
     
-  inline def absolute(using S: Signed[X]): Vec[X] = map(S.abs)
+  inline def abs(using S: Signed[X]): Vec[X] = map(S.absolute)
   
   inline def toVecF(using X =:= Int): VecF = thisAsVecI.map(_.toFloat)
   inline def toVecI(using X =:= Float): VecI = thisAsVecF.map(_.toInt)
@@ -277,11 +278,8 @@ object Vec:
     def divide(x: Int, y: Int): Int = x / y
     
   trait Signed[X]:
-    def abs(x: X): X
-  given Signed[Int] with
-    def abs(x: Int): Int = x.abs
-  given Signed[Float] with
-    def abs(x: Float): Float = x.abs
+    def absolute(x: X): X
+  given Signed[Int] = _.abs
+  given Signed[Float] = _.abs
   
-  given Conversion[VecI, VecF] with
-    def apply(v: VecI): VecF = v.toVecF
+  given Conversion[VecI, VecF] = _.toVecF

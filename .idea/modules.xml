@@ -7,9 +7,9 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-common.common-sources.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-common.common-sources.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-common.commonJS.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-common.commonJS.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-common.commonJVM.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-common.commonJVM.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-common.games-sources.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-common.games-sources.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-common.gamesJS.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-common.gamesJS.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-common.gamesJVM.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-common.gamesJVM.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-games.games-sources.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-games.games-sources.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-games.gamesJS.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-games.gamesJS.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-games.gamesJVM.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-games.gamesJVM.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-server.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-server.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.root-build.iml" filepath="$PROJECT_DIR$/.idea/modules/root.root-build.iml" />
     </modules>

@@ -8,8 +8,6 @@ import scala.math.Ordered.orderingToOrdered
 
 object CollectionOps:
   
-  val x: Set[Int] = Set()
-  
   type Collection[T[_], X] = IterableOps[X, T, T[X]]
 
   type MultiMap[K, +X] = Map[K, Seq[X]]
@@ -46,6 +44,10 @@ object CollectionOps:
       (using pure: [Z] => Z => M[Z])
     : M[Y] =
       collection.traverse(f).map(_.last)
+      
+  extension [X, Y] (order: Ordering[X])
+    def contramap(f: Y => X): Ordering[Y] =
+      (y1: Y, y2: Y) => order.compare(f(y1), f(y2))
 
   /*extension [K : Ordering, X] (m1: SortedMultiMap[K, X])
 

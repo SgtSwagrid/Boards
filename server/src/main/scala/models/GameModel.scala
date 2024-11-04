@@ -1,7 +1,9 @@
 package models
 
 import boards.Games
-import boards.algebra.{Action, Game, GameState}
+import boards.algebra.{Action, Game}
+import boards.algebra.Game.PlayerId
+import boards.algebra.state.GameState
 import boards.protocol.GameProtocol.{Player, Spectator, Room, Participant, Status, Unregistered}
 import org.mindrot.jbcrypt.BCrypt
 import slick.dbio.{DBIO, DBIOAction}
@@ -81,7 +83,7 @@ class GameModel(using db: Database, ec: ExecutionContext):
       players <- Action.getAllPlayers(roomId)
       users <- DBIO.sequence(players.map(_.userId).map(UserModel().Action.getUserById))
     yield (players.zip(users).map: (p, u) =>
-      Player(u.id, p.roomId, p.position, p.isOwner, u.username)
+      Player(u.id, p.roomId, PlayerId(p.position), p.isOwner, u.username)
     ).sortBy(_.position)
     db.run(action)
     
@@ -96,7 +98,7 @@ class GameModel(using db: Database, ec: ExecutionContext):
           case (None, _) => Unregistered
           case (Some(user), None) => Spectator(user.id, user.username)
           case (Some(user), Some(player)) =>
-            Player(user.id, roomId, player.position, player.isOwner, user.username)
+            Player(user.id, roomId, PlayerId(player.position), player.isOwner, user.username)
         db.run(action)
     
   def startGame(roomId: String): Future[Room] =

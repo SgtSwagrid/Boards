@@ -2,6 +2,7 @@ package boards.util
 
 import boards.imports.circe.{*, given}
 import boards.imports.math.{*, given}
+import boards.imports.games.{*, given}
 
 object Codecs:
   
@@ -17,3 +18,6 @@ object Codecs:
   
   given [X: Encoder]: Encoder[Vec[X]] = Encoder.encodeSeq[X].contramap(_.toSeq)
   given [X: Decoder: Ring]: Decoder[Vec[X]] = Decoder.decodeSeq[X].map(Vec.apply)
+  
+  given Encoder[PlayerId] = summon[Encoder[Int]].contramap(_.toInt)
+  given Decoder[PlayerId] = summon[Decoder[Int]].map(PlayerId.apply)

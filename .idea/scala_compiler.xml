@@ -15,7 +15,6 @@
     <option name="optimiseBytecode" value="true" />
     <option name="explainTypeErrors" value="true" />
     <option name="continuations" value="true" />
-    <option name="separateProdTestSources" value="false" />
     <profile name="sbt 1" modules="Boards,boards" />
     <profile name="sbt 10" modules="root.boards-common.gamesJS,root.boards-common.gamesJVM">
       <parameters>
@@ -28,9 +27,16 @@
     </profile>
     <profile name="sbt 11" modules="root">
       <parameters>
-        <parameter value="-language:namedTuples" />
         <parameter value="-Xmax-inlines" />
         <parameter value="128" />
+      </parameters>
+    </profile>
+    <profile name="sbt 12" modules="root.boards-common.commonJS,root.boards-common.commonJVM">
+      <parameters>
+        <parameter value="-Xmax-inlines" />
+        <parameter value="128" />
+        <parameter value="-scalajs" />
+        <parameter value="-scalajs-mapSourceURI:file:/C:/Users/alecd/IdeaProjects/Boards/common/src/main/scala/-&gt;../scala/58571c/" />
       </parameters>
     </profile>
     <profile name="sbt 2" modules="boards.server">
@@ -63,7 +69,6 @@
       <option name="deprecationWarnings" value="true" />
       <option name="uncheckedWarnings" value="true" />
       <parameters>
-        <parameter value="-language:namedTuples" />
         <parameter value="-Xmax-inlines" />
         <parameter value="128" />
         <parameter value="-encoding" />
@@ -76,20 +81,18 @@
     </profile>
     <profile name="sbt 8" modules="root.boards-client">
       <parameters>
-        <parameter value="-language:namedTuples" />
         <parameter value="-Xmax-inlines" />
         <parameter value="128" />
         <parameter value="-scalajs" />
         <parameter value="-scalajs-mapSourceURI:file:/C:/Users/alecd/IdeaProjects/Boards/client/src/main/scala/-&gt;../scala/5d8a0c/" />
       </parameters>
     </profile>
-    <profile name="sbt 9" modules="root.boards-common.commonJS,root.boards-common.commonJVM">
+    <profile name="sbt 9" modules="root.boards-games.gamesJS,root.boards-games.gamesJVM">
       <parameters>
-        <parameter value="-language:namedTuples" />
         <parameter value="-Xmax-inlines" />
         <parameter value="128" />
         <parameter value="-scalajs" />
-        <parameter value="-scalajs-mapSourceURI:file:/C:/Users/alecd/IdeaProjects/Boards/common/src/main/scala/-&gt;../scala/58571c/" />
+        <parameter value="-scalajs-mapSourceURI:file:/C:/Users/alecd/IdeaProjects/Boards/games/src/main/scala/-&gt;../scala/7bc743/" />
       </parameters>
     </profile>
   </component>

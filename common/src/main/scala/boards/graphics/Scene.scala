@@ -15,7 +15,8 @@ case class Scene (
   inputs: Seq[Input] = Seq.empty,
   diff: Seq[VecI] = Seq.empty,
   players: Seq[Player] = Seq.empty,
-  activePlayerId: Int = 0,
+  outcome: Option[Outcome] = None,
+  activePlayerId: PlayerId = PlayerId(0),
 ) derives Codec.AsObject:
   lazy val inputsByOrigin = inputs.groupBy(_.from)
   lazy val piecesById = pieces.map(p => p.pieceId -> p).toMap
@@ -24,7 +25,16 @@ case class Scene (
   def activePlayer = players(activePlayerId)
   def activePlayerName = game.playerNames(activePlayerId)
   def activePlayerColour = game.playerColours(activePlayerId)
+  
+  def isMyTurn: Boolean = participant match
+    case player: Player => player.position == activePlayerId
+    case _ => false
+  def iWon: Boolean = (participant, outcome) match
+    case (player: Player, Some(Winner(winner))) => player.position == winner
+    case _ => false
+  def iLost: Boolean = participant.isPlayer && isComplete && !iWon
   export room.{game, status}
+  export status.{isPending, isActive, isComplete}
 
 object Scene:
   import Scene.*
@@ -63,15 +73,15 @@ object Scene:
       PieceData(piece.id, piece.position, piece.texture)
     
     val inputs =
-      if !room.status.isActive || !spectator.isActivePlayer(state.activePlayer.toInt) then Seq() else
+      if !room.status.isActive || !spectator.isActivePlayer(state.activePlayer) then Seq() else
         state.next.toSeq.map: successor =>
-          val (from, to) = successor.action match
+          val (from, to) = successor.actionOption.get match
             case Place(_, _, pos) => (pos, pos)
             case Move(_, from, to) => (from, to)
             case Destroy(piece) => (piece.position, piece.position)
-            case NoOp => throw new IllegalStateException
+            case Skip => ???
           val result = Scene(successor.inert, players, room, spectator)
-          Input(from, to, successor.action.hash, result)
+          Input(from, to, successor.actionOption.get.hash, result)
     
     val inCheck = boards.games.Chess.inCheck(using state)
     
@@ -83,7 +93,8 @@ object Scene:
       inputs,
       state.turnDiff.toSeq,
       players,
-      state.activePlayer.toInt
+      state.outcomeOption,
+      state.activePlayer,
     )
     
   def empty: Scene = new Scene()

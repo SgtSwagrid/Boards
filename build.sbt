@@ -5,12 +5,12 @@ import sbtcrossproject.CrossPlugin.autoImport.{CrossType, crossProject}
 ThisBuild / version := "4.0-beta"
 ThisBuild / organization := "swagco"
 
-ThisBuild / scalaVersion := "3.5.0"
+ThisBuild / scalaVersion := "3.5.2"
 ThisBuild / scalacOptions ++= Seq (
   /*"-experimental",
   "-feature",*/
   //"-language:implicitConversions",
-  "-language:namedTuples",
+  //"-language:namedTuples",
   "-Xmax-inlines", "128",
 )
 
@@ -100,5 +100,5 @@ lazy val games = crossProject(JSPlatform, JVMPlatform)
   .enablePlugins(ScalaJSWeb)
   .in(file("games"))
   .settings (
-    name := "boards-common",
+    name := "boards-games",
   )

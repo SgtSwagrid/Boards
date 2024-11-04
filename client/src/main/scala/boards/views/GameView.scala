@@ -62,7 +62,7 @@ object GameView extends View:
     document.documentURI.split("/").contains("join")
   
   private val socket: WebSocket[Scene, GameRequest] =
-    WebSocket.path(s"/game/$roomId/socket").json.build()
+    WebSocket.path(s"/game/$roomId/socket").json[Scene, GameRequest].build()
     
   private val sceneBus: EventBus[Scene] = new EventBus[Scene]
   private val scene: Signal[Scene] = sceneBus.events.startWith(Scene.empty)

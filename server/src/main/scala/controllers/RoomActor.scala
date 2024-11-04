@@ -2,9 +2,9 @@ package controllers
 
 import boards.Games
 import RoomActor.Protocol.*
-import boards.algebra.GameState
-import boards.algebra.GameState.NonFinalState
-import boards.algebra.InstantaneousState.given
+import boards.algebra.state.GameState.NonFinalState
+import boards.algebra.state.InstantaneousState.given
+import boards.algebra.state.GameState
 import boards.graphics.Scene
 import boards.protocol.GameProtocol.*
 import boards.protocol.GameProtocol.GameRequest.*
@@ -46,7 +46,7 @@ extends Actor:
   updatePlayers()
   
   private def canTakeAction(spectator: Participant): Boolean =
-    room.status.isActive && spectator.isActivePlayer(state.activePlayer.toInt)
+    room.status.isActive && spectator.isActivePlayer(state.activePlayer)
   
   def receive =
     case Subscribe(me, out) =>
@@ -110,7 +110,6 @@ extends Actor:
     
   def render() =
     subscribers.foreach(sub => sub.session ! Scene(state, players, room, sub.spectator))
-    
   
 object RoomActor:
   

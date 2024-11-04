@@ -1,7 +1,7 @@
 package boards.protocol
 
-import boards.algebra.Game
 import boards.Games
+import boards.imports.games.{*, given}
 
 object GameProtocol:
   
@@ -19,7 +19,11 @@ object GameProtocol:
   
   sealed trait Participant:
     
-    def isActivePlayer(activePlayer: Int): Boolean = this match
+    def isPlayer: Boolean = this match
+      case _: Player => true
+      case _ => false
+    
+    def isActivePlayer(activePlayer: PlayerId): Boolean = this match
       case Player(_, _, position, _, _) => position == activePlayer
       case _ => false
       
@@ -28,9 +32,9 @@ object GameProtocol:
       case Spectator(userId, _) => Some(userId)
       case Unregistered => None
       
-    def isPlayer: Boolean = this match
-      case _: Player => true
-      case _ => false
+    def positionOption: Option[PlayerId] = this match
+      case player: Player => Some(player.position)
+      case _ => None
       
     def isRegistered: Boolean = this match
       case Unregistered => false
@@ -39,7 +43,7 @@ object GameProtocol:
   case class Player (
     userId: Int,
     roomId: String,
-    position: Int,
+    position: PlayerId,
     isOwner: Boolean,
     username: String,
   ) extends Participant

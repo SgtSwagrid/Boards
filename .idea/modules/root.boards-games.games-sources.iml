@@ -10,20 +10,20 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="sbt: scala-sdk-3.5.0" level="project" />
+    <orderEntry type="library" name="sbt: scala-sdk-3.5.2" level="project" />
     <orderEntry type="library" name="sbt: org.scala-js:scalajs-javalib:1.16.0:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scala-js:scalajs-library_2.13:1.16.0:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scala-js:scalajs-scalalib_2.13:2.13.13+1.16.0:jar" level="project" />
     <orderEntry type="library" scope="TEST" name="sbt: org.scala-js:scalajs-test-bridge_2.13:1.16.0:jar" level="project" />
     <orderEntry type="library" scope="TEST" name="sbt: org.scala-js:scalajs-test-interface_2.13:1.16.0:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scala-lang:scala-library:2.13.14:jar" level="project" />
-    <orderEntry type="library" name="sbt: org.scala-lang:scala3-library_sjs1_3:3.5.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-lang:scala3-library_sjs1_3:3.5.2:jar" level="project" />
   </component>
   <component name="SharedSourcesOwnerModules">
     <option name="ownersModuleNames">
       <list>
-        <option value="root.boards-common.gamesJS" />
-        <option value="root.boards-common.gamesJVM" />
+        <option value="root.boards-games.gamesJS" />
+        <option value="root.boards-games.gamesJVM" />
         <option value="root.boards-server" />
       </list>
     </option>

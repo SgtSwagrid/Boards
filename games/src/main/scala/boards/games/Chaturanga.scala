@@ -1,7 +1,9 @@
 package boards.games
 
 import boards.imports.games.{*, given}
+import boards.imports.math.{*, given}
 import boards.algebra.shortcuts.{*, given}
+import boards.games.Chess.Pawn
 
 object Chaturanga extends Game (
   name = "Chaturanga",
@@ -13,46 +15,45 @@ object Chaturanga extends Game (
   override val Board = Kernel.box(8, 8)
     .paint(Pattern.Checkered(Colour.Black, Colour.White))
   
-  case object Ratha extends
+  object Ratha extends
     PieceType.WithTexture(Texture.WhiteRatha, Texture.BlackRatha),
     PieceType.WithRule(_.move(Dir.orthogonal.ray.toEnemy.untilFriendly))
   
-  case object Ashva extends
+  object Ashva extends
     PieceType.WithTexture(Texture.WhiteAshva, Texture.BlackAshva),
     PieceType.WithRule(_.move(Dir.knight(1, 2).avoidFriendly))
   
-  case object Gaja extends
+  object Gaja extends
     PieceType.WithTexture(Texture.WhiteGaja, Texture.BlackGaja),
     PieceType.WithRule(_.move((Dir.diagonal * 2).avoidFriendly))
   
-  case object Mantri extends
+  object Mantri extends
     PieceType.WithTexture(Texture.WhiteMantri, Texture.BlackMantri),
     PieceType.WithRule(_.move(Dir.diagonal.avoidFriendly))
       
-  case object Raja extends
+  object Raja extends
     PieceType.WithTexture(Texture.WhiteRaja, Texture.BlackRaja),
     PieceType.WithRule(_.move(Dir.octagonal.avoidFriendly))
       
-  case object Padati
+  object Padati
     extends PieceType.WithTexture(Texture.WhitePadati, Texture.BlackPadati):
     def actions(padati: Piece) =
-      val MOVE =
+      val r_move =
         padati.move(padati.byOwner(Dir.up, Dir.down).ontoEmpty) |
         padati.move(padati.byOwner(Dir.diagonallyUp, Dir.diagonallyDown).ontoEnemy)
-      MOVE.after:
-        case Following(Move(_, _, to)) if to.y == padati.byOwner(7, 0) =>
-          Pieces.insert(Mantri -> to)
-      
-  val homeRow = Seq(Ratha, Ashva, Gaja, Mantri, Raja, Gaja, Ashva, Ratha)
-  override def setup(config: GameConfig) = Pieces
-    .insert(PlayerId(0))(homeRow -> Board.row(0), Padati -> Board.row(1))
-    .insert(PlayerId(1))(homeRow -> Board.row(7), Padati -> Board.row(6))
+      val r_promote = whenCase:
+        case Following(Move(piece, _, to)) if to.y == padati.byOwner(7, 0) =>
+          piece.replace(Mantri)
+      r_move |> r_promote
   
-  def inCheck(using GameState) =
-    Pieces.ofInactivePlayers.canAttack(Pieces.ofActivePlayer.ofType(Raja))
+  val r_setup =
+    val homeRow = Seq(Ratha, Ashva, Gaja, Mantri, Raja, Gaja, Ashva, Ratha)
+    insert(PlayerId(0))(homeRow -> Board.row(0), Padati -> Board.row(1)) |>
+    insert(PlayerId(1))(homeRow -> Board.row(7), Padati -> Board.row(6))
+  
+  def inCheck(using GameState) = pieces.ofInactivePlayers.canCaptureType(Raja)
     
-  override def rules = Rule.alternatingTurns:
-    Pieces.ofActivePlayer.actions
-      .require(!inCheck)
-      .stopIfImpossible(Winner(State.nextPlayer))
-      .stopIf(Pieces.ofNextPlayer.forall(_.is(Raja)))(Winner(State.now.activePlayer))
+  override def rules = r_setup |> alternatingTurns:
+    pieces.ofActivePlayer.actions
+      .require(!inCheck).orElseIfImpossible(stop(Winner(state.nextPlayer)))
+      .thenIf(pieces.ofNextPlayer.forall(_.is(Raja)))(stop(Winner(state.now.activePlayer)))

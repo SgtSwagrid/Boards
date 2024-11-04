@@ -2,27 +2,32 @@ package boards.imports
 
 object games:
   
-  export boards.algebra.{
-    Action, InstantaneousState, Game, GameState, Generator, Piece, PieceSet, Rule
+  export boards.algebra.{Action, Game}
+  //export boards.algebra.rules.{Rule, Generator, Transformer}
+  //export boards.algebra.rules.Rule.given
+  //export boards.algebra.rules.Transformer.given
+  
+  export boards.algebra.rules.{Generator, Effect, Rule, Capability, Combinator}
+  
+  export boards.algebra.state.{
+    InstantaneousState, GameState, Piece, PieceSet
   }
-  export boards.algebra.Action.*
+  
+  export boards.algebra.state.Piece.PieceType
+  
+  export boards.algebra.Action.{Place, Move, Destroy, Skip}
   
   export boards.algebra.Game.{PlayerId, *, given}
-  export boards.algebra.GameState.{
+  export GameState.{
     InitialState, InterimState, FinalState, NonInitialState, NonFinalState,
-    Outcome, /*~>, |>,*/ Following
+    Outcome, Winner, Draw, /*~>, |>,*/ Following
   }
   
-  export boards.algebra.GameState.Outcome.{Winner, Draw}
+  export Generator.given
   
-  export boards.algebra.Generator.given
-  
-  export boards.algebra.InstantaneousState.given
-  export boards.algebra.Piece.PieceType
+  export boards.algebra.state.InstantaneousState.given
   
   export boards.graphics.{Colour, Pattern, Texture, Shape}
   
   export boards.util.extensions.FunctionOps.*
   export boards.util.extensions.Conversions.given
-  
-  export boards.imports.math.{*, given}
