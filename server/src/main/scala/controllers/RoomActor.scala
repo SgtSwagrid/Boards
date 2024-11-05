@@ -8,6 +8,9 @@ import boards.algebra.state.GameState
 import boards.graphics.Scene
 import boards.protocol.GameProtocol.*
 import boards.protocol.GameProtocol.GameRequest.*
+import boards.protocol.Room
+import boards.protocol.Room.{Player, Status, RichRoom}
+import boards.protocol.UserProtocol.User
 import models.GameModel
 import org.apache.pekko.actor.{Status as _, *}
 import schema.RoomTable.rooms
@@ -25,92 +28,89 @@ extends Actor:
   
   given ExecutionContext = context.system.dispatcher
   
-  case class Subscriber(session: ActorRef, spectator: Participant)
+  case class Subscriber(session: ActorRef, user: Option[User])
   
   val subscribers: mutable.Set[Subscriber] = mutable.Set.empty
   
-  var room: Room = Room.empty
+  var room: RichRoom = Room.empty
   var state: GameState = GameState.empty
-  var players: Seq[Player] = Seq.empty
-  var status: Status = Status.Pending
   
   for
     room <- GameModel().getRoomById(roomId)
     state <- GameModel().getGameState(roomId)
     players <- GameModel().getPlayers(roomId)
-  yield
-    this.room = room.get
+  do
+    this.room = room.get.withPlayers(players)
     this.state = state
-    this.players = players
     render()
   
   updatePlayers()
   
-  private def canTakeAction(spectator: Participant): Boolean =
-    room.status.isActive && spectator.isPlayer(state.activePlayer)
+  private def canTakeAction(userId: Int): Boolean =
+    room.isActive &&
+    room.playersOf(userId).map(_.position).contains(state.activePlayer) &&
+    !room.players(state.activePlayer).hasResigned
   
   def receive =
+    
     case Subscribe(me, out) =>
-      
-      for participant <- GameModel().getParticipant(roomId, me) do
-        subscribers += Subscriber(out, participant)
-        out ! Scene(state, players, room, participant)
+      subscribers += Subscriber(out, me)
+      out ! Scene(room, me, state)
       
     case Update(me, TakeAction(hash)) =>
       for
-        _ <- Option.when(canTakeAction(me))(())
-        userId <- me.userIdOption
         result <- state.takeActionByHash(hash)
+        if canTakeAction(me)
       do for
-        _ <- GameModel().takeAction(roomId, userId, hash)
+        _ <- GameModel().takeAction(roomId, me, hash, result.isFinal)
       do
         this.state = result
+        if result.isFinal then
+          this.room = this.room.withStatus(Status.Complete)
         render()
       
     case Update(me, InviteToRoom(user)) => ???
     
     case Update(me, RemovePlayers(positions*)) =>
-      if me.isPlaying then
-        println(positions)
+      if room.isParticipating(me) then
         for _ <- GameModel().leaveRoom(roomId)(positions*)
         do updatePlayers()
     
-    case Update(me, ReorderPlayer(player)) =>
-      if me.isPlaying then
-        for _ <- GameModel().reorderPlayer(roomId, player)
+    case Update(me, SwapPlayers(left, right)) =>
+      if room.isParticipating(me) then
+        for _ <- GameModel().swapPlayers(roomId)(left, right)
         do updatePlayers()
       
     case Update(me, PromotePlayer(user)) => ???
     case Update(me, ChangeGame(game)) => ???
     
     case Update(me, JoinRoom) =>
-      for userId <- me.userIdOption
-      do for _ <- GameModel().joinRoom(roomId, userId)
+      for _ <- GameModel().joinRoom(roomId, me)
       do updatePlayers()
     
     case Update(me, StartGame) =>
-      if me.isPlaying then
+      if room.isParticipating(me) then
         for room <- GameModel().startGame(roomId) do
-          this.room = room
+          this.room = room.withPlayers(this.room.simplePlayers)
           render()
     
     case Update(me, CancelRoom) => ???
     
+    case Update(me, Resign(resign, players*)) =>
+      for
+        _ <- GameModel().resign(roomId, resign)(players*)
+        room <- GameModel().getRoomById(roomId).map(_.get)
+      do
+        this.room = room.withPlayers(this.room.simplePlayers)
+        updatePlayers()
+    
   def updatePlayers() =
     for players <- GameModel().getPlayers(roomId) do
-      this.players = players
-      val subs = subscribers.map:
-        case Subscriber(session, participant: RegisteredParticipant) =>
-          Subscriber(session, participant.copy(
-            positions = players.filter(_.userId == participant.userId).map(_.position)
-          ))
-        case sub => sub
-      subscribers.clear()
-      subscribers ++= subs
+      this.room = this.room.withPlayers(players)
       render()
     
   def render() =
-    subscribers.foreach(sub => sub.session ! Scene(state, players, room, sub.spectator))
+    subscribers.foreach(sub => sub.session ! Scene(room, sub.user, state))
   
 object RoomActor:
   
@@ -118,5 +118,5 @@ object RoomActor:
     Props(RoomActor(roomId))
     
   enum Protocol:
-    case Subscribe(userId: Option[Int], out: ActorRef)
-    case Update(spectator: Participant, request: GameRequest)
+    case Subscribe(user: Option[User], out: ActorRef)
+    case Update(userId: Int, request: GameRequest)

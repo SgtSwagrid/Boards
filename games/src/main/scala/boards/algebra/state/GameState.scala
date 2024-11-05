@@ -52,7 +52,8 @@ sealed trait GameState:
     takeActionWhere:
       case Destroy(piece) => piece.position == pos
       case _ => false
-      
+  
+  /** A version of this state whereby no further actions are possible. */
   def inert: GameState
   
   def actionHashes: Iterator[String] = actions.map(_.hash)

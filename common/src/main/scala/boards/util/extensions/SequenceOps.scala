@@ -1,6 +1,6 @@
-package boards.util
+package boards.util.extensions
 
-object Extensions:
+object SequenceOps:
   
   extension [X] (sx: Seq[X])
     

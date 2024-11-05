@@ -31,8 +31,8 @@
   <component name="SharedSourcesOwnerModules">
     <option name="ownersModuleNames">
       <list>
-        <option value="root.boards-common.commonJS" />
         <option value="root.boards-common.commonJVM" />
+        <option value="root.boards-common.commonJS" />
         <option value="root.boards-server" />
       </list>
     </option>

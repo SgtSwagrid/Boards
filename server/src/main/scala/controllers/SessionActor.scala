@@ -5,6 +5,7 @@ import boards.graphics.Scene
 import boards.protocol.GameProtocol.*
 import boards.protocol.GameProtocol.GameRequest.*
 import boards.imports.circe.{*, given}
+import boards.protocol.UserProtocol.User
 import models.GameModel
 import org.apache.pekko.actor.{*, given}
 import org.apache.pekko.pattern.ask
@@ -20,24 +21,22 @@ class SessionActor (
   out: ActorRef,
   system: ActorRef,
   roomId: String,
-  userId: Option[Int]
+  user: Option[User]
 ) (using Database) extends Actor:
   
   given ExecutionContext = context.system.dispatcher
   given Timeout = 5.seconds
   
   val roomActor = (system ? roomId).mapTo[ActorRef]
-  roomActor.map(_ ! RoomActor.Protocol.Subscribe(userId, out))
+  roomActor.map(_ ! RoomActor.Protocol.Subscribe(user, out))
   
   def receive =
     case message: String =>
       for
+        userId <- user.map(_.userId)
         request <- decode[GameRequest](message).toOption
-      do for
-        participant <- GameModel().getParticipant(roomId, userId)
-      do
-        roomActor.map(_ ! RoomActor.Protocol.Update(participant, request))
+      do roomActor.map(_ ! RoomActor.Protocol.Update(userId, request))
 
 object SessionActor:
-  def props(out: ActorRef, system: ActorRef, roomId: String, userId: Option[Int])(using Database) =
-    Props(SessionActor(out, system, roomId, userId))
+  def props(out: ActorRef, system: ActorRef, roomId: String, user: Option[User])(using Database) =
+    Props(SessionActor(out, system, roomId, user))

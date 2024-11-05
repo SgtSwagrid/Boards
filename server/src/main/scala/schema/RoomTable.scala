@@ -1,7 +1,8 @@
 package schema
 
 import RoomTable.{*, given}
-import boards.protocol.GameProtocol.{Status, Room}
+import boards.protocol.Room
+import boards.protocol.Room.Status
 import slick.jdbc.H2Profile.api.*
 
 class RoomTable(tag: Tag) extends Table[Room](tag, "ROOMS"):
@@ -15,7 +16,7 @@ object RoomTable:
   
   def rooms = TableQuery[RoomTable]
   
-  given BaseColumnType[Status] = MappedColumnType.base[Status, String](
+  given BaseColumnType[Status] = MappedColumnType.base[Status, String] (
     (status: Status) => status.toString.toUpperCase,
     (status: String) => Status.values.find(_.toString.toUpperCase == status.toUpperCase).get,
   )

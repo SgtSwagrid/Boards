@@ -18,7 +18,7 @@ import org.scalajs.dom.{CanvasRenderingContext2D, DOMRect, HTMLImageElement, Mou
 
 import scala.collection.mutable
 
-import boards.util.Extensions.*
+import boards.util.extensions.SequenceOps.*
 
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
 

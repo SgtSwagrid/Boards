@@ -11,6 +11,7 @@ import org.apache.pekko.stream.scaladsl.*
 import slick.jdbc.JdbcProfile
 import slick.jdbc.H2Profile.api.*
 import boards.imports.circe.{*, given}
+import boards.protocol.UserProtocol.User
 import models.GameModel
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -43,7 +44,9 @@ class GameController @Inject() (
         room match
           case Some(room) => Right (
             ActorFlow
-              .actorRef[String, Scene](out => SessionActor.props(out, system, room.id, user.map(_.id)))
+              .actorRef[String, Scene] { out => SessionActor.props (
+                out, system, room.id, user.map(user => User(user.id, user.username))
+              )}
               .map(_.asJson.toString)
           )
           case None => Left(NotFound)

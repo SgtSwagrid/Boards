@@ -3,7 +3,8 @@ package boards.components.game
 import boards.graphics.Scene
 import boards.graphics.Scene.{Input, PieceData, Tile}
 import boards.imports.laminar.HtmlProp
-import boards.protocol.GameProtocol.{GameRequest, Player, RegisteredParticipant, UnregisteredParticipant, Status}
+import boards.protocol.GameProtocol.GameRequest
+import boards.protocol.Room.Player
 import boards.views.GameView.{scene, sceneBus, socket}
 import com.raquo.laminar.codecs.StringAsIsCodec
 import com.raquo.laminar.modifiers.RenderableText
@@ -21,7 +22,7 @@ import org.scalajs.dom.{CanvasRenderingContext2D, DOMRect, HTMLImageElement, Mou
 
 import scala.collection.mutable
 
-import boards.util.Extensions.*
+import boards.util.extensions.SequenceOps.*
 
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
 
@@ -198,8 +199,8 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
   private val tentativeInput: Signal[Option[Input]] =
     Signal.combine(scene, dragged, config, cursorPos).map: (scene, dragged, cfg, cursorPos) =>
       dragged.filter(_ => inBounds(cursorPos, cfg)).flatMap: dragged =>
-        val inputs = scene.inputsByOrigin.getOrElse(dragged.pos, Seq.empty)
-        val target = (inputs.map(_.to) :+ dragged.pos)
+        val inputs = scene.inputsByOrigin.getOrElse(dragged.position, Seq.empty)
+        val target = (inputs.map(_.to) :+ dragged.position)
           .minBy: pos =>
             Metric.EuclideanSquared.dist(gameToCanvasCenterCoords(pos, cfg), cursorPos)
         inputs.find: input =>
@@ -241,7 +242,7 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
           // Pieces which previously existed and still exist.
           val existing = (previous.keySet & pieceState.keySet)
             .map(id => (previous(id), pieceState(id))).map: (previous, pieceState) =>
-              val target: VecF = gameToCanvasCenterCoords(pieceState.pos, cfg)
+              val target: VecF = gameToCanvasCenterCoords(pieceState.position, cfg)
               previous.pieceId -> PieceState(
                 previous.pieceId,
                 previous.actualPos + ((target - previous.actualPos) * 0.2F),
@@ -271,8 +272,8 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
             .map(pieceState.apply).map: pieceState =>
               pieceState.pieceId -> PieceState(
                 pieceState.pieceId,
-                gameToCanvasCenterCoords(pieceState.pos, cfg),
-                gameToCanvasCenterCoords(pieceState.pos, cfg),
+                gameToCanvasCenterCoords(pieceState.position, cfg),
+                gameToCanvasCenterCoords(pieceState.position, cfg),
                 0.0F,
                 false,
                 pieceState.texture,
@@ -307,12 +308,12 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
     clearRect(VecI.zero, cfg.canvasSize)
     
     for tile <- scene.board.labels do
-      val pos = gameToCanvasCornerCoords(tile.pos, cfg)
+      val pos = gameToCanvasCornerCoords(tile.position, cfg)
       val baseColour =
-        if dragged.exists(_.pos == tile.pos) then tile.colour.mix(Colour.British.RiseNShine, 0.75F)
-        else if scene.diffSet.contains(tile.pos) then tile.colour.mix(Colour.British.Naval, 0.75F)
+        if dragged.exists(_.position == tile.position) then tile.colour.mix(Colour.British.RiseNShine, 0.75F)
+        else if scene.diffSet.contains(tile.position) then tile.colour.mix(Colour.British.Naval, 0.75F)
         else tile.colour
-      val colour = if hover.exists(_.pos == tile.pos) then baseColour.darken(15) else baseColour
+      val colour = if hover.exists(_.position == tile.position) then baseColour.darken(15) else baseColour
       fillRect(pos, square, colour)
       
     if dragged.isEmpty then
@@ -324,7 +325,7 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
       drawImage(piece.position, piece.size, piece.texture)
 
     dragged.foreach: dragged =>
-      for input <- scene.inputsByOrigin.getOrElse(dragged.pos, Seq.empty) do
+      for input <- scene.inputsByOrigin.getOrElse(dragged.position, Seq.empty) do
         if !tentativeInput.exists(_.to == input.to) then
           val pos = gameToCanvasCenterCoords(input.to, cfg)
           if scene.piecesByPos.contains(input.to)

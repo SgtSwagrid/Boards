@@ -5,9 +5,11 @@ import boards.graphics.Scene
 import boards.graphics.Scene.{Input, PieceData, Tile}
 import boards.imports.laminar.HtmlProp
 import boards.protocol.GameProtocol.*
+import boards.protocol.Room.Status
+import boards.protocol.Room.Status.Complete
 import boards.util.Navigation
 import boards.views.GameView.{scene, socket}
-import com.raquo.laminar.api.L.img
+import com.raquo.laminar.api.L.{div, img}
 import com.raquo.laminar.codecs.StringAsIsCodec
 import com.raquo.laminar.modifiers.RenderableText
 
@@ -22,7 +24,7 @@ import org.scalajs.dom.{CanvasRenderingContext2D, DOMRect, HTMLImageElement, Mou
 
 import scala.collection.mutable
 
-import boards.util.Extensions.*
+import boards.util.extensions.SequenceOps.*
 
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
 
@@ -77,49 +79,64 @@ class GameSidebar(scene: Signal[Scene], response: Observer[GameRequest]):
       paddingLeft("20px"), paddingTop("10px"),
       //className("bg-primary-content"),
       backgroundColor("#fbc531"),
-      child <-- scene.map: scene =>
+      child <-- scene.map { scene =>
         span (
           b(scene.room.game.name, fontSize("25px"), color("#2f3640")),
           b(s"#${scene.room.id}", fontSize("14px"), color("#84817a"), marginLeft("5px")),
         )
+      }
     ),
     div (
       top("0"), left("0"), right("0"),
       height("50px"),
       paddingLeft("20px"), paddingTop("10px"), paddingRight("20px"),
       backgroundColor("#2f3640"),
-      child <-- scene.map: scene =>
+      child <-- scene.map { scene =>
         scene.status match
-          case Status.Pending => p("Waiting to start", className("text-warning"), textAlign("center"))
-          case Status.Active => p (
-            textAlign("center"),
-            b (
-              scene.activePlayerColour.textColour,
-              if scene.isExclusivelyMyTurn then "Your" else scene.activePlayerName,
-            ),
-            if scene.isExclusivelyMyTurn then " Turn" else " to Play",
-          )
+          case Status.Pending =>
+            p (
+              textAlign("center"),
+              className("text-warning"),
+              "Waiting to Start",
+            )
+          case Status.Active =>
+            p (
+              textAlign("center"),
+              b (
+                scene.activePlayer.colour.textColour,
+                if scene.isMyTurnAlone then "Your"
+                else if scene.isExclusivelyHotseat then scene.activePlayer.name
+                else scene.activePlayer.displayName,
+              ),
+              if scene.isMyTurnAlone then " Turn" else " to Play",
+            )
           case Status.Complete =>
-            scene.outcome.get match
-              case Winner(winner) => p (
-                textAlign("center"),
-                className (
-                  if scene.iWon then "text-success"
-                  else if scene.iLost then "text-error"
-                  else "text-info"
-                ),
-                if scene.iWon then "You Won"
-                else if scene.isHotseat then s"${scene.playerNames(winner)} Won"
-                else s"${scene.players(winner).username} Won",
-              )
-              case Draw => p(textAlign("center"), className("text-warning"), "Draw")
+            scene.winner match
+              case Some(winner) =>
+                p (
+                  textAlign("center"),
+                  b (
+                    winner.colour.textColour,
+                    if scene.iWonAlone then "You"
+                    else if scene.isExclusivelyHotseat then winner.name
+                    else winner.displayName,
+                  ),
+                  " Won",
+                )
+              case None =>
+                p (
+                  textAlign("center"),
+                  className("text-warning"),
+                  "Draw",
+                )
+      },
     ),
     div (
       top("0"), left("0"), right("0"),
       padding("20px"),
-      children <-- scene.map: scene =>
+      children <-- scene.map { scene =>
         
-        scene.players.map: player =>
+        scene.players.map { player =>
           span (
             display("block"),
             width("100%"),
@@ -137,15 +154,26 @@ class GameSidebar(scene: Signal[Scene], response: Observer[GameRequest]):
               b (
                 fontSize("16px"),
                 player.username,
+                span(
+                  Colour.French.ParadiseGreen.textColour,
+                  fontFamily("serif"),
+                  player.suffix,
+                ),
               ),
               p (
-                span(scene.game.playerColours(player.position).textColour, "⦿ "),
+                span(player.colour.textColour, "⦿ "),
                 fontSize("14px"),
-                scene.game.playerNames(player.position),
-              )
+                player.name,
+                when (player.hasResigned) (
+                  span (
+                    className("text-error"),
+                    " (Resigned)"
+                  ),
+                ),
+              ),
             ),
             
-            when(scene.status.isPending && scene.participant.isPlaying):
+            when (scene.isPending && scene.iAmPlaying) (
               div (
                 className("tooltip"),
                 display("inline-block"),
@@ -158,8 +186,9 @@ class GameSidebar(scene: Signal[Scene], response: Observer[GameRequest]):
                   onClick.mapTo(GameRequest.RemovePlayers(player.position)) --> response,
                 ),
               ),
+            ),
             
-            when(scene.status.isActive && player.position == scene.activePlayerId):
+            when (scene.isActive && player.position == scene.activePlayerId) (
               img (
                 display("inline-block"),
                 float("right"),
@@ -167,29 +196,44 @@ class GameSidebar(scene: Signal[Scene], response: Observer[GameRequest]):
                 width("30px"), height("30px"),
                 verticalAlign("top"),
                 marginTop("10px"),
-              )
+              ),
+            ),
+            
+            when (scene.isWinner(player.position)) (
+              img (
+                display("inline-block"),
+                float("right"),
+                src("/assets/images/ui/game/winner.svg"),
+                width("30px"), height("30px"),
+                verticalAlign("top"),
+                marginTop("10px"),
+              ),
+            ),
           )
-        .interweave:
-          scene.players.sliding(2).filter(_.size == 2).toSeq.map:
-            case player1 :: player2 :: Nil =>
-              val canSetup = scene.participant.isPlaying && scene.status.isPending
+        }.interweave (
+          scene.players.sliding(2).filter(_.size == 2).toSeq.map {
+            case left :: right :: Nil =>
               div (
                 className("divider"),
-                marginTop(if canSetup then "20px" else "10px"),
-                marginBottom(if canSetup then "20px" else "10px"),
-                when(canSetup):
+                marginTop(if scene.isPending && scene.iAmPlaying then "20px" else "10px"),
+                marginBottom(if scene.isPending && scene.iAmPlaying then "20px" else "10px"),
+                when (scene.isPending && scene.iAmPlaying && left.userId != right.userId) (
                   div (
                     className("tooltip"),
                     display("inline-block"),
                     float("right"),
-                    dataTip := s"Swap ${player1.username} and ${player2.username}",
+                    dataTip := s"Swap ${left.username} and ${right.username}",
                     button (
                       className("btn btn-circle btn-ghost btn-sm"),
                       SVG.Swap,
-                      onClick.mapTo(GameRequest.ReorderPlayer(player2.position)) --> response,
-                    )
+                      onClick.mapTo(GameRequest.SwapPlayers(left.position, right.position)) --> response,
+                    ),
                   ),
+                ),
               )
+          }
+        )
+      },
     ),
     div (
       bottom("0"), left("0"), right("0"),
@@ -198,43 +242,76 @@ class GameSidebar(scene: Signal[Scene], response: Observer[GameRequest]):
       backgroundColor("#2f3640"),
       child <-- scene.map ( scene =>
         div (
-          when(scene.isPending) (
-            scene.participant match
-              case participant: RegisteredParticipant if participant.isPlaying =>
-                div (
+          when (scene.isPending) (
+            when (scene.iAmPlaying) (
+              button (
+                className("btn btn-error"),
+                width("100%"),
+                marginBottom("10px"),
+                "Leave Game",
+                onClick.mapTo(GameRequest.RemovePlayers(scene.myPlayers.map(_.position)*)) --> response,
+              ),
+            ),
+            when (!scene.isFull) (
+              button (
+                className("btn btn-info"),
+                width("100%"),
+                marginBottom("10px"),
+                if scene.iAmPlaying then "Add Hotseat Player" else "Join Game",
+                if scene.iAmRegistered
+                then onClick.mapTo(GameRequest.JoinRoom) --> response
+                else onClick --> (_ => Navigation.goto("/login", "next" -> s"/game/${scene.room.id}/join"))
+              ),
+            ),
+            when (scene.canStart && scene.iAmPlaying) (
+              button (
+                className("btn btn-accent"),
+                width("100%"),
+                margin("0 0 10px 0"),
+                "Start Game",
+                onClick.mapTo(GameRequest.StartGame) --> response,
+              ),
+            ),
+          ),
+          when (scene.isActive && scene.iAmPlaying) (
+            div (
+              /*button (
+                className("btn btn-warning"),
+                width("100%"),
+                marginBottom("10px"),
+                "Offer Draw",
+                onClick.mapTo(GameRequest.OfferDraw(???)) --> response,
+              ),*/
+              {
+                val (toRejoin, toResign) =
+                  (if scene.isMyTurn then Seq(scene.activePlayer) else scene.myPlayers)
+                    .partition(_.hasResigned)
+                
+                if toResign.nonEmpty then
                   button (
                     className("btn btn-error"),
                     width("100%"),
                     marginBottom("10px"),
-                    "Leave Game",
-                    onClick.mapTo(GameRequest.RemovePlayers(participant.positions*)) --> response,
-                  ),
-                  when(scene.canStart):
-                    button (
-                      className("btn btn-accent"),
-                      width("100%"),
-                      margin("0 0 10px 0"),
-                      "Start Game",
-                      onClick.mapTo(GameRequest.StartGame) --> response,
-                    )
-                )
-              case _ => div()
-            ,
-            when(!scene.isFull) (
-              button (
-                className("btn btn-info"),
-                width("100%"),
-                margin("0 0 10px 0"),
-                if scene.participant.isPlaying then "Add Hotseat Player" else "Join Game",
-                scene.participant match
-                  case _: RegisteredParticipant =>
-                    onClick.mapTo(GameRequest.JoinRoom) --> response
-                  case UnregisteredParticipant =>
-                    onClick --> (_ => Navigation.goto("/login", "next" -> s"/game/${scene.room.id}/join"))
-              )
+                    if scene.iAmPlayingAlone then "Resign Game"
+                    else if toResign.sizeIs == 1 then s"Resign as ${toResign.head.name}"
+                    else "Resign All",
+                    onClick.mapTo(GameRequest.Resign(true, toResign.map(_.position)*)) --> response,
+                  )
+                else if toRejoin.nonEmpty then
+                  button (
+                    className("btn btn-info"),
+                    width("100%"),
+                    marginBottom("10px"),
+                    if scene.iAmPlayingAlone then "Rejoin Game"
+                    else if toRejoin.sizeIs == 1 then s"Rejoin as ${toRejoin.head.name}"
+                    else "Rejoin All",
+                    onClick.mapTo(GameRequest.Resign(false, toRejoin.map(_.position)*)) --> response,
+                  )
+                else emptyNode
+              },
             ),
-          )
-        )
-      )
-    )
+          ),
+        ),
+      ),
+    ),
   )
