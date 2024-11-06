@@ -8,7 +8,7 @@ object Chess extends Game (
   name = "Chess",
   numPlayers = Seq(2),
   playerNames = Seq("White", "Black"),
-  playerColours = Seq(Colour.British.LynxWhite, Colour.British.Naval),
+  playerColours = Seq(Colour.Chess.Light, Colour.Chess.Dark),
 ):
   
   override val Board = Kernel.box(8, 8)

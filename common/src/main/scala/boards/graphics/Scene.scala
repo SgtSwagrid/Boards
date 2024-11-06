@@ -104,6 +104,25 @@ case class Scene (
   /** Whether the only player on this device lost the game. */
   lazy val iLostAlone: Boolean = iLost && iAmPlayingAlone
   
+  lazy val (activePlayers, resignedPlayers, drawnPlayers) =
+    val (active, inactive) =  players.partition(p => !p.hasResigned && !p.hasOfferedDraw)
+    val (resigned, drawn) = inactive.partition(_.hasResigned)
+    (active, resigned, drawn)
+  
+  lazy val (myActivePlayers, myResignedPlayers, myDrawnPlayers) =
+    val (active, inactive) = myPlayers.partition(p => !p.hasResigned && !p.hasOfferedDraw)
+    val (resigned, drawn) = inactive.partition(_.hasResigned)
+    (active, resigned, drawn)
+  
+  /** Whether any of the players on this device have resigned. */
+  lazy val iHaveResigned: Boolean = myResignedPlayers.nonEmpty
+  /** Whether all the players on this device have resigned. */
+  lazy val iHaveResignedAll: Boolean = iHaveResigned && myActivePlayers.isEmpty && myDrawnPlayers.isEmpty
+  /** Whether any of the players on this device have offered a draw. */
+  lazy val iHaveOfferedDraw: Boolean = myDrawnPlayers.nonEmpty
+  /** Whether some player has offered a draw. */
+  lazy val someoneHasOfferedDraw: Boolean = drawnPlayers.nonEmpty
+  
   export room.*
 
 object Scene:

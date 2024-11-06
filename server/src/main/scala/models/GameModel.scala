@@ -129,9 +129,29 @@ class GameModel(using db: Database, ec: ExecutionContext):
       if room.isActive
       players <- Action.getPlayersByPos(roomId)(positions*)
       _ <- Query.playersByPos(roomId)(positions*).delete
-      _ <- PlayerTable.players ++= players.map(_.copy(hasResigned = resigned))
+      _ <- PlayerTable.players ++= players.map(_.copy (
+        hasResigned = resigned,
+        hasOfferedDraw = false,
+      ))
       nonResigned <- Action.getAllPlayers(roomId).map(_.filter(!_.hasResigned))
       _ <- if nonResigned.sizeIs == 1
+        then Query.room(roomId).map(_.status).update(Status.Complete)
+        else DBIO.successful(())
+    yield ()
+    db.run(action.transactionally)
+    
+  def offerDraw(roomId: String, draw: Boolean = true)(positions: PlayerId*): Future[Unit] =
+    val action = for
+      room <- Action.getRoom(roomId)
+      if room.isActive
+      players <- Action.getPlayersByPos(roomId)(positions*).map(_.filter(!_.hasResigned))
+      _ <- Query.playersByPos(roomId)(positions*).delete
+      _ <- PlayerTable.players ++= players.map(_.copy (
+        hasResigned = false,
+        hasOfferedDraw = draw,
+      ))
+      active <- Action.getAllPlayers(roomId).map(_.filter(p => !p.hasOfferedDraw && !p.hasResigned))
+      _ <- if active.isEmpty
         then Query.room(roomId).map(_.status).update(Status.Complete)
         else DBIO.successful(())
     yield ()

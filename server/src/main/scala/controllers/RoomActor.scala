@@ -96,13 +96,29 @@ extends Actor:
     
     case Update(me, CancelRoom) => ???
     
-    case Update(me, Resign(resign, players*)) =>
+    case Update(me, Resign(resign, positions*)) =>
       for
-        _ <- GameModel().resign(roomId, resign)(players*)
+        players <- GameModel().getPlayers(roomId)
+        // Ensure user can't resign on behalf of a player on another device.
+        myPositions = players.filter(_.userId == me).map(_.position).filter(positions.contains)
+        _ <- GameModel().resign(roomId, resign)(myPositions*)
         room <- GameModel().getRoomById(roomId).map(_.get)
+        players <- GameModel().getPlayers(roomId)
       do
-        this.room = room.withPlayers(this.room.simplePlayers)
-        updatePlayers()
+        this.room = room.withPlayers(players)
+        render()
+    
+    case Update(me, OfferDraw(draw, positions*)) =>
+      for
+        players <- GameModel().getPlayers(roomId)
+        // Ensure user can't offer draw on behalf of a player on another device.
+        myPositions = players.filter(_.userId == me).map(_.position).filter(positions.contains)
+        _ <- GameModel().offerDraw(roomId, draw)(myPositions*)
+        room <- GameModel().getRoomById(roomId).map(_.get)
+        players <- GameModel().getPlayers(roomId)
+      do
+        this.room = room.withPlayers(players)
+        render()
     
   def updatePlayers() =
     for players <- GameModel().getPlayers(roomId) do
