@@ -183,7 +183,7 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
         display("inline-block"),
         marginTop("10px"),
         float("right"),
-        dataTip := s"Remove ${player.username}",
+        dataTip(s"Remove ${player.username}"),
         button (
           className("btn btn-circle btn-ghost btn-sm"),
           SVG.Cross,
@@ -231,7 +231,7 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
           className("tooltip"),
           display("inline-block"),
           float("right"),
-          dataTip := s"Swap ${left.username} and ${right.username}",
+          dataTip(s"Swap ${left.username} and ${right.username}"),
           button (
             className("btn btn-circle btn-ghost btn-sm"),
             SVG.Swap,
@@ -255,7 +255,9 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
       ) else if scene.isActive && scene.iAmPlaying then div (
         drawButton,
         resignButton,
-      ) else emptyNode
+      ) else if scene.isComplete then
+        navigationButtons
+      else emptyNode,
     )
   
   private def leaveButton =
@@ -345,3 +347,67 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
         onClick.mapTo(GameRequest.Resign(false, toRejoin.map(_.position) *)) --> respond,
       )
     else emptyNode
+    
+  private def navigationButtons =
+    
+    div (
+      margin("auto"),
+      maxWidth("fit-content"),
+      div (
+        margin("5px"),
+        display("inline-block"),
+        className("tooltip"),
+        dataTip("To Start of Game"),
+        button (
+          className("btn btn-square btn-sm btn-ghost"),
+          img (
+            src("/assets/images/ui/game/first.svg"),
+            width("30px"), height("30px"),
+          ),
+          onClick.mapTo(GameRequest.ViewPreviousState(0)) --> respond,
+        ),
+      ),
+      div (
+        margin("5px"),
+        display("inline-block"),
+        className("tooltip"),
+        dataTip("To Previous Turn"),
+        button (
+          className("btn btn-square btn-sm btn-ghost"),
+          img (
+            src("/assets/images/ui/game/previous.svg"),
+            width("30px"), height("30px"),
+          ),
+          onClick.mapTo(GameRequest.ViewPreviousState(scene.time - 1)) --> respond,
+        ),
+      ),
+      div (
+        margin("5px"),
+        display("inline-block"),
+        className("tooltip"),
+        dataTip("To Next Turn"),
+        button (
+          className("btn btn-square btn-sm btn-ghost"),
+          img (
+            src("/assets/images/ui/game/next.svg"),
+            width("30px"), height("30px"),
+          ),
+          onClick.mapTo(GameRequest.ViewPreviousState(scene.time + 1)) --> respond,
+        ),
+      ),
+      div (
+        margin("5px"),
+        display("inline-block"),
+        className("tooltip"),
+        dataTip("To End of Game"),
+        button (
+          className("btn btn-square btn-sm btn-ghost"),
+          img (
+            src("/assets/images/ui/game/last.svg"),
+            width("30px"), height("30px"),
+          ),
+          onClick.mapTo(GameRequest.ViewPreviousState(-1)) --> respond,
+        ),
+      ),
+    )
+    

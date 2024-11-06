@@ -55,7 +55,11 @@ extends Actor:
     
     case Subscribe(me, out) =>
       subscribers += Subscriber(out, me)
-      out ! Scene(room, me, state)
+      out ! Scene(room, me.map(_.userId), state)
+    
+    case ViewState(time, me, out) =>
+      state.atTime((time + (state.time + 1)) % (state.time + 1)).foreach: state =>
+        out ! Scene(room, me, state)
       
     case Update(me, TakeAction(hash)) =>
       for
@@ -126,7 +130,7 @@ extends Actor:
       render()
     
   def render() =
-    subscribers.foreach(sub => sub.session ! Scene(room, sub.user, state))
+    subscribers.foreach(sub => sub.session ! Scene(room, sub.user.map(_.userId), state))
   
 object RoomActor:
   
@@ -136,3 +140,4 @@ object RoomActor:
   enum Protocol:
     case Subscribe(user: Option[User], out: ActorRef)
     case Update(userId: Int, request: GameRequest)
+    case ViewState(time: Int, user: Option[Int], out: ActorRef)

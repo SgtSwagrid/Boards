@@ -32,10 +32,12 @@ class SessionActor (
   
   def receive =
     case message: String =>
-      for
-        userId <- user.map(_.userId)
-        request <- decode[GameRequest](message).toOption
-      do roomActor.map(_ ! RoomActor.Protocol.Update(userId, request))
+      decode[GameRequest](message).toOption.foreach:
+        case GameRequest.ViewPreviousState(time) =>
+          roomActor.map(_ ! RoomActor.Protocol.ViewState(time, user.map(_.userId), out))
+        case request: GameRequest =>
+          user.foreach: user =>
+            roomActor.map[Unit](_ ! RoomActor.Protocol.Update(user.userId, request))
 
 object SessionActor:
   def props(out: ActorRef, system: ActorRef, roomId: String, user: Option[User])(using Database) =

@@ -36,6 +36,8 @@ object GameProtocol:
     case Resign(resign: Boolean, positions: PlayerId*)
     /** Offer a draw or accept an offer for a draw. */
     case OfferDraw(draw: Boolean, positions: PlayerId*)
+    /** See the game state from a previous turn. */
+    case ViewPreviousState(time: Int)
   
   /** A request sent by the user to create a new room. */
   case class CreateRoomRequest(gameId: String)

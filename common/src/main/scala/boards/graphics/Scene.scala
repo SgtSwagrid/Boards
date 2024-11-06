@@ -20,7 +20,7 @@ import Scene.*
  *
  * @param room The game room currently being viewed.
  *
- * @param user The user who is currently logged in on this device.
+ * @param userId The ID of the user who is currently logged in on this device.
  * @param activePlayerId The ID of the player whose turn it currently is.
  *
  * @param board The set of empty tiles that forms the game board.
@@ -28,12 +28,13 @@ import Scene.*
  * @param inputs The set of legally permissible inputs for this user in the current state.
  * @param diff The tiles which were modified during the previous turn.
  * @param outcome The result of the game, if it has ended.
+ * @param time The number of actions which have already been taken.
  */
 case class Scene (
   
   room: RichRoom = Room.empty,
   
-  user: Option[User] = None,
+  userId: Option[Int] = None,
   activePlayerId: PlayerId = PlayerId(0),
   
   board: Kernel[Tile] = Kernel.empty,
@@ -41,6 +42,7 @@ case class Scene (
   inputs: Seq[Input] = Seq.empty,
   diff: Seq[VecI] = Seq.empty,
   outcome: Option[Outcome] = None,
+  time: Int = 0,
   
 ) derives Codec.AsObject:
   
@@ -54,14 +56,14 @@ case class Scene (
   lazy val diffSet: Set[VecI] = diff.toSet
   
   /** Whether this participant is currently signed in. */
-  lazy val iAmRegistered: Boolean = user.isDefined
+  lazy val iAmRegistered: Boolean = userId.isDefined
   
   /** The player whose turn it currently is. */
   lazy val activePlayer: RichPlayer = players(activePlayerId)
   
   /** All the players that are playing on this device. */
   lazy val myPlayers: Seq[RichPlayer] =
-    user.toSeq.flatMap(user => playersByUser.get(user.userId).toSeq.flatten)
+    userId.toSeq.flatMap(userId => playersByUser.get(userId).toSeq.flatten)
   
   /** Whether at least one player is playing on this device. */
   lazy val iAmPlaying: Boolean = myPlayers.sizeIs > 0
@@ -74,7 +76,7 @@ case class Scene (
   def isMe(playerId: PlayerId): Boolean = myPlayers.exists(_.position == playerId)
   
   /** Whether it is the turn of a player on this device. */
-  lazy val isMyTurn: Boolean = user.exists(user => activePlayer.userId == user.userId)
+  lazy val isMyTurn: Boolean = userId.contains(activePlayer.userId)
   /** Whether it is the turn of the only player on this device. */
   lazy val isMyTurnAlone: Boolean = isMyTurn && !iAmPlayingHotseat
   
@@ -94,13 +96,13 @@ case class Scene (
   
   /** Whether a player on this device won the game. */
   lazy val iWon: Boolean =
-    winner.exists(winner => user.exists(user => winner.userId == user.userId))
+    winner.exists(winner => userId.contains(winner.userId))
   /** Whether the only player on this device won the game. */
   lazy val iWonAlone: Boolean = iWon && iAmPlayingAlone
     
   /** Whether a player on another device won the game. */
   lazy val iLost: Boolean =
-    user.isDefined && winner.exists(winner => user.forall(user => winner.userId != user.userId))
+    userId.isDefined && winner.exists(winner => !userId.contains(winner.userId))
   /** Whether the only player on this device lost the game. */
   lazy val iLostAlone: Boolean = iLost && iAmPlayingAlone
   
@@ -175,12 +177,12 @@ object Scene:
    * (This is used by the server to produce a scene before sending it to the client.)
    *
    * @param room The room in which the game is being played.
-   * @param user The user for whom the scene is to be rendered.
+   * @param user The ID of the user for whom the scene is to be rendered.
    * @param state The actual game state.
    */
   def apply (
     room: RichRoom,
-    user: Option[User],
+    userId: Option[Int],
     state: GameState,
   ): Scene =
     
@@ -197,7 +199,7 @@ object Scene:
     
     val inputs =
       val isMyTurn = room.isActive &&
-        user.exists(user => room.players(state.activePlayer).userId == user.userId) &&
+        userId.contains(room.players(state.activePlayer).userId) &&
         !room.players(state.activePlayer).hasResigned
       if !isMyTurn then Seq.empty else
         state.next.toSeq.map: successor =>
@@ -206,18 +208,19 @@ object Scene:
             case Move(_, from, to) => (from, to)
             case Destroy(piece) => (piece.position, piece.position)
             case Skip => throw new IllegalStateException
-          val result = Scene(room, user, successor.inert)
+          val result = Scene(room, userId, successor.inert)
           Input(from, to, successor.actionOption.get.hash, result)
     
     new Scene (
-      room = room,
-      user = user,
+      room           = room,
+      userId         = userId,
       activePlayerId = state.activePlayer,
-      board = board,
-      pieces = pieces,
-      inputs = inputs,
-      diff = state.turnDiff.toSeq,
-      outcome = state.outcomeOption,
+      board          = board,
+      pieces         = pieces,
+      inputs         = inputs,
+      diff           = state.turnDiff.toSeq,
+      outcome        = state.outcomeOption,
+      time           = state.time,
     )
     
   /** An empty scene without any board or players. */

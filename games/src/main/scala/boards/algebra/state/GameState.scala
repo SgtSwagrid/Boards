@@ -52,6 +52,11 @@ sealed trait GameState:
     takeActionWhere:
       case Destroy(piece) => piece.position == pos
       case _ => false
+      
+  def atTime(t: Int): Option[GameState] =
+    if t < time then previousOption.flatMap(_.atTime(t))
+    else if t == time then Some(this)
+    else None
   
   /** A version of this state whereby no further actions are possible. */
   def inert: GameState
