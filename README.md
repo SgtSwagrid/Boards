@@ -27,7 +27,7 @@ Boards is composed of 6 subprojects, which you will find in the top-level direct
 ### Requirements
 
 Boards is written entirely in [Scala](https://www.scala-lang.org/), and in order to work on this project you will need the following:
-* An up-to-date [JDK](https://www.oracle.com/java/technologies/downloads/) for development in a JVM-based language.
+* An up-to-date [JDK](https://www.oracle.com/java/technologies/downloads/) for development in a [JVM](https://en.wikipedia.org/wiki/Java_virtual_machine)-based language.
 * [Scala 3.5.2](https://www.scala-lang.org/) itself.
 * [sbt](https://www.scala-sbt.org/), the pre-eminent build tool for Scala projects.
 * [Git](https://git-scm.com/) for version control.
