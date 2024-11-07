@@ -116,5 +116,11 @@ In some games, there are even multiple global game phases. For instance, it is c
 
 Any `Rule` is actually a [tree](https://en.wikipedia.org/wiki/Tree_(abstract_data_type)) of `Rule`s, of the following basic kinds:
 * `Generator`: The leaves of the `Rule` tree. A `Generator` simply enumerates legal `Action`s and the direct consequences thereof. For example, a king in chess might provide a `Generator` which produces one `Move` action for each [octagonal](https://www.researchgate.net/figure/A-2-d-octagon-and-its-four-Octagonal-directions-Observe-that-octagonal-directions-within_fig1_332078957) direction.
-* `Effect`: A passive effect which is only indirectly caused by the `Action` of the `Player`. For instance, when we [castle](https://www.chess.com/terms/castling-chess) in chess, a `Generator` allows the king to move, but then a susequent `Effect` ensures that rook moves too as a result.
-* `Combinator`: A composition of multiple simpler `Rule`s for reasoning about `Action` sequencing. For example, in chess, we need to take the _union_ of `Rule`s from individual `Piece`s to indicate that the `Player` can choose which `Piece` to move, then _sequence_ this with `Effect.endTurn`, then _repeat_ indefinitely.
+* `Effect`: A passive effect which is only indirectly caused by the `Action` of the `Player`. For instance, when we [castle](https://www.chess.com/terms/castling-chess) in chess, a `Generator` allows the king to move, but then a susequent `Effect` ensures that the rook moves too as a result.
+* `Combinator`: A composition of multiple simpler `Rule`s, for reasoning about `Action` sequencing. For example, in chess, we need to take the _union_ of `Rule`s from individual `Piece`s to indicate that the `Player` can choose which `Piece` to move, then _sequence_ this with `Effect.endTurn`, then _repeat_ indefinitely.
+
+#### Important Combinators
+
+`BoardLang` provides a number of important operators for combining and modifying `Rule`s. The most important ones are:
+* `|`: An infix _union_ operator for specifying that the `Player` may choose which of two `Rule`s to follow. Also available in function notation as `Rule.union` for use with any number of alternative `Rule`s.
+* `|>`: An infix _sequence_ operator for specifying that the `Player` must execute both `Rule`s in the given order. Also available in function notation as `Rule.sequence` for user with any number of chained `Rule`s.
