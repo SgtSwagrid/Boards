@@ -63,7 +63,7 @@ For development purposes, it is recommended that you use [IntelliJ IDEA](https:/
 
 In any case, the project is configured to automatically detect code changes while the server is running, so that changes are reflected immediately. Note however that this unfortunately isn't foolproof and if something isn't working, a full server restart is the safest option.
 
-## The _BoardLang_ DSL
+## Architecture of the _BoardLang_ DSL
 
 A key commponent of Boards is _BoardLang_, an [embedded domain-specific language](https://en.wikipedia.org/wiki/Domain-specific_language) (eDSL) for creating turn-based board games in Scala.
 * You will find the implementation of _BoardLang_ in `dsl/src/main/scala/boards`.
@@ -119,8 +119,12 @@ Any `Rule` is actually a [tree](https://en.wikipedia.org/wiki/Tree_(abstract_dat
 * `Effect`: A passive effect which is only indirectly caused by the `Action` of the `Player`. For instance, when we [castle](https://www.chess.com/terms/castling-chess) in chess, a `Generator` allows the king to move, but then a susequent `Effect` ensures that the rook moves too as a result.
 * `Combinator`: A composition of multiple simpler `Rule`s, for reasoning about `Action` sequencing. For example, in chess, we need to take the _union_ of `Rule`s from individual `Piece`s to indicate that the `Player` can choose which `Piece` to move, then _sequence_ this with `Effect.endTurn`, then _repeat_ indefinitely.
 
-#### Important Combinators
+## Using the _BoardLang_ DSL
+
+### Important Operators
 
 `BoardLang` provides a number of important operators for combining and modifying `Rule`s. The most important ones are:
 * `|`: An infix _union_ operator for specifying that the `Player` may choose which of two `Rule`s to follow. Also available in function notation as `Rule.union` for use with any number of alternative `Rule`s.
 * `|>`: An infix _sequence_ operator for specifying that the `Player` must execute both `Rule`s in the given order. Also available in function notation as `Rule.sequence` for user with any number of chained `Rule`s.
+* `_.optional`: For specifying that the `Player` can decide whether or not to execute this `Rule`.
+* `_.repeatXXX`: There are various methods of this kind for performing a `Rule` multiple times. See `Rule.scala` for all variants.
