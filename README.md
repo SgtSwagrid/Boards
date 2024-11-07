@@ -121,6 +121,22 @@ Any `Rule` is actually a [tree](https://en.wikipedia.org/wiki/Tree_(abstract_dat
 
 ## Using the _BoardLang_ DSL
 
+To use the _BoardLang_ DSL, the following import is always required:
+```scala
+import boards.imports.games.{*, given}
+```
+
+Furthermore, any game must inherit from the base class `Game`:
+```scala
+class Chess extends Game
+```
+
+The abstract class `Game` only requires us to implement a single member,  `rule`:
+```scala
+def rule: Rule = ???
+```
+The defines the _initial_ `Rule` for our `Game`. In other words, from the start of the game, what happens and what are the players allowed to do?
+
 ### Important Operators
 
 _BoardLang_ provides a number of important operators for combining and modifying `Rule`s. The most important ones are:
