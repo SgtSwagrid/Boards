@@ -16,11 +16,13 @@ This is a continuation from a long lineage of similar projects ([1.0](https://gi
 
 #### Project Structure
 
-Boards is composed of 4 subprojects, which you will find in the top-level directories of the same names:
+Boards is composed of 6 subprojects, which you will find in the top-level directories of the same names:
+* `dsl` contains the implementation of the _BoardLang_ DSL.
+* `games` contains the rule specifications for the games themselves, written using `BoardLang`.
+* `bots` contains general and game-specific strategies for playing these games.
 * `server` code which is compiled to JVM bytecode for use on a web server. Handles user requests, authentication and persistence.
 * `client` code which is transpiled to JS and served to the user's web browser. Handles rendering and user input.
 * `common` code which is shared by both the `server` and `client`, and compiled into both projects. Primarily contains data formats for communication therebetween.
-* `games` contains both the implementation of _BoardLang_ as well as the games written therein.
 
 #### Requirements
 
@@ -61,10 +63,16 @@ For development purposes, it is recommended that you use [IntelliJ IDEA](https:/
 
 In any case, the project is configured to automatically detect code changes while the server is running, so that changes are reflected immediately. Note however that this unfortunately isn't foolproof and if something isn't working, a full server restart is the safest option.
 
-#### Games
+### The _BoardLang_ DSL
 
-In the `games` subproject, the implementation of the `BoardLang` DSL can be found in `games/src/main/scala/boards/algebra`, which in turn makes use of mathematical structures from `games/src/main/scala/boards/math`. The games themselves can be found in `games/src/main/scala/boards/games`, which is where you should start if you're looking for an example. Please put any new games here too. Currently, no games will be loaded unless they are also referenced in `games/src/main/scala/boards/Games.scala`. In the future, it should be possible to load games dynamically at runtime from user submissions, but this is not yet supported.
+A key commponent of Boards is _BoardLang_, an [embedded domain specific language](https://en.wikipedia.org/wiki/Domain-specific_language) (eDSL) for creating turn-based board games in Scala.
+* You will find the implementation of _BoardLang_ in `dsl/src/main/scala/boards`.
+* You will find examples of _BoardLang_ in use in `games/src/main/scala/boards`.
 
-#### _BoardLang_ Architecture
+_BoardLang_ uses a functional style and all objects are immutable.
 
-_BoardLang_ uses a functional style and all states are immutable. The current "physical" state of the game is represented by an `InstantaneousState` instance. From a state, a `Rule` instance creates a set of transitions to possible future states, with each transition triggered by some specific user input. However, the transitions are not Markovian in the `InstantaneousState`, which is to say the transition possibilities can depend arbitrarily on the state _history_. The full state, which includes the entire history, is represented by a `GameState`, which encloses a chain of `InstantenousState` instances.
+#### Important Types
+
+* `InstantaneousState`: The current "physical" state of the game. Contains the game board and current pieces, and tracks the active player.
+* `GameState`: The total state of the game. Contains the entire game history, including all past `InstantaneousState`s and user `Action`s.
+* `Rule`: A mechanism for, given some current `GameState`, enumerating possible player `Action`s and corresponding successor `GameState`s, as well as performing `Action` legality testing.
