@@ -123,7 +123,7 @@ Any `Rule` is actually a [tree](https://en.wikipedia.org/wiki/Tree_(abstract_dat
 
 ### Important Operators
 
-`BoardLang` provides a number of important operators for combining and modifying `Rule`s. The most important ones are:
+_BoardLang_ provides a number of important operators for combining and modifying `Rule`s. The most important ones are:
 * `|`: An infix _union_ operator for specifying that the `Player` may choose which of two `Rule`s to follow. Also available in function notation as `Rule.union` for use with any number of alternative `Rule`s.
 * `|>`: An infix _sequence_ operator for specifying that the `Player` must execute both `Rule`s in the given order. Also available in function notation as `Rule.sequence` for user with any number of chained `Rule`s.
 * `_.optional`: For specifying that the `Player` can decide whether or not to execute this `Rule`.
