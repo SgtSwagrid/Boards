@@ -144,6 +144,10 @@ override val Board = Kernel.box(8, 8)
 We may want to define some types of pieces, otherwise there won't be much to do in our game:
 ```scala
 object Pawn extends PieceType.WithTexture(Texture.WhitePawn, Texture.BlackPawn)
+
+object King extends PieceType.WithTexture(Texture.WhiteKing, Texture.BlackKing)
+
+...
 ```
 
 Often, the first thing that should happen is some setup. For example, if we're making chess, we might want to start with this `Rule` to insert a row of white pawns in the second rank from the bottom:
@@ -176,7 +180,31 @@ def rule: Rule = setup |> loop
 ```
 In the above, we start by setting up the game board by putting the pieces in their starting locations, then we enter the main game loop.
 
-Now, it should be able to move pieces around. But the `Game` will never end as `Rule.alternatingTurns` will continue forever.
+Now, it should be possible to move pieces around. But the `Game` will never end as `Rule.alternatingTurns` goes forever and we have no termination condition.
+In chess, the game ends when the current `Player` has no legal moves. For this, we can use the `?:` operator (read: orElse) which specifies some alternative behaviour to use precisely when there are no legal `Action`s in the main path:
+```scala
+pieces.ofActivePlayer.actions ?: Effect.endGame(Draw)
+```
+
+Of course, chess shouldn't always end in a draw. To determine a winner, we also need [check](https://www.chess.com/terms/check-chess) detection:
+```scala
+def inCheck(using GameState) = pieces.ofInactivePlayers.canCaptureType(King)
+```
+
+Now we can replace the termination `Effect` with:
+```scala
+Effect.endGame(if inCheck then Winner(state.nextPlayer) else Draw)
+```
+
+From here, it is also very easy to forbid the `Player` from taking any action that would result in them being in check.
+Instead of:
+```scala
+pieces.ofActivePlayer.actions
+```
+Use this:
+```scala
+pieces.ofActivePlayer.actions.require(!inCheck)
+```
 
 ### Important Operators
 
