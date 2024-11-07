@@ -49,8 +49,8 @@ To download the project into a subdirectory named `Boards`, run:
 git clone https://github.com/SgtSwagrid/Boards.git
 ```
 
-To run the project, navigate to the `Boards` directory and run:
+To run a local development server, navigate to the `Boards` directory and run:
 ```
 sbt "project server" "~run"
 ```
-
+You should then be able to access website at `localhost:9000` in your browser.
