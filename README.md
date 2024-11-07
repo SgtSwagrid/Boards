@@ -110,4 +110,11 @@ For an example, consider chess again: after a pawn moves to the final rank, as a
 
 #### Game Phases
 
-In some games, there are even multiple global game phases. For instance, it is common to have a separate _setup_ phase, which still requires input from the players, but with completely different rules than the main phase (example: [Catan](https://www.catan.com/)). Again, with a _dynamic_ `Rule`, this is easy to achieve without any global flags by creating a separate `Rule` for each phase and sequencing them.
+In some games, there are even multiple global game phases. For instance, it is common to have a separate _setup_ phase, which still requires input from the players, but with completely different rules than the main phase (example: [Catan](https://www.catan.com/)). Again, with a _dynamic_ `Rule`, this is easy to achieve without any global flags by creating a separate `Rule` for each phase and sequencing them in the same way as before.
+
+### Types of Rule
+
+Any `Rule` is actually a [tree](https://en.wikipedia.org/wiki/Tree_(abstract_data_type)) of `Rule`s, of the following basic kinds:
+* `Generator`: The leaves of the `Rule` tree. A `Generator` simply enumerates legal `Action`s and the direct consequences thereof. For example, a king in chess might provide a `Generator` which produces one `Move` action for each [octagonal](https://www.researchgate.net/figure/A-2-d-octagon-and-its-four-Octagonal-directions-Observe-that-octagonal-directions-within_fig1_332078957) direction.
+* `Effect`: A passive effect which is only indirectly caused by the `Action` of the `Player`. For instance, when we [castle](https://www.chess.com/terms/castling-chess) in chess, a `Generator` allows the king to move, but then a susequent `Effect` ensures that rook moves too as a result.
+* `Combinator`: A composition of multiple simpler `Rule`s for reasoning about `Action` sequencing. For example, in chess, we need to take the _union_ of `Rule`s from individual `Piece`s to indicate that the `Player` can choose which `Piece` to move, then _sequence_ this with `Effect.endTurn`, then _repeat_ indefinitely.
