@@ -65,7 +65,7 @@ In any case, the project is configured to automatically detect code changes whil
 
 ## The _BoardLang_ DSL
 
-A key commponent of Boards is _BoardLang_, an [embedded domain specific language](https://en.wikipedia.org/wiki/Domain-specific_language) (eDSL) for creating turn-based board games in Scala.
+A key commponent of Boards is _BoardLang_, an [embedded domain-specific language](https://en.wikipedia.org/wiki/Domain-specific_language) (eDSL) for creating turn-based board games in Scala.
 * You will find the implementation of _BoardLang_ in `dsl/src/main/scala/boards`.
 * You will find examples of games created using _BoardLang_ in `games/src/main/scala/boards`.
 
