@@ -150,11 +150,10 @@ def rule: Rule = ???
 ```
 This defines the _initial_ `Rule` for our `Game`. In other words, from the start of the game, what happens and what are the players allowed to do?
 
-Often, the first thing that should happen is some setup. For example, if we're making chess, we might want to start with this `Rule` to insert a row of white pawns:
+Often, the first thing that should happen is some setup. For example, if we're making chess, we might want to start with this `Rule` to insert a row of white pawns in the second rank from the bottom:
 ```scala
-Effect.insert(/* The owner of the pieces */ PlayerId(0))(Pawn -> Board.row(1))
+Effect.insert(/* The owner of the pieces. */ PlayerId(0))(Pawn -> Board.row(1))
 ```
-
 
 ### Important Operators
 
