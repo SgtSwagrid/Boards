@@ -178,9 +178,9 @@ The abstract class `Game` only requires us to implement a single member,  `rule`
 ```scala
 def rule: Rule = setup |> loop
 ```
-In the above, we start by setting up the game board by putting the pieces in their starting locations, then we enter the main game loop.
+In the above, we start by setting up the game board, then we enter the main game loop.
 
-Now, it should be possible to move pieces around. But the `Game` will never end as `Rule.alternatingTurns` goes forever and we have no termination condition.
+Now the `Player`s can move pieces around. But the `Game` will never end as `Rule.alternatingTurns` goes forever and we have no termination condition.
 In chess, the game ends when the current `Player` has no legal moves. For this, we can use the `?:` operator (read: orElse) which specifies some alternative behaviour to use precisely when there are no legal `Action`s in the main path:
 ```scala
 pieces.ofActivePlayer.actions ?: Effect.endGame(Draw)
@@ -196,12 +196,11 @@ Now we can replace the termination `Effect` with:
 Effect.endGame(if inCheck then Winner(state.nextPlayer) else Draw)
 ```
 
-From here, it is also very easy to forbid the `Player` from taking any action that would result in them being in check.
-Instead of:
+From here, it is also very easy to forbid the `Player` from taking any action that would result in them being in check. Instead of:
 ```scala
 pieces.ofActivePlayer.actions
 ```
-Use this:
+we use this instead:
 ```scala
 pieces.ofActivePlayer.actions.require(!inCheck)
 ```
