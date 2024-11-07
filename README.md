@@ -22,12 +22,21 @@ Boards is composed of 4 subprojects, which you will find in the top-level direct
 * `common` code which is shared by both the `server` and `client`, and compiled into both projects. Primarily contains data formats for communication therebetween.
 * `games` contains both the implementation of _BoardLang_ as well as the games written therein.
 
+#### Requirements
+
+Boards is written entirely in [Scala](https://www.scala-lang.org/), and in order to work on this project you will need the following:
+* An up-to-date [JDK](https://www.oracle.com/java/technologies/downloads/) for development in a JVM-based language.
+* [Scala 3.5.2](https://www.scala-lang.org/) itself.
+* [sbt](https://www.scala-sbt.org/), the pre-eminent build tool for Scala projects.
+* [Git](https://git-scm.com/) for version control.
+
 #### Libraries
 
-Boards relies on the following open-source libraries:
+Boards relies on the following open-source libraries, this installation of which should be handled automatically by sbt:
 
 * The [Play Framework](https://www.playframework.com/) for handling web requests on the server.
 * [Slick](https://scala-slick.org/) for database access by [functional relational mapping](https://scala-slick.org/talks/2014-06-09_33rd_Degree/Functional%20Relational%20Mapping%20with%20Slick.pdf).
+* [H2](https://www.h2database.com/html/main.html) for running an embedded database.
 * [Apache Pekko](https://pekko.apache.org/), an [actor](https://www.oreilly.com/library/view/applied-akka-patterns/9781491934876/ch01.html) framework, used here for managing server-side state in relation to web socket sessions.
 * [Circe](https://github.com/circe/circe) for automatic serialisation/deserialisation to/from JSON.
 * [Laminar](https://laminar.dev/) for client-side rendering.
@@ -39,10 +48,9 @@ To download the project into a subdirectory named `Boards`, run:
 ```
 git clone https://github.com/SgtSwagrid/Boards.git
 ```
-(Required: [git](https://git-scm.com/))
 
 To run the project, navigate to the `Boards` directory and run:
 ```
 sbt "project server" "~run"
 ```
-(Required: [Scala 3.5.2](https://www.scala-lang.org/), [sbt](https://www.scala-sbt.org/))
+
