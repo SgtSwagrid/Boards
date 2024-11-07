@@ -53,4 +53,8 @@ To run a local development server, navigate to the `Boards` directory and run:
 ```
 sbt "project server" "~run"
 ```
-You should then be able to access website at `localhost:9000` in your browser.
+You should then be able to access the website at `localhost:9000` in your browser.
+
+#### Development
+
+For development purposes, it is recommended that you use [IntelliJ IDEA](https://www.jetbrains.com/idea/) with the [Scala plugin](https://plugins.jetbrains.com/plugin/1347-scala). IntelliJ configuration files are deliberately included in the project to offer a uniform developer experience with consistent formatting rules, code highlighting and build configurations. If you _are_ using IntelliJ, the `Boards Development Server` run option is equivalent to the command shown above.
