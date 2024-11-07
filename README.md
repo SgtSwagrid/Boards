@@ -195,12 +195,13 @@ Now we can replace the termination `Effect` with:
 ```scala
 Effect.endGame(if inCheck then Winner(state.nextPlayer) else Draw)
 ```
+In other words, if there are no possible `Action`s, either we are in [checkmate](https://www.chess.com/terms/checkmate-chess) (lose) or [stalemate](https://support.chess.com/en/articles/8557490-what-is-stalemate) (draw).
 
 From here, it is also very easy to forbid the `Player` from taking any action that would result in them being in check. Instead of:
 ```scala
 pieces.ofActivePlayer.actions
 ```
-we use this instead:
+we use this:
 ```scala
 pieces.ofActivePlayer.actions.require(!inCheck)
 ```
