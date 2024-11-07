@@ -69,9 +69,13 @@ A key commponent of Boards is _BoardLang_, an [embedded domain specific language
 * You will find the implementation of _BoardLang_ in `dsl/src/main/scala/boards`.
 * You will find examples of _BoardLang_ in use in `games/src/main/scala/boards`.
 
-_BoardLang_ uses a functional style and all objects are immutable.
+#### Philosophy
+
+_BoardLang_ uses a [functional](https://en.wikipedia.org/wiki/Functional_programming) style and all objects are [immutable](https://en.wikipedia.org/wiki/Immutable_object). Fundamentally, a game is built by defining some number of `PieceTypes`s and composing `Rule`s to precisely specify what the player can and can't do with these pieces. Each `Action` the player takes causes a transition to a new `GameState` in accordance with the current `Rule`.
 
 #### Important Types
+
+* `Game`: A precise specification of the rules for a game (e.g. Chess, Connect Four, etc).
 
 For the state of the game:
 * `InstantaneousState`: The current "physical" state of the game. Contains the `Board` and current `PieceSet`, and tracks the `activePlayerId`.
@@ -83,3 +87,9 @@ For the game board and pieces:
 * `Piece`: A specific piece that is on the board at a specific time.
 * `PieceType`: A property held by a `Piece` used to distinguish different kinds of pieces (e.g. Rook, Knight, etc).
 * `PieceSet`: A set of `Pieces`, used in particular by an `InstantaneousState`, with specialised functionality for filtering, `Action` querying and modification.
+
+Mathematical types:
+* `VecI`: An integer vector representing a position on the `Board`.
+* `Ker`: A set of vectors describing a region in space.
+* `Dir`: A direction or set thereof, used for describing _relative_ positions.
+* `Ray`: A specific kind of `Ker` formed by making up to some number of steps in some `Dir`.
