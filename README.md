@@ -121,6 +121,8 @@ Any `Rule` is actually a [tree](https://en.wikipedia.org/wiki/Tree_(abstract_dat
 
 ## Using the _BoardLang_ DSL
 
+### Worked Example with Chess
+
 To use the _BoardLang_ DSL, the following import is always required:
 ```scala
 import boards.imports.games.{*, given}
@@ -144,16 +146,37 @@ We may want to define some types of pieces, otherwise there won't be much to do 
 object Pawn extends PieceType.WithTexture(Texture.WhitePawn, Texture.BlackPawn)
 ```
 
-The abstract class `Game` only requires us to implement a single member,  `rule`:
-```scala
-def rule: Rule = ???
-```
-This defines the _initial_ `Rule` for our `Game`. In other words, from the start of the game, what happens and what are the players allowed to do?
-
 Often, the first thing that should happen is some setup. For example, if we're making chess, we might want to start with this `Rule` to insert a row of white pawns in the second rank from the bottom:
 ```scala
-Effect.insert(/* The owner of the pieces. */ PlayerId(0))(Pawn -> Board.row(1))
+val setup = Effect.insert(/* The owner of the pieces. */ PlayerId(0))(Pawn -> Board.row(1))
 ```
+
+After setup, we probably want some kind of main game loop:
+```scala
+val loop = Rule.alternatingTurns:
+  ???
+```
+This particular `Rule` will repeat the body indefinitely, ending the turn after each iteration. For most turn-based games, this is how it works; the `Player`s always play in the same clockwise or counterclockwise order.
+
+Inside the main loop, we allow the `Player` to move one of their pieces:
+```
+pieces.ofActivePlayer.actions
+```
+`pieces.ofActivePlayer` is a `PieceSet` containing only those pieces belonging to the player whose turn it currently is. `.actions` produces a `Rule` which allows the `Player` to move one of the pieces in this `PieceSet`.
+
+This won't do anything yet, because none of the pieces know which kinds of movement they can do. This can be fixed by having each moveable `PieceType` implement the `actions` method:
+```scala
+def actions(pawn: Pawn): Rule =
+  pawn.move(if pawn.owner == 0 then Dir.Up else Dir.Down)
+```
+
+The abstract class `Game` only requires us to implement a single member,  `rule`. This defines the _initial_ `Rule` for our `Game`. In other words, from the start of the game, what happens and what are the players allowed to do?
+```scala
+def rule: Rule = setup |> loop
+```
+In the above, we start by setting up the game board by putting the pieces in their starting locations, then we enter the main game loop.
+
+Now, it should be able to move pieces around. But the `Game` will never end as `Rule.alternatingTurns` will continue forever.
 
 ### Important Operators
 
