@@ -84,7 +84,7 @@ For the state of the game:
 
 For the game board and pieces:
 * `Board`: The topology of the game, describing which positions are in bounds and the connectivity therebetween.
-* `Piece`: A specific piece that is on the board at a specific time.
+* `Piece`: A specific piece that is on the board at a specific time in a specific place.
 * `PieceType`: A property held by a `Piece` used to distinguish different kinds of pieces (e.g. rook, knight, etc).
 * `PieceSet`: A set of `Pieces`, used in particular by an `InstantaneousState`, with specialised functionality for filtering, `Action` querying and modification.
 
