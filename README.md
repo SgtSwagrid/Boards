@@ -131,7 +131,15 @@ Furthermore, any game must inherit from the base class `Game`:
 class Chess extends Game
 ```
 
-Inside this class, we may want to define some types of pieces:
+We can't have chess without a chessboard!
+```scala
+// A chessboard is an 8x8 grid.
+override val Board = Kernel.box(8, 8)
+  // The following is only required for aesthetic reasons:
+  .paint(Pattern.Checkered(Colour.Chess.Dark, Colour.Chess.Light))
+```
+
+We may want to define some types of pieces, otherwise there won't be much to do in our game:
 ```scala
 object Pawn extends PieceType.WithTexture(Texture.WhitePawn, Texture.BlackPawn)
 ```
