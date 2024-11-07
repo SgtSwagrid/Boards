@@ -12,9 +12,9 @@ Featured games (this list will continually expand):
 
 This is a continuation from a long lineage of similar projects ([1.0](https://github.com/SgtSwagrid/boards-1.0), [2.0](https://github.com/SgtSwagrid/boards-2.0), [3.0](https://github.com/SgtSwagrid/boards-3.0)).
 
-### Information for Developers
+## Information for Developers
 
-#### Project Structure
+### Project Structure
 
 Boards is composed of 6 subprojects, which you will find in the top-level directories of the same names:
 * `dsl` contains the implementation of the _BoardLang_ DSL.
@@ -24,7 +24,7 @@ Boards is composed of 6 subprojects, which you will find in the top-level direct
 * `client` code which is transpiled to JS and served to the user's web browser. Handles rendering and user input.
 * `common` code which is shared by both the `server` and `client`, and compiled into both projects. Primarily contains data formats for communication therebetween.
 
-#### Requirements
+### Requirements
 
 Boards is written entirely in [Scala](https://www.scala-lang.org/), and in order to work on this project you will need the following:
 * An up-to-date [JDK](https://www.oracle.com/java/technologies/downloads/) for development in a JVM-based language.
@@ -32,7 +32,7 @@ Boards is written entirely in [Scala](https://www.scala-lang.org/), and in order
 * [sbt](https://www.scala-sbt.org/), the pre-eminent build tool for Scala projects.
 * [Git](https://git-scm.com/) for version control.
 
-#### Libraries
+### Libraries
 
 Boards relies on the following open-source libraries, this installation of which should be handled automatically by sbt:
 
@@ -44,7 +44,7 @@ Boards relies on the following open-source libraries, this installation of which
 * [Laminar](https://laminar.dev/) for client-side rendering.
 * [Airstream](https://github.com/raquo/Airstream), which is required by Laminar, is a library for [functional reactive programming](https://en.wikipedia.org/wiki/Functional_reactive_programming).
 
-#### Local Execution
+### Local Execution
 
 To download the project into a subdirectory named `Boards`, run:
 ```
@@ -57,23 +57,23 @@ sbt "project server" "~run"
 ```
 You should then be able to access the website at `localhost:9000` in your browser.
 
-#### Development
+### Development
 
 For development purposes, it is recommended that you use [IntelliJ IDEA](https://www.jetbrains.com/idea/) with the [Scala plugin](https://plugins.jetbrains.com/plugin/1347-scala). IntelliJ configuration files are deliberately included in the project to offer a uniform developer experience with consistent formatting rules, code highlighting and build configurations. If you _are_ using IntelliJ, the `Boards Development Server` run option is equivalent to the command shown above.
 
 In any case, the project is configured to automatically detect code changes while the server is running, so that changes are reflected immediately. Note however that this unfortunately isn't foolproof and if something isn't working, a full server restart is the safest option.
 
-### The _BoardLang_ DSL
+## The _BoardLang_ DSL
 
 A key commponent of Boards is _BoardLang_, an [embedded domain specific language](https://en.wikipedia.org/wiki/Domain-specific_language) (eDSL) for creating turn-based board games in Scala.
 * You will find the implementation of _BoardLang_ in `dsl/src/main/scala/boards`.
-* You will find examples of _BoardLang_ in use in `games/src/main/scala/boards`.
+* You will find examples of games created using _BoardLang_ in `games/src/main/scala/boards`.
 
-#### Philosophy
+### Philosophy
 
 _BoardLang_ uses a [functional](https://en.wikipedia.org/wiki/Functional_programming) style and all objects are [immutable](https://en.wikipedia.org/wiki/Immutable_object). Fundamentally, a game is built by defining some number of `PieceTypes`s and composing `Rule`s to precisely specify what the player can and can't do with these pieces. Each `Action` the player takes causes a transition to a new `GameState` in accordance with the current `Rule`.
 
-#### Important Types
+### Important Abstractions
 
 * `Game`: A precise specification of the rules for a game (e.g. Chess, Connect Four, etc).
 
@@ -93,3 +93,21 @@ Mathematical types:
 * `Ker`: A set of vectors describing a region in space.
 * `Dir`: A direction or set thereof, used for describing _relative_ positions.
 * `Ray`: A specific kind of `Ker` formed by making up to some number of steps in some `Dir`.
+
+### Rule Semantics
+
+There are two important things to note about `Rule`s in _BoardLang_:
+
+1. A `Rule` is **not** Markovian in the current `InstantaneousState`, which is to say that the state transitions can depend arbitarily on the full state _history_ in `GameState`. To see why, consider chess: [en passant](https://www.chess.com/terms/en-passant) is legal _only_ on the turn directly following the initial double pawn move. The account for this, the `Rule` must be able to see when and how the pawn being captured arrived in its current position.
+
+2. The `Rule` itself is a property of the `GameState`, not of the entire `Game`. In particular, this means that the `Rule` can (and typically does) change over time. The `Game` specifies the _initial_ `Rule`, and thereafter each successor `GameState` is infused with a _new_ `Rule` upon creation. When a `Rule` generates successor `GameState`s, it is also responsible for determining which `Rule` should apply thereafter from that state. The reason is that this makes it much easier to reason about _sequences_ of `Action`s, and implicitly provides support for two kinds of situation which arise very frequently: **turn phases** and **game phases**.
+
+#### Turn Phases
+
+In many games, the turn is divided up into multiple phases. For instance, maybe you first have to roll, then trade, and finally build. To implement this behaviour, one can simply create a separate `Rule` for each phase, and sequence them together, whereby each phase knows that when it is done, it should replace the `Rule` with the one corresponding to the next phase.
+
+For an example, consider chess again: after a pawn moves to the final rank, as a separate action it must then [promote](https://www.chess.com/terms/pawn-promotion). With a static `Rule`, the state would need some kind of a global flag indicating the need for promotion, to override the default behaviour on the next action. This moves the promotion logic outside of the pawn `PieceType` where it belongs. Instead, with a dynamic `Rule`, the pawn can simply infuse the successor `GameState` with a special, one-time promotion rule.
+
+#### Game Phases
+
+In some games, there are even multiple global game phases. For instance, it is common to have a separate _setup_ phase, which still requires input from the players, but with completely different rules than the main phase (example: [Catan](https://www.catan.com/)). Again, with a dynamic `Rule`, this is easy to achieve without any global flags by creating multiple `Rule`s and sequencing them.
