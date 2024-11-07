@@ -73,6 +73,13 @@ _BoardLang_ uses a functional style and all objects are immutable.
 
 #### Important Types
 
-* `InstantaneousState`: The current "physical" state of the game. Contains the game board and current pieces, and tracks the active player.
+For the state of the game:
+* `InstantaneousState`: The current "physical" state of the game. Contains the `Board` and current `PieceSet`, and tracks the `activePlayerId`.
 * `GameState`: The total state of the game. Contains the entire game history, including all past `InstantaneousState`s and user `Action`s.
 * `Rule`: A mechanism for, given some current `GameState`, enumerating possible player `Action`s and corresponding successor `GameState`s, as well as performing `Action` legality testing.
+
+For the game board and pieces:
+* `Board`: The topology of the game, describing which positions are in bounds and the connectivity therebetween.
+* `Piece`: A specific piece that is on the board at a specific time.
+* `PieceType`: A property held by a `Piece` used to distinguish different kinds of pieces (e.g. Rook, Knight, etc).
+* `PieceSet`: A set of `Pieces`, used in particular by an `InstantaneousState`, with specialised functionality for filtering, `Action` querying and modification.
