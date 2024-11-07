@@ -32,3 +32,17 @@ Boards relies on the following open-source libraries:
 * [Circe](https://github.com/circe/circe) for automatic serialisation/deserialisation to/from JSON.
 * [Laminar](https://laminar.dev/) for client-side rendering.
 * [Airstream](https://github.com/raquo/Airstream), which is required by Laminar, is a library for [functional reactive programming](https://en.wikipedia.org/wiki/Functional_reactive_programming).
+
+#### Local Execution
+
+To download the project into a subdirectory named `Boards`, run:
+```
+git clone https://github.com/SgtSwagrid/Boards.git
+```
+(Required: [git](https://git-scm.com/))
+
+To run the project, navigate to the `Boards` directory and run:
+```
+sbt "project server" "~run"
+```
+(Required: [Scala 3.5.2](https://www.scala-lang.org/), [sbt](https://www.scala-sbt.org/))
