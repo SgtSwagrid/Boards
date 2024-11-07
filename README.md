@@ -85,7 +85,7 @@ For the state of the game:
 For the game board and pieces:
 * `Board`: The topology of the game, describing which positions are in bounds and the connectivity therebetween.
 * `Piece`: A specific piece that is on the board at a specific time.
-* `PieceType`: A property held by a `Piece` used to distinguish different kinds of pieces (e.g. Rook, Knight, etc).
+* `PieceType`: A property held by a `Piece` used to distinguish different kinds of pieces (e.g. rook, knight, etc).
 * `PieceSet`: A set of `Pieces`, used in particular by an `InstantaneousState`, with specialised functionality for filtering, `Action` querying and modification.
 
 Mathematical types:
@@ -98,7 +98,7 @@ Mathematical types:
 
 There are two important things to note about `Rule`s in _BoardLang_:
 
-1. A `Rule` is **not** Markovian in the current `InstantaneousState`, which is to say that the state transitions can depend arbitarily on the full state _history_ in `GameState`. To see why, consider chess: [en passant](https://www.chess.com/terms/en-passant) is legal _only_ on the turn directly following the initial double pawn move. The account for this, the `Rule` must be able to see when and how the pawn being captured arrived in its current position.
+1. A `Rule` is **not** [Markovian](https://en.wikipedia.org/wiki/Markov_property) in the current `InstantaneousState`, which is to say that the state transitions can depend arbitarily on the full state _history_ in `GameState`. To see why, consider chess: [en passant](https://www.chess.com/terms/en-passant) is legal _only_ on the turn directly following the initial double pawn move. The account for this, the `Rule` must be able to see when and how the pawn being captured arrived in its current position.
 
 2. The `Rule` itself is a property of the `GameState`, not of the entire `Game`. In particular, this means that the `Rule` is _dynamic_ rather than _static_, meaning it can (and typically does) change over time. The `Game` specifies the _initial_ `Rule`, and thereafter each successor `GameState` is infused with a _new_ `Rule` upon creation. When a `Rule` generates successor `GameState`s, it is also responsible for determining which `Rule` should apply thereafter from that state. The reason is that this makes it much easier to reason about _sequences_ of `Action`s, and implicitly provides support for two kinds of situation which arise very frequently: **turn phases** and **game phases**.
 
