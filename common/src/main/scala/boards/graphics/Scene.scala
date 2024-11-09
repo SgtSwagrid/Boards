@@ -8,6 +8,7 @@ import boards.protocol.UserProtocol.*
 import boards.protocol.Room
 import boards.protocol.Room.*
 import Scene.*
+import boards.math.Region
 
 /**
  * A representation of the current game state.
@@ -37,7 +38,7 @@ case class Scene (
   userId: Option[Int] = None,
   activePlayerId: PlayerId = PlayerId(0),
   
-  board: Kernel[Tile] = Kernel.empty,
+  board: Region[Int, Tile] = Region.empty,
   pieces: Seq[PieceData] = Seq.empty,
   inputs: Seq[Input] = Seq.empty,
   diff: Seq[VecI] = Seq.empty,

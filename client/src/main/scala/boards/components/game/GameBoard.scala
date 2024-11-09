@@ -124,12 +124,12 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
         e.preventDefault()
         e.stopPropagation()
       VecI(rect.width.toInt, rect.height.toInt)
-    .startWith(VecI.zero)
+    .startWith(VecI.zero(2))
   
   /** The size in pixels of a single tile from the game board. */
   private val scale: Signal[Int] =
     Signal.combine(scene, canvasSize).map: (scene, canvasSize) =>
-      try (canvasSize * scene.board.size).toSeq.min / scene.board.size.product
+      try (canvasSize * scene.board.size).components.min / scene.board.size.product
       catch case _ => 0
   
   /** The offset in pixels from the corner of the canvas to the corner of the game board. */
@@ -143,7 +143,7 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
   /** The current position of the cursor in pixels relative to the canvas. */
   private val cursorPos: Signal[VecI] = cursorBus.stream
     .map(e => VecI(e.clientX.toInt, e.clientY.toInt))
-    .startWith(VecI.zero)
+    .startWith(VecI.zero(2))
     .map(m => VecI(m.x - rect.left.toInt, m.y - rect.top.toInt))
   
   private case class CanvasState(
@@ -305,7 +305,7 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
     
     val square = VecI.fill(2)(cfg.scale)
     
-    clearRect(VecI.zero, cfg.canvasSize)
+    clearRect(VecI.zero(2), cfg.canvasSize)
     
     for tile <- scene.board.labels do
       val pos = gameToCanvasCornerCoords(tile.position, cfg)

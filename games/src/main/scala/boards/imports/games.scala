@@ -30,4 +30,4 @@ object games:
   export boards.graphics.{Colour, Pattern, Texture, Shape}
   
   export boards.util.extensions.FunctionOps.*
-  export boards.util.extensions.Conversions.given
+  //export boards.util.extensions.Conversions.given

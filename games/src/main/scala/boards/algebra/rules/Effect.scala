@@ -23,7 +23,7 @@ object Effect:
     
   def insert
     (owner: PlayerId)
-    (insertions: (PieceType | Iterable[PieceType], Ker)*)
+    (insertions: (PieceType | Iterable[PieceType], RegionI)*)
   : Rule = Rule.sequence (
     insertions.map:
       case (piece: PieceType, region) => InsertEffect(owner, IndexedSeq(piece), region)
@@ -31,14 +31,14 @@ object Effect:
   *)
   
   def insert
-    (insertions: (PieceType | Iterable[PieceType], Ker)*)
+    (insertions: (PieceType | Iterable[PieceType], RegionI)*)
     (using owner: PlayerId)
   : Rule = insert(owner)(insertions*)
   
-  def relocate(relocations: (Ker, Ker)*): Rule =
+  def relocate(relocations: (RegionI, RegionI)*): Rule =
     Rule.sequence(relocations.map(RelocateEffect.apply)*)
     
-  def remove(regions: Ker*): Rule =
+  def remove(regions: RegionI*): Rule =
     Rule.sequence(regions.map(RemoveEffect.apply)*)
   
   /**
@@ -77,7 +77,7 @@ object Effect:
   private[algebra] case class InsertEffect (
     owner: PlayerId,
     pieceTypes: IndexedSeq[PieceType],
-    region: Ker,
+    region: RegionI,
   ) extends PieceEffect:
     
     def transform(pieceSet: PieceSet): PieceSet =
@@ -86,8 +86,8 @@ object Effect:
       .foldLeft(pieceSet)(_.withPiece(_))
       
   private[algebra] case class RelocateEffect (
-    from: Ker,
-    to: Ker,
+    from: RegionI,
+    to: RegionI,
   ) extends PieceEffect:
     
     def transform(pieces: PieceSet): PieceSet =
@@ -99,7 +99,7 @@ object Effect:
         case (pieces, _) => pieces
         
   private[algebra] case class RemoveEffect (
-    region: Ker,
+    region: RegionI,
   ) extends PieceEffect:
     
     def transform(pieces: PieceSet): PieceSet =

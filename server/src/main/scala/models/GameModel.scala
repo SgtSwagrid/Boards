@@ -107,7 +107,7 @@ class GameModel(using db: Database, ec: ExecutionContext):
       if room.requiredNumPlayers.contains(numPlayers)
       _ <- Query.room(roomId).map(_.status).update(Status.Active)
     yield room.copy(status = Status.Active)
-    db.run(action.transactionally)
+    db.run(action.transactionally).recover{e => e.printStackTrace(); ???}
     
   def takeAction(roomId: String, userId: Int, actionHash: String, end: Boolean = false): Future[ActionRow] =
     val action = for
@@ -121,7 +121,7 @@ class GameModel(using db: Database, ec: ExecutionContext):
         then Query.room(roomId).map(_.status).update(Status.Complete)
         else DBIO.successful(())
     yield action
-    db.run(action.transactionally)
+    db.run(action.transactionally).recover{e => e.printStackTrace(); ???}
     
   def resign(roomId: String, resigned: Boolean = true)(positions: PlayerId*): Future[Unit] =
     val action = for
@@ -167,7 +167,7 @@ class GameModel(using db: Database, ec: ExecutionContext):
       current = actions.foldLeft[GameState](initial): (state, action) =>
         state.takeActionByHash(action.actionHash).get
     yield current
-    db.run(action)
+    db.run(action).recover{e => e.printStackTrace(); ???}
     
   private[models] object Action:
     

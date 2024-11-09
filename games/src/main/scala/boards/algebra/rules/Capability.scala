@@ -46,7 +46,7 @@ class Capability (rule: Rule, state: GameState):
   def canPlace: Boolean = can:
     case g: PlaceGenerator => g
     
-  def canPlaceAt(region: Kernel[?]): Boolean = can:
+  def canPlaceAt(region: RegionI): Boolean = can:
     case PlaceGenerator(o, p, r) => PlaceGenerator(o, p, r & region)
     
   def canPlaceType(pieces: PieceType*): Boolean = can:
@@ -55,32 +55,32 @@ class Capability (rule: Rule, state: GameState):
   def canMove: Boolean = can:
     case g: MoveGenerator => g
     
-  def canMoveFrom(region: Kernel[?]): Boolean = can:
+  def canMoveFrom(region: RegionI): Boolean = can:
     case MoveGenerator(f, t) => MoveGenerator(f & region, t)
     
   def canMoveType(pieces: PieceType*): Boolean =
-    canMoveFrom(state.now.pieces.ofType(pieces*).positions)
+    canMoveFrom(state.now.pieces.ofType(pieces*))
     
-  def canMoveTo(region: Kernel[?]): Boolean = can:
+  def canMoveTo(region: RegionI): Boolean = can:
     case MoveGenerator(f, t) => MoveGenerator(f, t & region)
     
   def canCaptureType(pieces: PieceType*): Boolean =
-    canMoveTo(state.now.pieces.ofType(pieces*).positions)
+    canMoveTo(state.now.pieces.ofType(pieces*))
     
   def canCapturePlayer(players: PlayerId*): Boolean =
-    canMoveTo(state.now.pieces.ofPlayer(players*).positions)
+    canMoveTo(state.now.pieces.ofPlayer(players*))
     
-  def canMoveBetween(from: Kernel[?], to: Kernel[?]): Boolean = can:
+  def canMoveBetween(from: RegionI, to: RegionI): Boolean = can:
     case MoveGenerator(f, t) => MoveGenerator(f & from, t & to)
     
   def canDestroy: Boolean = can:
     case g: DestroyGenerator => g
     
-  def canDestroyAt(region: Kernel[?]): Boolean = can:
+  def canDestroyAt(region: RegionI): Boolean = can:
     case DestroyGenerator(r) => DestroyGenerator(r & region)
     
   def canDestroyType(pieces: PieceType*): Boolean =
-    canDestroyAt(state.now.pieces.ofType(pieces*).positions)
+    canDestroyAt(state.now.pieces.ofType(pieces*))
     
   def canDestroyPlayer(players: PlayerId*): Boolean =
-    canDestroyAt(state.now.pieces.ofPlayer(players*).positions)
+    canDestroyAt(state.now.pieces.ofPlayer(players*))

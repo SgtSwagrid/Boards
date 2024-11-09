@@ -60,10 +60,9 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
       height("50px"),
       paddingLeft("20px"), paddingTop("10px"), paddingRight("20px"),
       backgroundColor("#2f3640"),
-      scene.status match
-        case Status.Pending => pendingStatus
-        case Status.Active => activeStatus
-        case Status.Complete => completeStatus
+      if scene.status.isPending then pendingStatus
+      else if scene.outcome.isDefined then completeStatus
+      else activeStatus
     )
     
   private def pendingStatus =
@@ -194,7 +193,7 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
   
   private def playerTurnMarker(player: RichPlayer) =
     
-    when (scene.isActive && player.position == scene.activePlayerId) (
+    when (!scene.isPending && scene.outcome.isEmpty && player.position == scene.activePlayerId) (
       img (
         display("inline-block"),
         float("right"),

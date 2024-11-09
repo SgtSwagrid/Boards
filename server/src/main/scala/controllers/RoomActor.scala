@@ -58,8 +58,9 @@ extends Actor:
       out ! Scene(room, me.map(_.userId), state)
     
     case ViewState(time, me, out) =>
-      state.atTime((time + (state.time + 1)) % (state.time + 1)).foreach: state =>
-        out ! Scene(room, me, state)
+      if room.status.isComplete then
+        state.atTime((time + (state.time + 1)) % (state.time + 1)).foreach: state =>
+          out ! Scene(room, me, state)
       
     case Update(me, TakeAction(hash)) =>
       for

@@ -1,14 +1,13 @@
 package boards.algebra.state
 
 import boards.algebra.rules.Rule
-import boards.algebra.rules.Rule
-import boards.algebra.shortcuts.given_Conversion_Iterable_Rule
 import boards.imports.games.{*, given}
 import boards.imports.math.{*, given}
+import boards.math.Region
+import boards.math.Region.Shape
 
 import scala.collection.immutable.BitSet
 import scala.reflect.ClassTag
-import scala.runtime.LazyVals.Names.state
 
 case class PieceSet (
   piecesByPos: Map[VecI, Piece] = Map.empty,
@@ -16,15 +15,14 @@ case class PieceSet (
   
   playerFilter: Map[Game.PlayerId, BitSet] = Map.empty,
   typeFilter: Map[Class[? <: Piece.PieceType], BitSet] = Map.empty
-)(using board: Ker):
+) (using board: RegionI) extends Shape[Int]:
   
-  def pieces: Iterable[Piece] = positions.positions.flatMap(piecesByPos.get).toSeq
-  def positions: Ker = Kernel(selected.unsorted.map(_.toVec))
-  def actions: Rule = pieces.map(_.actions)
+  def pieces: Iterable[Piece] = positions.flatMap(piecesByPos.get).toSeq
+  def actions: Rule = Rule.union(pieces.map(_.actions))
   
   export selected.{isEmpty, nonEmpty}
   def contains(pos: VecI): Boolean =
-    board.contains(pos) && selected.contains(pos.toId)
+    board.contains(pos) && board.indexOf.get(pos).exists(selected.contains)
   def get(pos: VecI): Option[Piece] =
     if contains(pos) then Some(piecesByPos(pos)) else None
     
@@ -75,47 +73,47 @@ case class PieceSet (
     ) & selected
   )
   
-  def ofRegion(region: Ker*): PieceSet = copy (
+  def ofRegion(region: RegionI*): PieceSet = copy (
     selected = selected & BitSet(region.flatMap(_.positions)
       .filter(board.contains)
-      .map(board.indexOf)
+      .flatMap(board.indexOf.get)
     *)
   )
   
-  def regionIsEmpty(region: Ker*): Boolean = ofRegion(region*).isEmpty
-  def regionNonEmpty(region: Ker*): Boolean = ofRegion(region*).nonEmpty
+  def regionIsEmpty(region: RegionI*): Boolean = ofRegion(region*).isEmpty
+  def regionNonEmpty(region: RegionI*): Boolean = ofRegion(region*).nonEmpty
   
   def filter(f: Piece => Boolean): PieceSet = copy (
-    selected = selected.filter(i => get(i.toVec).exists(f))
+    selected = selected.filter(id => board.posById.isDefinedAt(id) && get(board.posById(id)).exists(f))
   )
   
   def map[X](f: Piece => X): Iterable[X] =
     pieces.map(f)
     
-  def move(f: VecI ?=> Ker): Rule =
+  def move(f: VecI ?=> RegionI): Rule =
     Rule.union(pieces.map(_.move(f)).toSeq*)
   def replace(pieceTypes: PieceType*): Rule =
     Rule.union(pieces.map(_.replace(pieceTypes*)).toSeq*)
   def destroy: Rule =
-    Generator.destroy(positions)
+    Generator.destroy(region)
     
-  def relocate(to: Ker): Rule =
-    Effect.relocate(positions -> to)
+  def relocate(to: RegionI): Rule =
+    Effect.relocate(region -> to)
   def relocate(f: VecI ?=> VecI): Rule =
-    Effect.relocate(positions -> positions.map(pos => f(using pos)))
+    Effect.relocate(region -> region.map(pos => f(using pos)))
   def substitute(pieceType: PieceType): Rule =
     Rule.sequence(pieces.map(_.substitute(pieceType)).toSeq*)
   def remove: Rule =
-    Effect.remove(positions)
+    Effect.remove(region)
   
   def withPiece(piece: Piece): PieceSet =
     withoutPiece(piece.position).copy (
       piecesByPos = piecesByPos + (piece.position -> piece),
-      selected = selected + piece.position.toId,
+      selected = selected ++ board.indexOf.get(piece),
       playerFilter = playerFilter + (piece.owner ->
-        (playerFilter.getOrElse(piece.owner, BitSet.empty) + piece.position.toId)),
+        (playerFilter.getOrElse(piece.owner, BitSet.empty) ++ board.indexOf.get(piece))),
       typeFilter = typeFilter + (piece.pieceType.getClass ->
-        (typeFilter.getOrElse(piece.pieceType.getClass, BitSet.empty) + piece.position.toId))
+        (typeFilter.getOrElse(piece.pieceType.getClass, BitSet.empty) ++ board.indexOf.get(piece)))
     )
     
   def withMove(from: VecI, to: VecI): PieceSet =
@@ -129,12 +127,19 @@ case class PieceSet (
       case None => this
       case Some(piece) => copy (
         piecesByPos = piecesByPos - piece.position,
-        selected = selected - piece.position.toId,
+        selected = selected -- board.indexOf.get(piece),
         playerFilter = playerFilter + (piece.owner ->
-          (playerFilter(piece.owner) - piece.position.toId)),
+          (playerFilter(piece.owner) -- board.indexOf.get(piece))),
         typeFilter = typeFilter + (piece.pieceType.getClass ->
-          (typeFilter(piece.pieceType.getClass) - piece.position.toId))
+          (typeFilter(piece.pieceType.getClass) -- board.indexOf.get(piece)))
       )
       
+  // Methods required to implement Shape:
+  private lazy val region: RegionI = Region(selected.unsorted.flatMap: id =>
+    Option.when(board.posById.isDefinedAt(id))(board.posById(id)))
+  override def positions: Iterator[VecI] = region.positions
+  override def start: VecI = board.start
+  override def end: VecI = board.end
+      
 object PieceSet:
-  def empty(using Ker): PieceSet = PieceSet()
+  def empty(using RegionI): PieceSet = PieceSet()

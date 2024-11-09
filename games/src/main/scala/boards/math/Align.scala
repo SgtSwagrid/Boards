@@ -1,4 +1,4 @@
-package boards.math.kernel
+package boards.math
 
 import boards.imports.math.{*, given}
 
@@ -6,10 +6,10 @@ sealed trait Align:
   import Align.*
   
   def relativeOffset(l: VecI, r: VecI): VecI =
-    Vec(
+    VecI (
       (0 until Math.max(l.dim, r.dim)).map: d =>
         axisOffset(l(d), r(d), d)
-    *)
+    )
   
   protected def axisOffset(l: Int, r: Int, d: Int): Int
   

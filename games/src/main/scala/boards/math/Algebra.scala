@@ -25,21 +25,31 @@ object Algebra:
   trait Field[T] extends Ring[T]:
     def multiplicativeInverse(x: T): T
     
-  extension [X] (x: X) (using s: Semigroup[X])
-    @targetName("add") def + (y: X): X = s.sum(x, y)
+  extension [X] (x: X) (using S: Semigroup[X])
+    def + (y: X): X = S.sum(x, y)
     
-  extension [X] (x: X) (using g: Group[X])
-    @targetName("negate") def unary_- : X = g.additiveInverse(x)
-    @targetName("subtract") def - (y: X): X = x + -y
+  extension [X] (x: X) (using G: Group[X])
+    def unary_- : X = G.additiveInverse(x)
+    def - (y: X): X = x + -y
     
-  extension [X] (x: X) (using r: Ring[X])
-    @targetName("multiply") def * (y: X): X = r.product(x, y)
-    @targetName("multiply") def * (v: Vec[X]): Vec[X] = v.map(x * _)
-    @targetName("multiply") def * (m: Matrix[X]): Matrix[X] = m.map(x * _)
+  extension [X] (x: X) (using R: Ring[X])
+    def * (y: X): X = R.product(x, y)
+    def * (v: Vec[X]): Vec[X] = v * x
+    def * [T] (region: Region[X, T]): Region[X, T] = region * x
     
-  extension [X] (x: X) (using f: Field[X])
-    def inverse: X = f.multiplicativeInverse(x)
-    @targetName("divide") def / (y: X): X = x * y.inverse
+  extension [X] (x: X) (using R: Ring[X], O: Ordering[X])
+    def < (y: X): Boolean = O.lt(x, y)
+    def < (v: Vec[X]): Boolean = v > x
+    def <= (y: X): Boolean = O.lteq(x, y)
+    def <= (v: Vec[X]): Boolean = v >= x
+    def > (y: X): Boolean = O.gt(x, y)
+    def > (v: Vec[X]): Boolean = v < x
+    def >= (y: X): Boolean = O.gteq(x, y)
+    def >= (v: Vec[X]): Boolean = v <= x
+    
+  extension [X] (x: X) (using F: Field[X])
+    def inverse: X = F.multiplicativeInverse(x)
+    def / (y: X): X = x * y.inverse
     
   given Identity[Unit] with
     inline def identity: Unit = ()

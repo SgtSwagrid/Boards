@@ -6,6 +6,7 @@ import boards.algebra.state.GameState
 import boards.imports.games.{*, given}
 import boards.imports.math.{*, given}
 import boards.graphics.Colour
+import boards.math.Region
 
 abstract class Game (
   data: Game.Metadata
@@ -27,11 +28,11 @@ abstract class Game (
   
   export data.*
   
-  protected type GameBoard = Kernel[Colour]
-  protected val Board: GameBoard
+  protected type GameBoard = Region[Int, Colour]
+  protected val board: GameBoard
   
   final def initial(config: GameConfig): GameState =
-    val genesis = InstantaneousState.initial(Board, config)
+    val genesis = InstantaneousState.initial(board, config)
     GameState.initial(this, genesis, rules).flattenFutureSkips
   
   def rules: Rule
@@ -41,7 +42,7 @@ object Game:
   def none: Game = new Game(name = "Game"):
     def setup(config: GameConfig) = InstantaneousState.empty
     def rules = Rule.none
-    val Board = Kernel.empty
+    val board = Region.empty
   
   case class Metadata (
     name: String,

@@ -5,7 +5,6 @@ import org.scalajs.dom
 object Navigation:
   
   def queryParams(url: String = dom.window.location.href): Map[String, String] =
-    println(url)
     url.split("\\?").toSeq match
       case _ +: params +: _ =>
         params.split("&")

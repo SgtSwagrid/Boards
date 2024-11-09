@@ -3,6 +3,7 @@ package boards.algebra.rules
 import boards.imports.games.{*, given}
 import boards.imports.math.{*, given}
 import boards.algebra.rules.Rule.Query
+import boards.math.Ray
 
 /**
  * A rule for enumerating all actions of a particular kind.
@@ -26,7 +27,7 @@ object Generator:
   
   def place
     (owner: PlayerId)
-    (placements: (PieceType | Iterable[PieceType], Ker)*)
+    (placements: (PieceType | Iterable[PieceType], RegionI)*)
   : Rule = Rule.union (
     placements.map:
       case (piece: PieceType, region) => PlaceGenerator(owner, Some(piece), region)
@@ -34,15 +35,20 @@ object Generator:
   *)
   
   def place
-    (placements: (PieceType | Iterable[PieceType], Ker)*)
+    (placements: (PieceType | Iterable[PieceType], RegionI)*)
     (using owner: PlayerId)
   : Rule = place(owner)(placements*)
   
-  def move(moves: (Ker, Ker)*): Rule =
+  def move(moves: (RegionI, RegionI)*): Rule =
     Rule.union(moves.map(MoveGenerator.apply)*)
     
-  def destroy(regions: Ker*): Rule =
+  def destroy(regions: RegionI*): Rule =
     Rule.union(regions.map(DestroyGenerator.apply)*)
+    
+  private def shrinkRegionToBoard(region: RegionI, board: RegionI): RegionI =
+    region match
+      case ray: Ray => ray.takeWhile(board.contains)
+      case region: RegionI => region.window(board.start, board.end)
   
   /**
    * Generates all possible piece placements in a region.
@@ -54,12 +60,12 @@ object Generator:
   private[algebra] case class PlaceGenerator (
     owner: PlayerId,
     pieces: Iterable[PieceType],
-    region: Ker,
+    region: RegionI,
   ) extends Generator:
     
     def generate(state: GameState): Iterator[Action] = for
-      pos <- region.positions
-      if state.now.inBounds(pos)
+      pos <- shrinkRegionToBoard(region, state.board).positions
+      if state.inBounds(pos)
       piece <- pieces.iterator
     yield Place(owner, piece, pos)
   
@@ -70,16 +76,16 @@ object Generator:
    * @param to the board region that may be moved to.
    */
   private[algebra] case class MoveGenerator (
-    from: Ker,
-    to: Ker,
+    from: RegionI,
+    to: RegionI,
   ) extends Generator:
     
     def generate(state: GameState): Iterator[Action] = for
-      from <- from.positions
-      if state.now.inBounds(from)
+      from <- shrinkRegionToBoard(from, state.board).positions
+      if state.inBounds(from)
       piece <- state.now.pieces.get(from).iterator
-      to <- to.positions
-      if state.now.inBounds(to)
+      to <- shrinkRegionToBoard(to, state.board).positions
+      if state.inBounds(to)
     yield Move(piece.copy(position = to), from, to)
   
   /**
@@ -88,11 +94,11 @@ object Generator:
    * @param region the board region that may be removed from.
    */
   private[algebra] case class DestroyGenerator (
-    region: Ker,
+    region: RegionI,
   ) extends Generator:
     
     def generate(state: GameState): Iterator[Action] = for
-      pos <- region.positions
-      if state.now.inBounds(pos)
-      piece <- state.now.pieces.get(pos).iterator
+      pos <- shrinkRegionToBoard(region, state.board).positions
+      if state.inBounds(pos)
+      piece <- state.pieces.get(pos).iterator
     yield Destroy(piece)

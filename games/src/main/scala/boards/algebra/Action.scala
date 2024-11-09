@@ -4,8 +4,8 @@ import boards.algebra.rules.Rule
 import boards.algebra.rules.Rule
 import boards.imports.games.{*, given}
 import boards.imports.math.{*, given}
-import boards.algebra.shortcuts.{given_Conversion_Action_Rule, given_Kernel_}
 import boards.algebra.state.{InstantaneousState, Piece}
+import boards.math.Ray
 
 import scala.annotation.{tailrec, targetName}
 

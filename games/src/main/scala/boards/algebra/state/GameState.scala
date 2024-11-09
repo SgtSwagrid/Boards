@@ -11,6 +11,7 @@ sealed trait GameState:
   
   private val capability = Capability(ruleOption.getOrElse(Rule.none), this)
   export capability.*
+  export now.{activePlayer, inactivePlayers, nextPlayer, pieces, board, inBounds}
   
   val now: InstantaneousState
   
@@ -92,8 +93,6 @@ sealed trait GameState:
   
   val time: Int
   val game: Game
-  
-  export now.activePlayer
   
 object GameState:
   

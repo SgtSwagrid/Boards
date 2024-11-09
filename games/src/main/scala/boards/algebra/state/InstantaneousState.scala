@@ -1,14 +1,17 @@
 package boards.algebra.state
 
 import boards.algebra.Game.GameConfig
+import boards.graphics.Colour
 import boards.imports.games.{*, given}
 import boards.imports.math.{*, given}
+import boards.algebra.Game.PlayerId
+import boards.math.Region
 
 import scala.collection.immutable.BitSet
 import scala.reflect.ClassTag
 
 case class InstantaneousState (
-  board: Kernel[boards.graphics.Colour],
+  board: Region[Int, Colour],
   pieces: PieceSet,
   config: GameConfig,
   activePlayer: Game.PlayerId = PlayerId(0),
@@ -28,26 +31,16 @@ case class InstantaneousState (
   
   def withPieces(pieces: PieceSet): InstantaneousState = copy(pieces = pieces)
   def updatePieces(f: PieceSet => PieceSet): InstantaneousState = copy(pieces = f(pieces))
-  
-  def draw: String =
-    board.offset.y.until(board.extent.y).map: y =>
-      board.offset.x.until(board.extent.x).map: x =>
-        (board.label(x, y), pieces.get(Vec(x, y))) match
-          case (Some(_), Some(piece)) => piece.pieceType.getClass.getSimpleName.apply(0)
-          case (Some(_), None) => "."
-          case (None, _) => " "
-      .mkString
-    .reverse.mkString("\n")
     
   def diff(that: InstantaneousState): Iterator[VecI] =
     board.positions.filter(v => pieces.piecesByPos.get(v) != that.pieces.piecesByPos.get(v))
     
 object InstantaneousState:
   
-  def initial(board: Kernel[boards.graphics.Colour], config: GameConfig): InstantaneousState =
+  def initial(board: Region[Int, Colour], config: GameConfig): InstantaneousState =
     InstantaneousState(board, PieceSet.empty(using board), config)
     
   def empty: InstantaneousState =
-    new InstantaneousState(Kernel.empty, PieceSet.empty(using Kernel.empty), GameConfig(0))
+    new InstantaneousState(Region.empty, PieceSet.empty(using Region.empty), GameConfig(0))
     
   given (using state: InstantaneousState): GameConfig = state.config

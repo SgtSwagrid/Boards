@@ -3,6 +3,7 @@ package boards.games
 import boards.imports.games.{*, given}
 import boards.imports.math.{*, given}
 import boards.algebra.shortcuts.{*, given}
+import boards.math.{Dir, Region}
 
 object Chess extends Game (
   name = "Chess",
@@ -11,43 +12,40 @@ object Chess extends Game (
   playerColours = Seq(Colour.Chess.Light, Colour.Chess.Dark),
 ):
   
-  override val Board = Kernel.box(8, 8)
+  override val board = Region.box(8, 8)
     .paint(Pattern.Checkered(Colour.Chess.Dark, Colour.Chess.Light))
   
-  object Rook extends
-    PieceType.WithTexture(Texture.WhiteRook, Texture.BlackRook),
-    PieceType.WithRule(_.move(Dir.orthogonal.ray.toEnemy.untilFriendly))
+  object Rook extends PieceType.WithTexture(Texture.WhiteRook, Texture.BlackRook):
+    def actions(rook: Piece) = rook.move(Dir.orthogonal.rayFromHere.toEnemy.untilFriendly)
   
-  object Knight extends
-    PieceType.WithTexture(Texture.WhiteKnight, Texture.BlackKnight),
-    PieceType.WithRule(_.move(Dir.knight(1, 2).avoidFriendly))
+  object Knight extends PieceType.WithTexture(Texture.WhiteKnight, Texture.BlackKnight):
+    def actions(knight: Piece) = knight.move(Dir.knight(1, 2).fromHere.avoidFriendly)
   
-  object Bishop extends
-    PieceType.WithTexture(Texture.WhiteBishop, Texture.BlackBishop),
-    PieceType.WithRule(_.move(Dir.diagonal.ray.toEnemy.untilFriendly))
+  object Bishop extends PieceType.WithTexture(Texture.WhiteBishop, Texture.BlackBishop):
+    def actions(bishop: Piece) = bishop.move(Dir.diagonal.rayFromHere.toEnemy.untilFriendly)
   
-  object Queen extends
-    PieceType.WithTexture(Texture.WhiteQueen, Texture.BlackQueen),
-    PieceType.WithRule(_.move(Dir.octagonal.ray.toEnemy.untilFriendly))
+  object Queen extends PieceType.WithTexture(Texture.WhiteQueen, Texture.BlackQueen):
+    def actions(queen: Piece) = queen.move(Dir.octagonal.rayFromHere.toEnemy.untilFriendly)
   
   object King extends PieceType.WithTexture(Texture.WhiteKing, Texture.BlackKing):
     
     def actions(king: Piece) =
       
-      val r_move = king.move(Dir.octagonal.avoidFriendly)
+      val r_move = king.move(Dir.octagonal.fromHere.avoidFriendly)
       
       val r_castle = Rule.when(!king.hasMoved):
-        pieces.ofPlayer(king.owner).ofType(Rook)
+        king.fellowPieces.ofType(Rook)
           .filter: rook =>
-            !rook.hasMoved && rook.y == king.y
-              && pieces.regionIsEmpty(king.rayTo(rook).interior)
+            !rook.hasMoved &&
+            rook.y == king.y &&
+            king.rayTo(rook).interior.pieces.isEmpty
           .map: rook =>
-            king.move(Dir.between(king, rook) * 2)
-              |> rook.relocate(king + king.directionTo(rook))
+            king.move(king + (king.directionTo(rook) * 2)) |>
+            rook.relocate(king + king.directionTo(rook))
       .requireInCase:
         case Following(move: Move) =>
           hypothetically(King.insert(move.path)):
-            !pieces.ofInactivePlayers.canMoveTo(move.path)
+            !instances.ofInactivePlayers.canMoveTo(move.path)
       
       r_move | r_castle
   
@@ -58,14 +56,13 @@ object Chess extends Game (
       val forward = pawn.byOwner(Dir.up, Dir.down)
       val diagonal = pawn.byOwner(Dir.diagonallyUp, Dir.diagonallyDown)
       val dist = if pawn.hasMoved then 1 else 2
-      
-      val r_move = pawn.move(forward.ray.take(dist).untilPiece)
-      val r_capture = pawn.move(diagonal.ontoEnemy)
+      val r_move = pawn.move(forward.rayFromHere.take(dist).untilPiece)
+      val r_capture = pawn.move(diagonal.fromHere.ontoEnemy)
       
       val r_enpassant = Rule.whenCase:
         case Following(move @ Move(enemy, _, _)) if enemy.is(Pawn)
           && move.step.abs.y == 2
-          && (pawn + diagonal).contains(move.midpoint) =>
+          && (pawn ++ diagonal).contains(move.midpoint) =>
             pawn.move(move.midpoint) |> enemy.remove
       
       val r_promote = Rule.maybeCase:
@@ -77,11 +74,9 @@ object Chess extends Game (
   
   val r_setup =
     val homeRow = Seq(Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook)
-    Effect.insert(PlayerId(0))(homeRow -> Board.row(0), Pawn -> Board.row(1)) |>
-    Effect.insert(PlayerId(1))(homeRow -> Board.row(7), Pawn -> Board.row(6))
-  
-  def inCheck(using GameState) = pieces.ofInactivePlayers.canCaptureType(King)
+    Effect.insert(PlayerId(0))(homeRow -> board.row(0), Pawn -> board.row(1)) |>
+    Effect.insert(PlayerId(1))(homeRow -> board.row(7), Pawn -> board.row(6))
   
   override def rules = r_setup |> Rule.alternatingTurns:
-    pieces.ofActivePlayer.actions.require(!inCheck)
-      ?: Effect.stop(if inCheck then Winner(state.nextPlayer) else Draw)
+    pieces.ofActivePlayer.actions.require(!King.inCheck)
+      ?: Effect.stop(if King.inCheck then Winner(state.nextPlayer) else Draw)
