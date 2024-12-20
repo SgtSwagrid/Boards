@@ -1,8 +1,9 @@
 package boards.components.game
 
 import boards.graphics.Scene
-import boards.graphics.Scene.{Input, PieceData, Tile}
+import boards.graphics.Scene.{Choice, PieceData, Tile}
 import boards.imports.laminar.HtmlProp
+import boards.math.region.Metric
 import boards.protocol.GameProtocol.GameRequest
 import boards.protocol.Room.Player
 import boards.views.GameView.{scene, sceneBus, socket}
@@ -129,13 +130,13 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
   /** The size in pixels of a single tile from the game board. */
   private val scale: Signal[Int] =
     Signal.combine(scene, canvasSize).map: (scene, canvasSize) =>
-      try (canvasSize * scene.board.size).components.min / scene.board.size.product
+      try (canvasSize * scene.board.size.asFinite[Int]).components.min / scene.board.boundingBox.area.asFinite
       catch case _ => 0
   
   /** The offset in pixels from the corner of the canvas to the corner of the game board. */
   private val offset: Signal[VecI] =
     Signal.combine(scene, canvasSize, scale).map: (scene, canvasSize, scale) =>
-      (canvasSize - (scene.board.size * scale)) / 2
+      (canvasSize - (scene.board.size.asFinite[Int] * scale)) / 2
   
   /** Records all cursor movement events. */
   private val cursorBus: EventBus[MouseEvent] = new EventBus[MouseEvent]
@@ -196,29 +197,29 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
       .startWith(None)
   
   /** The action the user might be about to take. */
-  private val tentativeInput: Signal[Option[Input]] =
+  private val tentativeInput: Signal[Option[Choice[Input.Drag]]] =
     Signal.combine(scene, dragged, config, cursorPos).map: (scene, dragged, cfg, cursorPos) =>
       dragged.filter(_ => inBounds(cursorPos, cfg)).flatMap: dragged =>
-        val inputs = scene.inputsByOrigin.getOrElse(dragged.position, Seq.empty)
-        val target = (inputs.map(_.to) :+ dragged.position)
-          .minBy: pos =>
-            Metric.EuclideanSquared.dist(gameToCanvasCenterCoords(pos, cfg), cursorPos)
-        inputs.find: input =>
-          input.to == target
+        val choices = scene.dragsByOrigin.getOrElse(dragged.position, Seq.empty)
+        val target = (choices.flatMap(_.input.to.positions) :+ dragged.position)
+          .minBy: region =>
+            Metric.EuclideanSquared.dist(gameToCanvasCenterCoords(region, cfg), cursorPos)
+        choices.find: choice =>
+          choice.input.to.contains(target)
   
-  private val inputStream: EventStream[Input] =
+  private val inputStream: EventStream[Choice[Input.Drag]] =
     clickBus.stream.filter(_.action == MouseAction.Up)
       .withCurrentValueOf(tentativeInput)
       .filter((_, input) => input.isDefined)
       .map((_, input) => input.get)
   
-  private val pieceState: Signal[Map[Int, PieceData]] =
+  private val pieceState: Signal[Map[PieceId, PieceData]] =
     Signal.combine(scene, tentativeInput).map:
       case (_, Some(input)) => input.result.piecesById
       case (scene, None) => scene.piecesById
   
   private case class PieceState (
-    pieceId: Int,
+    pieceId: PieceId,
     actualPos: VecF,
     targetPos: VecF,
     actualSize: Float,
@@ -237,7 +238,7 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
       
       EventStream.periodic(5)
         .withCurrentValueOf(pieceState).map((_, s) => s)
-        .scanLeft(Map.empty[Int, PieceState]) { (previous, pieceState) =>
+        .scanLeft(Map.empty[PieceId, PieceState]) { (previous, pieceState) =>
           
           // Pieces which previously existed and still exist.
           val existing = (previous.keySet & pieceState.keySet)
@@ -270,7 +271,7 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
           // Pieces which were newly created.
           val deleted = (pieceState.keySet -- previous.keySet)
             .map(pieceState.apply).map: pieceState =>
-              pieceState.pieceId -> PieceState(
+              pieceState.pieceId -> PieceState (
                 pieceState.pieceId,
                 gameToCanvasCenterCoords(pieceState.position, cfg),
                 gameToCanvasCenterCoords(pieceState.position, cfg),
@@ -299,7 +300,7 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
     pieces: Seq[PieceSprite],
     hover: Option[Tile],
     dragged: Option[Tile],
-    tentativeInput: Option[Input],
+    tentativeInput: Option[Choice[Input.Drag]],
     cfg: CanvasState,
   ) =
     
@@ -311,13 +312,13 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
       val pos = gameToCanvasCornerCoords(tile.position, cfg)
       val baseColour =
         if dragged.exists(_.position == tile.position) then tile.colour.mix(Colour.British.RiseNShine, 0.75F)
-        else if scene.diffSet.contains(tile.position) then tile.colour.mix(Colour.British.Naval, 0.75F)
+        else if scene.diff.contains(tile.position) then tile.colour.mix(Colour.British.Naval, 0.75F)
         else tile.colour
       val colour = if hover.exists(_.position == tile.position) then baseColour.darken(15) else baseColour
       fillRect(pos, square, colour)
       
     if dragged.isEmpty then
-      for origin <- scene.inputsByOrigin.keys do
+      for origin <- scene.dragsByOrigin.keys do
         val pos = gameToCanvasCenterCoords(origin, cfg)
         fillCircle(pos, cfg.scale * 0.4F, Colour.British.LynxWhite, 0.4F)
     
@@ -325,12 +326,13 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
       drawImage(piece.position, piece.size, piece.texture)
 
     dragged.foreach: dragged =>
-      for input <- scene.inputsByOrigin.getOrElse(dragged.position, Seq.empty) do
-        if !tentativeInput.exists(_.to == input.to) then
-          val pos = gameToCanvasCenterCoords(input.to, cfg)
-          if scene.piecesByPos.contains(input.to)
-          then drawCross(pos, cfg.scale * 0.15F, Colour.British.NasturcianFlower, cfg.scale * 0.05F, 0.6F)
-          else fillCircle(pos, cfg.scale * 0.1F, Colour.British.LynxWhite, 0.6F)
+      for choice <- scene.dragsByOrigin.getOrElse(dragged.position, Seq.empty) do
+        if !tentativeInput.exists(_.input.to == choice.input.to) then
+          choice.input.to.asVec.foreach: to =>
+            val pos = gameToCanvasCenterCoords(to, cfg)
+            if scene.piecesByPos.contains(to)
+            then drawCross(pos, cfg.scale * 0.15F, Colour.British.NasturcianFlower, cfg.scale * 0.05F, 0.6F)
+            else fillCircle(pos, cfg.scale * 0.1F, Colour.British.LynxWhite, 0.6F)
   
   def apply: HtmlElement = canvasTag (
     
@@ -348,7 +350,7 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
     
     // Tell the server when the user takes an action.
     inputStream.map(input => input.result) --> sceneBus.writer,
-    inputStream.map(input => GameRequest.TakeAction(input.actionHash)) --> response,
+    inputStream.map(input => GameRequest.TakeAction(input.choiceId)) --> response,
     
     // Play a sound when a piece moves.
     scene.map(_.pieces).changes.distinct --> {_ => sound.play()},

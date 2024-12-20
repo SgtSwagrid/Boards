@@ -1,9 +1,9 @@
 package models
 
-import boards.Games
-import boards.algebra.{Action, Game}
-import boards.algebra.Game.PlayerId
-import boards.algebra.state.GameState
+import boards.Catalogue
+import boards.dsl.meta.{Game, PlayerId}
+import boards.dsl.meta.PlayerId.PlayerId
+import boards.dsl.states.GameState
 import boards.protocol.GameProtocol.*
 import boards.protocol.Room
 import boards.protocol.Room.{Player, Status}
@@ -15,9 +15,9 @@ import io.circe.generic.auto.*
 import io.circe.syntax.*
 import io.circe.*
 import io.circe.parser.*
-import schema.{ActionTable, PlayerTable, RoomTable}
+import schema.{InputTable, PlayerTable, RoomTable}
 import schema.RoomTable.given
-import schema.ActionTable.ActionRow
+import schema.InputTable.InputRow
 import schema.PlayerTable.PlayerRow
 
 import scala.util.Random
@@ -39,7 +39,7 @@ class GameModel(using db: Database, ec: ExecutionContext):
     
   def getGame(roomId: String): Future[Game] =
     for room <- getRoomById(roomId)
-    yield Games.byName(room.get.gameId)
+    yield Catalogue.byName(room.get.gameId)
     
   def joinRoom(roomId: String, userId: Int): Future[PlayerRow] =
     val action = for
@@ -84,8 +84,8 @@ class GameModel(using db: Database, ec: ExecutionContext):
       Seq(left, right) <- Action.getPlayersByPos(roomId)(leftId, rightId)
       _ <- Query.playersByPos(roomId)(leftId, rightId).delete
       _ <- PlayerTable.players ++= Seq (
-        left.copy(position = rightId),
-        right.copy(position = leftId),
+        left.copy(position = rightId.toInt),
+        right.copy(position = leftId.toInt),
       )
     yield ()
     db.run(action.transactionally)
@@ -109,14 +109,14 @@ class GameModel(using db: Database, ec: ExecutionContext):
     yield room.copy(status = Status.Active)
     db.run(action.transactionally).recover{e => e.printStackTrace(); ???}
     
-  def takeAction(roomId: String, userId: Int, actionHash: String, end: Boolean = false): Future[ActionRow] =
+  def takeAction(roomId: String, userId: Int, inputId: Int, end: Boolean = false): Future[InputRow] =
     val action = for
       room <- Action.getRoom(roomId)
       if room.status.isActive
-      actions <- Action.getActions(roomId)
+      actions <- Action.getInputHistory(roomId)
       time = System.currentTimeMillis()
-      action = ActionRow(roomId, actions.size, userId, actionHash, time)
-      _ <- ActionTable.actions += action
+      action = InputRow(roomId, actions.size, userId, inputId, time)
+      _ <- InputTable.actions += action
       _ <- if end
         then Query.room(roomId).map(_.status).update(Status.Complete)
         else DBIO.successful(())
@@ -161,11 +161,11 @@ class GameModel(using db: Database, ec: ExecutionContext):
     val action = for
       room <- Action.getRoom(roomId)
       numPlayers <- Action.getNumPlayers(roomId)
-      actions <- Action.getActions(roomId)
+      inputs <- Action.getInputHistory(roomId)
       requiredPlayers = room.game.numPlayers.filter(_ >= numPlayers).min
       initial = room.game.initial(Game.GameConfig(requiredPlayers))
-      current = actions.foldLeft[GameState](initial): (state, action) =>
-        state.takeActionByHash(action.actionHash).get
+      current = inputs.foldLeft[GameState](initial): (state, action) =>
+        state.applyInputById(action.inputId).get
     yield current
     db.run(action).recover{e => e.printStackTrace(); ???}
     
@@ -195,7 +195,7 @@ class GameModel(using db: Database, ec: ExecutionContext):
     def getRoomOption(roomId: String): DBIO[Option[Room]] =
      Query.room(roomId).result.headOption
       
-    def getActions(roomId: String): DBIO[Seq[ActionRow]] =
+    def getInputHistory(roomId: String): DBIO[Seq[InputRow]] =
       Query.actions(roomId).result
       
   private[models] object Query:
@@ -220,8 +220,8 @@ class GameModel(using db: Database, ec: ExecutionContext):
     def playersAfter(roomId: String, position: PlayerId): Query[PlayerTable, PlayerRow, Seq] =
       allPlayers(roomId).filter(_.position > position.toInt)
       
-    def actions(roomId: String): Query[ActionTable, ActionRow, Seq] =
-      ActionTable.actions.filter(_.roomId === roomId).sortBy(_.position)
+    def actions(roomId: String): Query[InputTable, InputRow, Seq] =
+      InputTable.actions.filter(_.roomId === roomId).sortBy(_.position)
       
     def room(roomId: String): Query[RoomTable, Room, Seq] =
       RoomTable.rooms.filter(_.id === roomId)

@@ -1,15 +1,15 @@
 package controllers
 
-import boards.Games
 import RoomActor.Protocol.*
-import boards.algebra.state.GameState.NonFinalState
-import boards.algebra.state.InstantaneousState.given
-import boards.algebra.state.GameState
+import boards.dsl.meta.TurnId.TurnId
+import boards.dsl.rules.Cause
+import boards.dsl.states.GameState
+import boards.dsl.states.InstantaneousState.given
 import boards.graphics.Scene
 import boards.protocol.GameProtocol.*
 import boards.protocol.GameProtocol.GameRequest.*
 import boards.protocol.Room
-import boards.protocol.Room.{Player, Status, RichRoom}
+import boards.protocol.Room.{Player, RichRoom, Status}
 import boards.protocol.UserProtocol.User
 import models.GameModel
 import org.apache.pekko.actor.{Status as _, *}
@@ -49,7 +49,7 @@ extends Actor:
   private def canTakeAction(userId: Int): Boolean =
     room.isActive &&
     room.playersOf(userId).map(_.position).contains(state.activePlayer) &&
-    !room.players(state.activePlayer).hasResigned
+    !room.player(state.activePlayer).hasResigned
   
   def receive =
     
@@ -57,17 +57,17 @@ extends Actor:
       subscribers += Subscriber(out, me)
       out ! Scene(room, me.map(_.userId), state)
     
-    case ViewState(time, me, out) =>
+    case ViewState(turnId, me, out) =>
       if room.status.isComplete then
-        state.atTime((time + (state.time + 1)) % (state.time + 1)).foreach: state =>
-          out ! Scene(room, me, state)
+        val moment = state.atTime((turnId + (state.turnId + 1)) % (state.turnId + 1))
+        out ! Scene(room, me, moment.withRule(Cause.none))
       
-    case Update(me, TakeAction(hash)) =>
+    case Update(me, TakeAction(inputId)) =>
       for
-        result <- state.takeActionByHash(hash)
+        result <- state.applyInputById(inputId)
         if canTakeAction(me)
       do for
-        _ <- GameModel().takeAction(roomId, me, hash, result.isFinal)
+        _ <- GameModel().takeAction(roomId, me, inputId, result.isFinal)
       do
         this.state = result
         if result.isFinal then
@@ -141,4 +141,4 @@ object RoomActor:
   enum Protocol:
     case Subscribe(user: Option[User], out: ActorRef)
     case Update(userId: Int, request: GameRequest)
-    case ViewState(time: Int, user: Option[Int], out: ActorRef)
+    case ViewState(turnId: TurnId, user: Option[Int], out: ActorRef)

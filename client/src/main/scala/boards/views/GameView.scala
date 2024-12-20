@@ -2,7 +2,7 @@ package boards.views
 
 import boards.components.game.{GameBoard, GameSidebar}
 import boards.graphics.Scene
-import boards.graphics.Scene.{Input, PieceData, Tile}
+import boards.graphics.Scene.{PieceData, Tile}
 import boards.imports.laminar.HtmlProp
 import boards.protocol.GameProtocol.*
 import com.raquo.laminar.codecs.StringAsIsCodec
@@ -73,7 +73,7 @@ object GameView extends View:
     socket.connect,
     socket.connected.filter(_ => autoJoin).mapTo(GameRequest.JoinRoom) --> socket.send,
     socket.received --> sceneBus.writer,
-    socket.received --> {x => println(x)},
+    socket.received --> {x => println(x.choices)},
     
     Navbar(),
     

@@ -8,7 +8,11 @@ import boards.protocol.UserProtocol.*
 import boards.protocol.Room
 import boards.protocol.Room.*
 import Scene.*
-import boards.math.Region
+import boards.dsl.pieces.PieceState.empty.region
+import boards.dsl.rules
+import boards.dsl.states.GameState
+import boards.math.region.RegionMap.RegionMapI
+import boards.math.region.{Region, RegionMap}
 
 /**
  * A representation of the current game state.
@@ -20,13 +24,11 @@ import boards.math.Region
  * and without revealing hidden information that should remain secret.
  *
  * @param room The game room currently being viewed.
- *
  * @param userId The ID of the user who is currently logged in on this device.
  * @param activePlayerId The ID of the player whose turn it currently is.
- *
  * @param board The set of empty tiles that forms the game board.
  * @param pieces The pieces which currently exist on the board.
- * @param inputs The set of legally permissible inputs for this user in the current state.
+ * @param choices The set of legally permissible inputs for this user in the current state.
  * @param diff The tiles which were modified during the previous turn.
  * @param outcome The result of the game, if it has ended.
  * @param time The number of actions which have already been taken.
@@ -38,29 +40,38 @@ case class Scene (
   userId: Option[Int] = None,
   activePlayerId: PlayerId = PlayerId(0),
   
-  board: Region[Int, Tile] = Region.empty,
+  board: RegionMapI[Tile] = RegionMap.empty,
   pieces: Seq[PieceData] = Seq.empty,
-  inputs: Seq[Input] = Seq.empty,
-  diff: Seq[VecI] = Seq.empty,
+  choices: Seq[Choice[Input]] = Seq.empty,
+  diff: RegionI = Region.empty,
   outcome: Option[Outcome] = None,
-  time: Int = 0,
+  turnId: TurnId = TurnId.initial,
   
 ) derives Codec.AsObject:
   
+  lazy val (clicks, drags) = choices.partitionMap:
+    case Choice(click: Input.Click, result, id) => Left(Choice(click, result, id))
+    case Choice(drag: Input.Drag, result, id) => Right(Choice(drag, result, id))
+  
   /** All inputs indexed by starting board position. */
-  lazy val inputsByOrigin: Map[VecI, Seq[Input]] = inputs.groupBy(_.from)
+  lazy val dragsByOrigin: Map[VecI, Seq[Choice[Input.Drag]]] =
+    drags.flatMap: choice =>
+      choice.input.from.positions.map: pos =>
+        pos -> choice
+    .groupBy((pos, _) => pos)
+    .map: (pos, choices) =>
+      pos -> choices.map((pos, choice) => choice)
+    
   /** All pieces indexed by piece ID. */
-  lazy val piecesById: Map[Int, PieceData] = pieces.map(p => p.pieceId -> p).toMap
+  lazy val piecesById: Map[PieceId, PieceData] = pieces.map(p => p.pieceId -> p).toMap
   /** All pieces indexed by board position. */
   lazy val piecesByPos: Map[VecI, PieceData] = pieces.map(p => p.position -> p).toMap
-  /** A set of the tiles which were modified during the previous turn. */
-  lazy val diffSet: Set[VecI] = diff.toSet
   
   /** Whether this participant is currently signed in. */
   lazy val iAmRegistered: Boolean = userId.isDefined
   
   /** The player whose turn it currently is. */
-  lazy val activePlayer: RichPlayer = players(activePlayerId)
+  lazy val activePlayer: RichPlayer = player(activePlayerId)
   
   /** All the players that are playing on this device. */
   lazy val myPlayers: Seq[RichPlayer] =
@@ -84,7 +95,7 @@ case class Scene (
   /** The winner of the game, if there is one. */
   lazy val winner: Option[RichPlayer] =
     (outcome match
-      case Some(Winner(winner)) => Some(players(winner))
+      case Some(Winner(winner)) => Some(player(winner))
       case _ => None
     ).orElse(winnerByResignation)
   /** Whether the given player has won the game. */
@@ -153,12 +164,12 @@ object Scene:
    * @param actionHash A unique code used to identify this action.
    * @param result The state that results from this action, so it can be displayed in realtime.
    */
-  case class Input (
-    from: VecI,
-    to: VecI,
-    actionHash: String,
+  case class Choice[I <: Input] (
+    input: I,
     result: Scene,
-  ) derives Codec.AsObject
+    choiceId: Int,
+  ) derives Codec.AsObject:
+    override def toString = input.toString
   
   /**
    * A visual representation of a piece on the game board.
@@ -168,7 +179,7 @@ object Scene:
    * @param texture The current texture of this piece.
    */
   case class PieceData (
-    pieceId: Int,
+    pieceId: PieceId,
     position: VecI,
     texture: Texture,
   ) derives Codec.AsObject
@@ -187,30 +198,30 @@ object Scene:
     state: GameState,
   ): Scene =
     
-    val board = state.now.board.paint: (pos, colour) =>
+    val board = state.now.board.zipWithPosition.mapLabels: (pos, colour) =>
       Tile (
         pos,
         Shape.Rectangle(1, 1),
         state.now.board.label(pos).get,
-        state.now.pieces.get(pos).map(_.texture),
+        state.now.pieces.at(pos).map(_.texture),
       )
       
-    val pieces = state.now.pieces.pieces.toSeq.map: piece =>
-      PieceData(piece.id, piece.position, piece.texture)
+    val pieces = state.now.pieces.pieces.map: piece =>
+      PieceData(piece.pieceId, piece.position, piece.texture)
     
-    val inputs =
+    val choices =
       val isMyTurn = room.isActive &&
-        userId.contains(room.players(state.activePlayer).userId) &&
-        !room.players(state.activePlayer).hasResigned
+        userId.contains(room.player(state.activePlayer).userId) &&
+        !room.player(state.activePlayer).hasResigned
       if !isMyTurn then Seq.empty else
-        state.next.toSeq.map: successor =>
-          val (from, to) = successor.actionOption.get match
-            case Place(_, _, pos) => (pos, pos)
-            case Move(_, from, to) => (from, to)
-            case Destroy(piece) => (piece.position, piece.position)
-            case Skip => throw new IllegalStateException
-          val result = Scene(room, userId, successor.inert)
-          Input(from, to, successor.actionOption.get.hash, result)
+        state.successors.zipWithIndex.map: (successor, id) =>
+          Choice(successor.latestInput.get, Scene(room, userId, successor.inert), id)
+          
+    val diff =
+      given HistoryState = state.history
+      if state.history.isNewTurn
+      then state.pieces.duringPreviousTurn.updatedRegion
+      else state.pieces.sinceTurnStart.updatedRegion
     
     new Scene (
       room           = room,
@@ -218,10 +229,10 @@ object Scene:
       activePlayerId = state.activePlayer,
       board          = board,
       pieces         = pieces,
-      inputs         = inputs,
-      diff           = state.turnDiff.toSeq,
+      choices        = choices,
+      diff           = diff,
       outcome        = state.outcomeOption,
-      time           = state.time,
+      turnId         = state.turnId,
     )
     
   /** An empty scene without any board or players. */

@@ -1,6 +1,5 @@
 package controllers
 
-import boards.games.Chess
 import boards.graphics.Scene
 import boards.protocol.GameProtocol.*
 import boards.protocol.GameProtocol.GameRequest.*

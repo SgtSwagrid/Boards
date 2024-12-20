@@ -1,6 +1,6 @@
 package boards.views
 
-import boards.Games
+import boards.Catalogue
 import boards.protocol.GameProtocol.{CreateRoomRequest, CreateRoomResponse}
 import boards.imports.laminar.{*, given}
 import com.raquo.laminar.api.L.*
@@ -18,7 +18,7 @@ object StartView extends View:
       position("absolute"),
       top("120px"), left("50px"), right("50px"),
       width("fit-content"),
-      Games.all.map: game =>
+      Catalogue.all.map: game =>
         div (
           onClick.flatMapTo:
             Fetch.post("/start", body=CreateRoomRequest(game.name))

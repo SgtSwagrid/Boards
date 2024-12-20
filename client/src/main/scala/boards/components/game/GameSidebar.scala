@@ -1,6 +1,7 @@
 package boards.components.game
 
 import boards.components.{Footer, Navbar, SVG}
+import boards.dsl.meta.TurnId
 import boards.graphics.{Colour, Scene}
 import boards.protocol.GameProtocol.GameRequest
 import boards.protocol.Room.{RichPlayer, Status}
@@ -363,7 +364,7 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
             src("/assets/images/ui/game/first.svg"),
             width("30px"), height("30px"),
           ),
-          onClick.mapTo(GameRequest.ViewPreviousState(0)) --> respond,
+          onClick.mapTo(GameRequest.ViewPreviousState(TurnId.initial)) --> respond,
         ),
       ),
       div (
@@ -377,7 +378,7 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
             src("/assets/images/ui/game/previous.svg"),
             width("30px"), height("30px"),
           ),
-          onClick.mapTo(GameRequest.ViewPreviousState(scene.time - 1)) --> respond,
+          onClick.mapTo(GameRequest.ViewPreviousState(scene.turnId - 1)) --> respond,
         ),
       ),
       div (
@@ -391,7 +392,7 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
             src("/assets/images/ui/game/next.svg"),
             width("30px"), height("30px"),
           ),
-          onClick.mapTo(GameRequest.ViewPreviousState(scene.time + 1)) --> respond,
+          onClick.mapTo(GameRequest.ViewPreviousState(scene.turnId + 1)) --> respond,
         ),
       ),
       div (
@@ -405,7 +406,7 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
             src("/assets/images/ui/game/last.svg"),
             width("30px"), height("30px"),
           ),
-          onClick.mapTo(GameRequest.ViewPreviousState(-1)) --> respond,
+          onClick.mapTo(GameRequest.ViewPreviousState(TurnId(-1))) --> respond,
         ),
       ),
     )

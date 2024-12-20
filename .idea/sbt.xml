@@ -10,10 +10,16 @@
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
+            <option value="$PROJECT_DIR$/bots" />
+            <option value="$PROJECT_DIR$/bots/.js" />
+            <option value="$PROJECT_DIR$/bots/.jvm" />
             <option value="$PROJECT_DIR$/client" />
             <option value="$PROJECT_DIR$/common" />
             <option value="$PROJECT_DIR$/common/.js" />
             <option value="$PROJECT_DIR$/common/.jvm" />
+            <option value="$PROJECT_DIR$/dsl" />
+            <option value="$PROJECT_DIR$/dsl/.js" />
+            <option value="$PROJECT_DIR$/dsl/.jvm" />
             <option value="$PROJECT_DIR$/games" />
             <option value="$PROJECT_DIR$/games/.js" />
             <option value="$PROJECT_DIR$/games/.jvm" />

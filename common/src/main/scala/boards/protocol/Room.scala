@@ -2,9 +2,10 @@ package boards.protocol
 
 import boards.imports.games.{*, given}
 import boards.protocol.UserProtocol.User
-import boards.Games
 import boards.util.extensions.IntOps.*
 import Room.*
+import boards.Catalogue
+import boards.dsl.meta.Game
 
 /**
  * A game room, representing a specific instance of a game being played.
@@ -19,7 +20,7 @@ case class Room (
   status: Status,
 ):
   /** The game which is being played in this room. */
-  lazy val game: Game = Games.byName.getOrElse(gameId, Game.none)
+  lazy val game: Game = Catalogue.byName.getOrElse(gameId, Game.none)
   
   /** The permissible options for number of players according to the game. */
   lazy val requiredNumPlayers: Seq[Int] = game.numPlayers
@@ -55,11 +56,13 @@ object Room:
     lazy val players: Seq[RichPlayer] = simplePlayers.map: player =>
       RichPlayer (
         player = player,
-        name = game.playerNames(player.position),
-        colour = game.playerColours(player.position),
+        name = game.playerNames(player.position.toInt),
+        colour = game.playerColours(player.position.toInt),
         isHotseat = simplePlayers.filter(_.userId == player.userId).sizeIs > 1,
-        hotseatOrder = simplePlayers.filter(_.userId == player.userId).count(_.position < player.position),
+        hotseatOrder = simplePlayers.filter(_.userId == player.userId).count(_.position.toInt < player.position.toInt),
       )
+      
+    def player(playerId: PlayerId): RichPlayer = players(playerId.toInt)
       
     /** The players who are participating in this room, grouped by the device they are playing on. */
     lazy val playersByUser: Map[Int, Seq[RichPlayer]] =

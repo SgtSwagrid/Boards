@@ -11,7 +11,7 @@ object GameProtocol:
      * Take an action, which is uniquely identifiable by its hash.
      * Will fail if the game is inactive or if it is not this user's turn.
      */
-    case TakeAction(actionHash: String)
+    case TakeAction(inputId: Int)
     /** Invite a user to join this room. */
     case InviteToRoom(userId: Int)
     /** Remove the players in the given positions from the game. */
@@ -37,7 +37,7 @@ object GameProtocol:
     /** Offer a draw or accept an offer for a draw. */
     case OfferDraw(draw: Boolean, positions: PlayerId*)
     /** See the game state from a previous turn. */
-    case ViewPreviousState(time: Int)
+    case ViewPreviousState(turnId: TurnId)
   
   /** A request sent by the user to create a new room. */
   case class CreateRoomRequest(gameId: String)

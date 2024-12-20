@@ -3,10 +3,16 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.iml" filepath="$PROJECT_DIR$/.idea/modules/root.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-bots.bots-sources.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-bots.bots-sources.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-bots.botsJS.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-bots.botsJS.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-bots.botsJVM.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-bots.botsJVM.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-client.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-client.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-common.common-sources.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-common.common-sources.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-common.commonJS.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-common.commonJS.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-common.commonJVM.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-common.commonJVM.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-dsl.dsl-sources.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-dsl.dsl-sources.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-dsl.dslJS.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-dsl.dslJS.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-dsl.dslJVM.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-dsl.dslJVM.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-games.games-sources.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-games.games-sources.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-games.gamesJS.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-games.gamesJS.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/root.boards-games.gamesJVM.iml" filepath="$PROJECT_DIR$/.idea/modules/root.boards-games.gamesJVM.iml" />

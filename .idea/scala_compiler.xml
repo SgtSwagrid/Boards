@@ -39,6 +39,21 @@
         <parameter value="-scalajs-mapSourceURI:file:/C:/Users/alecd/IdeaProjects/Boards/common/src/main/scala/-&gt;../scala/58571c/" />
       </parameters>
     </profile>
+    <profile name="sbt 13" modules="root.boards-bots.botsJS,root.boards-bots.botsJVM">
+      <parameters>
+        <parameter value="-Xmax-inlines" />
+        <parameter value="128" />
+        <parameter value="-scalajs" />
+      </parameters>
+    </profile>
+    <profile name="sbt 14" modules="root.boards-dsl.dslJS,root.boards-dsl.dslJVM">
+      <parameters>
+        <parameter value="-Xmax-inlines" />
+        <parameter value="128" />
+        <parameter value="-scalajs" />
+        <parameter value="-scalajs-mapSourceURI:file:/C:/Users/alecd/IdeaProjects/Boards/dsl/src/main/scala/-&gt;../scala/dd70f0/" />
+      </parameters>
+    </profile>
     <profile name="sbt 2" modules="boards.server">
       <option name="deprecationWarnings" value="true" />
       <option name="uncheckedWarnings" value="true" />
