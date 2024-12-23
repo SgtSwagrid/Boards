@@ -5,18 +5,22 @@ import boards.imports.math.{*, given}
 import Rule.*
 import Cause.UnionCause
 import Effect.SequenceEffect
-import io.circe.Decoder.state
 
 import scala.annotation.targetName
 import scala.collection.mutable
 
 trait Rule:
   
-  def successors(state: HistoryState): LazyList[GameState]
-  def effect(state: HistoryState): Option[GameState]
+  final def next(state: HistoryState): LazyList[GameState] =
+    successors(state).filter(_.turnId == state.turnId.next)
   
-  final def from(state: HistoryState): GameState = ActiveState(state, this)
-  final def fromNow(using state: HistoryState): GameState = ActiveState(state, this)
+  private[dsl] def successors(state: HistoryState): LazyList[GameState]
+  private[dsl] def effect(state: HistoryState): Option[GameState]
+  
+  final def from(state: HistoryState): GameState =
+    ActiveState(state, this).applyEffect
+  final def fromNow(using state: HistoryState): GameState =
+    from(state)
   
   @targetName("union")
   final def | (that: => Rule): Rule = UnionRule(this, that)
@@ -28,8 +32,14 @@ trait Rule:
     else that
   
   @targetName("orElse")
-  final def ?: (that: Rule): Rule = Rule:
-     Alternative(that, this)
+  final def ?: (that: Rule): Rule =
+    AlternativeRule(that, this)
+     
+  def orElse (that: => Rule): Rule =
+    AlternativeRule(this, that)
+    
+  def orElseStop(outcome: HistoryState ?=> Outcome): Rule =
+    orElse(Effect.stop(outcome))
   
   final def optional: Rule =
     this | Effect.identity
@@ -42,8 +52,6 @@ trait Rule:
   
   final def require(condition: HistoryState ?=> Boolean): Rule =
     FilterRule(this, state => condition(using state))
-    
-  def structure(state: HistoryState): String
   
 object Rule:
   
@@ -98,9 +106,6 @@ object Rule:
       left.successors(state) ++ right.successors(state)
     
     def effect(state: HistoryState) = None
-    
-    def structure(state: HistoryState) =
-      s"(${left.structure(state)} | ${right.structure(state)})"
   
   private[rules] class SequenceRule (
     left: => Rule,
@@ -111,7 +116,7 @@ object Rule:
       left.successors(s0)
         .map(_.updateRule(_ |> right))
         .flatMap: s1 =>
-          if s0.turnId == s1.turnId then s1.successors
+          if s0.turnId == s1.turnId then s1.next
           else if s0.turnId.next == s1.turnId then Some(s1.applyEffect)
           else throw new IllegalStateException
       
@@ -119,9 +124,6 @@ object Rule:
       left.effect(s0)
         .map(_.updateRule(_ |> right))
         .map(_.applyEffect)
-      
-    def structure(state: HistoryState) =
-      s"(${left.structure(state)} |> ${right.structure(state)})"
     
   private[rules] class SwitchRule (
     brancher: HistoryState => Rule,
@@ -137,8 +139,6 @@ object Rule:
     def effect(state: HistoryState) =
       branch(state).effect(state)
       
-    def structure(state: HistoryState) = branch(state).structure(state)
-      
   private[rules] class FilterRule (
     base: Rule,
     condition: HistoryState => Boolean,
@@ -147,24 +147,23 @@ object Rule:
     def successors(state: HistoryState) =
       base.successors(state)
         .filter(state => condition(state.history))
-        .map(_.updateRule(_.require(condition(summon[HistoryState]))))
+        .map(_.updateRule(FilterRule(_, condition)))
     
     def effect(state: HistoryState) =
       base.effect(state)
     
-    def structure(state: HistoryState) = s"${base.structure(state)}?"
-    
-  private[rules] class Alternative (
-    base: Rule,
-    alternative: Rule,
+  private[rules] class AlternativeRule (
+    base: => Rule,
+    alternative: => Rule,
   ) extends Rule:
     
     def successors(state: HistoryState) =
-      val states = base.successors(state)
-        .map(_.updateRule(_ ?: alternative))
-      if states.nonEmpty then states else alternative.successors(state)
+      if base.from(state).isBlocked
+      then alternative.successors(state)
+      else base.successors(state)
+        .map(_.updateRule(_.orElse(alternative)))
       
     def effect(state: HistoryState) =
-      base.effect(state)
-      
-    def structure(state: HistoryState) = s"($base ?: $alternative)"
+      if base.from(state).isBlocked
+      then alternative.effect(state)
+      else base.effect(state)

@@ -73,7 +73,7 @@ object GameView extends View:
     socket.connect,
     socket.connected.filter(_ => autoJoin).mapTo(GameRequest.JoinRoom) --> socket.send,
     socket.received --> sceneBus.writer,
-    socket.received --> {x => println(x.choices)},
+    //socket.received --> {x => println(x.choices)},
     
     Navbar(),
     

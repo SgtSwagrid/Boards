@@ -1,6 +1,7 @@
 package boards.dsl.pieces
 
 import boards.dsl.pieces.PieceRef.PieceId
+import boards.dsl.rules.Cause
 import boards.dsl.states.HistoryState
 import boards.dsl.states.HistoryState.AtTime
 

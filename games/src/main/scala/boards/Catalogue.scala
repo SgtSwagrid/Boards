@@ -8,6 +8,7 @@ object Catalogue:
   
   val all = Seq[Game] (
     Chess,
+    Amazons,
   )
   
   val byName: Map[String, Game] =

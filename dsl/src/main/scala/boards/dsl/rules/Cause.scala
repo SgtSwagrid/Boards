@@ -20,10 +20,10 @@ import scala.collection.mutable
  */
 trait Cause extends Rule:
   
-  final def successors(state: HistoryState): LazyList[GameState] =
+  private[dsl] final def successors(state: HistoryState): LazyList[GameState] =
     inputs(state).map(state.withCause).map(_.withRule(Effect.identity))
   
-  def effect(state: HistoryState): None.type = None
+  private[dsl] final def effect(state: HistoryState): None.type = None
   
   final def | (that: => Cause): Cause =
     UnionCause(this, that)

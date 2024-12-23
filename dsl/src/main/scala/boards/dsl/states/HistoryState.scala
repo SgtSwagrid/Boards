@@ -77,8 +77,8 @@ sealed trait HistoryState extends HasTurnId:
     case InitialState(state) => InitialState(f(state))
     
   /** Pair this `HistoryState` with a `Rule` to create a `GameState`, so that this new `Rule` applies hereafter. */
-  def withRule(rule: Rule): ActiveState =
-    ActiveState(this, rule)
+  def withRule(rule: Rule): GameState =
+    rule.from(this)
     
   /** Pair this `HistoryState` with an `Outcome` to indicate that the `Game` has ended. */
   def withOutcome(outcome: Outcome): FinalState =
@@ -114,7 +114,7 @@ object HistoryState:
   ) extends HistoryState:
     val turnId: TurnId = previous.turnId.next
     val initial: InitialState = previous.initial
-    override def toString = s"$previous |-> $cause |-> $now"
+    override def toString = s"$previous |-($cause)-> $now"
     
   trait AtTime[X]:
     

@@ -3,6 +3,7 @@ package boards.dsl.pieces
 import boards.dsl.pieces.{PieceSet, PieceState, PieceView}
 import PieceFilter.*
 import boards.dsl.meta.PlayerId.PlayerId
+import boards.dsl.pieces.PieceState.empty.region
 import boards.dsl.pieces.PieceType
 import boards.dsl.pieces.PieceUpdate.UpdateQuery
 import boards.dsl.rules.{Capability, Control, Effect, Rule}
@@ -66,16 +67,11 @@ trait PieceFilter extends AtTime[PieceView], PeriodQuery[UpdateQuery], OfPlayer[
     actions.fromNow
     
   final def following(effect: Effect)(using HistoryState): Capability =
-    actions.from(effect.effect(summon[HistoryState]).value.history)
+    actions.from(effect.effect(summon[HistoryState]).get.history)
   
   final def inCheck(using state: HistoryState): Boolean =
     now.pieces.exists: piece =>
-      println(s"Checking for check of $piece by ${Pieces.now.ofOtherPlayers(piece.owner)}.")
-      val check = Pieces.ofOtherPlayers(piece.owner).fromNow.canCapture(piece)
-      val meanies = Pieces.ofOtherPlayers(piece.owner).fromNow.successors
-        .filter(s => s.pieces.sincePrevious(using s.history).hasMovedTo(piece)).force
-      println(s"check: $check, meanies: $meanies")
-      check
+      Pieces.ofOtherPlayers(piece.owner).fromNow.canCapture(piece)
   
   def relocate (
     to: (HistoryState, Piece) ?=> HasVecI,
@@ -97,6 +93,12 @@ trait PieceFilter extends AtTime[PieceView], PeriodQuery[UpdateQuery], OfPlayer[
     pieceTypes: PieceType*
   ): Rule =
     Control.promote(this, pieceTypes*)
+  
+  def click: Cause =
+    Cause.clickPiece(this)
+  
+  def dragTo(region: HasRegionI): Cause =
+    Cause.dragPiece(this, region)
 
 object PieceFilter extends OfPlayer[PieceFilter]:
   

@@ -52,8 +52,15 @@ case class Scene (
   lazy val (clicks, drags) = choices.partitionMap:
     case Choice(click: Input.Click, result, id) => Left(Choice(click, result, id))
     case Choice(drag: Input.Drag, result, id) => Right(Choice(drag, result, id))
+    
+  lazy val clicksByOrigin: Map[VecI, Seq[Choice[Input.Click]]] =
+    clicks.flatMap: choice =>
+      choice.input.from.positions.map: pos =>
+        pos -> choice
+    .groupBy((pos, _) => pos)
+    .map: (pos, choices) =>
+      pos -> choices.map((pos, choice) => choice)
   
-  /** All inputs indexed by starting board position. */
   lazy val dragsByOrigin: Map[VecI, Seq[Choice[Input.Drag]]] =
     drags.flatMap: choice =>
       choice.input.from.positions.map: pos =>
@@ -214,7 +221,7 @@ object Scene:
         userId.contains(room.player(state.activePlayer).userId) &&
         !room.player(state.activePlayer).hasResigned
       if !isMyTurn then Seq.empty else
-        state.successors.zipWithIndex.map: (successor, id) =>
+        state.next.zipWithIndex.map: (successor, id) =>
           Choice(successor.latestInput.get, Scene(room, userId, successor.inert), id)
           
     val diff =

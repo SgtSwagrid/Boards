@@ -147,7 +147,7 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
     .startWith(VecI.zero(2))
     .map(m => VecI(m.x - rect.left.toInt, m.y - rect.top.toInt))
   
-  private case class CanvasState(
+  private case class CanvasState (
     canvasSize: VecI,
     scale: Int,
     offset: VecI,
@@ -177,27 +177,45 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
       scene.board.label(canvasToGameCoords(cursorPos, cfg))
   
   private enum MouseButton:
-    
     case Left, Right, Middle
   
   private enum MouseAction:
-    
     case Down, Up
   
   private case class ClickEvent(button: MouseButton, action: MouseAction)
   
   private val clickBus: EventBus[ClickEvent] = new EventBus[ClickEvent]
   
+  private def clickStream(button: MouseButton): EventStream[MouseAction] =
+    clickBus.stream.delay(1).filter(_.button == button).map(_.action)
+  
+  private val clicked: Signal[Option[Tile]] =
+    clickStream(MouseButton.Left)
+      .withCurrentValueOf(hover).map(Right.apply)
+      //.mergeWith(hover.changes.map(Left.apply))
+      .collect:
+        case Right(MouseAction.Down, Some(tile)) => Some(tile)
+        case _ => None
+      .startWith(None)
+  
   /** The board tile currently being dragged from. */
   private val dragged: Signal[Option[Tile]] =
-    clickBus.stream.delay(1).filter(_.button == MouseButton.Left).map(_.action)
+    clickStream(MouseButton.Left)
       .withCurrentValueOf(hover).map:
         case (MouseAction.Down, hover) => hover
         case (MouseAction.Up, _) => None
       .startWith(None)
   
+  private val tentativeClick: Signal[Option[Choice[Input.Click]]] =
+    Signal.combine(scene, clicked).map: (scene, clicked) =>
+      for
+        clicked <- clicked
+        choices <- scene.clicksByOrigin.get(clicked.position)
+        choice <- choices.headOption
+      yield choice
+  
   /** The action the user might be about to take. */
-  private val tentativeInput: Signal[Option[Choice[Input.Drag]]] =
+  private val tentativeDrag: Signal[Option[Choice[Input.Drag]]] =
     Signal.combine(scene, dragged, config, cursorPos).map: (scene, dragged, cfg, cursorPos) =>
       dragged.filter(_ => inBounds(cursorPos, cfg)).flatMap: dragged =>
         val choices = scene.dragsByOrigin.getOrElse(dragged.position, Seq.empty)
@@ -206,12 +224,14 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
             Metric.EuclideanSquared.dist(gameToCanvasCenterCoords(region, cfg), cursorPos)
         choices.find: choice =>
           choice.input.to.contains(target)
+          
+  private val tentativeInput: Signal[Option[Choice[?]]] =
+    Signal.combine(tentativeClick, tentativeDrag).map(_.orElse(_))
   
-  private val inputStream: EventStream[Choice[Input.Drag]] =
+  private val inputStream: EventStream[Choice[?]] =
     clickBus.stream.filter(_.action == MouseAction.Up)
       .withCurrentValueOf(tentativeInput)
-      .filter((_, input) => input.isDefined)
-      .map((_, input) => input.get)
+      .collect { case (_, Some(choice)) => choice }
   
   private val pieceState: Signal[Map[PieceId, PieceData]] =
     Signal.combine(scene, tentativeInput).map:
@@ -300,7 +320,7 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
     pieces: Seq[PieceSprite],
     hover: Option[Tile],
     dragged: Option[Tile],
-    tentativeInput: Option[Choice[Input.Drag]],
+    tentativeInput: Option[Choice[?]],
     cfg: CanvasState,
   ) =
     
@@ -317,17 +337,22 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
       val colour = if hover.exists(_.position == tile.position) then baseColour.darken(15) else baseColour
       fillRect(pos, square, colour)
       
+    if tentativeInput.isEmpty then
+      for origin <- scene.clicksByOrigin.keys do
+        val pos = gameToCanvasCenterCoords(origin, cfg)
+        fillCircle(pos, cfg.scale * 0.1F, Colour.British.LynxWhite, 0.6F)
+      
     if dragged.isEmpty then
       for origin <- scene.dragsByOrigin.keys do
         val pos = gameToCanvasCenterCoords(origin, cfg)
-        fillCircle(pos, cfg.scale * 0.4F, Colour.British.LynxWhite, 0.4F)
+        fillCircle(pos, cfg.scale * 0.4F, Colour.British.LynxWhite, 0.6F)
     
     for piece <- pieces do
       drawImage(piece.position, piece.size, piece.texture)
 
     dragged.foreach: dragged =>
       for choice <- scene.dragsByOrigin.getOrElse(dragged.position, Seq.empty) do
-        if !tentativeInput.exists(_.input.to == choice.input.to) then
+        if !tentativeInput.map(_.input).collect{ case d: Input.Drag => d }.exists(_.to == choice.input.to) then
           choice.input.to.asVec.foreach: to =>
             val pos = gameToCanvasCenterCoords(to, cfg)
             if scene.piecesByPos.contains(to)

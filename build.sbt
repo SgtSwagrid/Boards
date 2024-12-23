@@ -9,6 +9,9 @@ ThisBuild / scalaVersion := "3.6.2"
 ThisBuild / scalacOptions ++= Seq (
   "-Xmax-inlines", "128",
 )
+ThisBuild / javaOptions ++= Seq (
+  "-Xmx8G",
+)
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 

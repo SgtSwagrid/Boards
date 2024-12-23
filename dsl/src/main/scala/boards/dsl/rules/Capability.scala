@@ -6,13 +6,13 @@ import boards.dsl.shortcuts.{*, given}
 
 trait Capability:
   
-  lazy val successors: LazyList[GameState]
+  lazy val next: LazyList[GameState]
   
   lazy val inputs: LazyList[Input] =
-    successors.flatMap(_.latestInput)
+    next.flatMap(_.latestInput)
   
   def can(f: HistoryState ?=> Boolean): Boolean =
-    successors.exists(s => f(using s.history))
+    next.exists(s => f(using s.history))
     
   def canAct: Boolean =
     can(true)
@@ -27,8 +27,6 @@ trait Capability:
     can(Pieces.now.sincePrevious.hasMovedFrom(region))
     
   def canCapture(pieces: PieceFilter): Boolean = can:
-    println(s"Checking whether ${Pieces.now} can capture ${pieces.atPrevious}.")
-    println(s"Updates: ${Pieces.now.sincePrevious.updates.toList}")
     Pieces.now.sincePrevious.hasMovedTo(pieces.atPrevious)
     
   def canClick: Boolean = can:

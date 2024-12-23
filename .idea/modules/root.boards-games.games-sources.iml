@@ -34,8 +34,8 @@
     <option name="ownersModuleNames">
       <list>
         <option value="root.boards-games.gamesJVM" />
-        <option value="root.boards-server" />
         <option value="root.boards-games.gamesJS" />
+        <option value="root.boards-server" />
       </list>
     </option>
   </component>

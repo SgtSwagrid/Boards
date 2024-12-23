@@ -33,15 +33,17 @@ sealed trait GameState extends Capability:
     inBounds,
   }
   
-  lazy val successors: LazyList[GameState] =
-    println(s"Calling successors from depth ${turnId}.")
-    ruleOption.map(_.successors(history)).getOrElse(LazyList.empty)
+  lazy val next: LazyList[GameState] =
+    ruleOption.map(_.next(history)).getOrElse(LazyList.empty)
     
-  def effect: Option[GameState] =
-    ruleOption.flatMap(_.effect(history))
+  private[dsl] inline def applyEffect: GameState =
+    ruleOption
+      .filter(_ != Effect.identity)
+      .flatMap(_.effect(history))
+      .getOrElse(this)
     
-  def applyEffect: GameState =
-    effect.getOrElse(this)
+  def isBlocked: Boolean =
+    ruleOption.exists(_.successors(history).isEmpty)
   
   /** The `Rule` used to generate successor `GameState`s from this one, unless the game has ended. */
   def ruleOption: Option[Rule] = this match
@@ -66,7 +68,7 @@ sealed trait GameState extends Capability:
     case FinalState(_, outcome) => Some(outcome)
     
   def applyInputById(inputId: Int): Option[GameState] =
-    Option.when(inputId >= 0 && successors.sizeIs > inputId)(successors(inputId))
+    Option.when(inputId >= 0 && next.sizeIs > inputId)(next(inputId))
     
   def isFinal: Boolean = this match
     case ActiveState(_, _) => false
@@ -77,7 +79,7 @@ sealed trait GameState extends Capability:
 object GameState:
   
   def initial(state: HistoryState, rule: Rule): GameState =
-    ActiveState(state, rule).applyEffect
+    rule.from(state)
     
   def empty: GameState =
     HistoryState.empty.withRule(Cause.none)

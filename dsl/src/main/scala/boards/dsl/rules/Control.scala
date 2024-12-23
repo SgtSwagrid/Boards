@@ -64,10 +64,12 @@ object Control:
   def promote (
     pieces: HistoryState ?=> PieceFilter,
     pieceTypes: PieceType*,
-  ): Rule =
-    ???//Cause.clickPiece(pieces) |> Effect.create (
-    
-    //)
+  ): Rule = Rule.union:
+    for
+      piece <- pieces.now.pieces
+      pieceType <- pieceTypes
+      if !(piece is PieceType)
+    yield Cause.clickPiece(piece) |> Effect.create(piece.owner, piece.position, pieceType)
     
   object PieceControl:
     

@@ -16,8 +16,6 @@ object Chess extends Game (
   playerColours = Seq(Colour.Chess.Light, Colour.Chess.Dark),
 ):
   
-  println("Mode: .require test 1.11")
-  
   val board = Box(8, 8)
     .withLabels(Pattern.Checkered(Colour.Chess.Dark, Colour.Chess.Light))
   
@@ -50,15 +48,14 @@ object Chess extends Game (
       Rule.union:
         king.fellowPieces.ofType(Rook).pieces
           .filter: rook =>
+            val path = king.rayTo(rook)
             !rook.hasMoved &&
             rook.y == piece.y &&
-            king.rayTo(rook).interior.pieces.isEmpty
+            path.interior.pieces.isEmpty &&
+            !Pieces.ofInactivePlayers.following(King.createMine(path)).canMoveTo(path)
           .map: rook =>
             king.move(king + (king.directionTo(rook) * 2)) |>
             rook.relocate(king + king.directionTo(rook))
-      //.require:
-        //val path = king.moves.head.path
-        //!Pieces.ofInactivePlayers.following(King.createMine(path)).canMoveTo(path)
   
   object Pawn extends
     TexturedPiece(Texture.WhitePawn, Texture.BlackPawn),
@@ -91,11 +88,10 @@ object Chess extends Game (
     board.row(1).create(white, Pawn)                                                    |>
     board.row(0).create(white, Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook)
     
-  def inCheck(using state: HistoryState) =
-    King.ofActivePlayer.inCheck
+  def inCheck(using state: HistoryState) = King.ofActivePlayer.inCheck
   
   val r_loop = Rule.alternatingTurns:
     Pieces.ofActivePlayer.actions.require(!inCheck)
-      ?: Effect.stop(if inCheck then Winner(State.nextPlayer) else Draw)
+      .orElse(Effect.stop(if inCheck then State.nextPlayer.wins else Draw))
   
   override def rules = r_setup |> r_loop

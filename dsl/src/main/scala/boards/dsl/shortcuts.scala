@@ -51,6 +51,9 @@ object shortcuts:
   
   extension (region: RegionI)
     
+    def rayFromPiece(using piece: PieceRef, state: HistoryState): Ray =
+      region.rayFrom(piece.now.region)
+    
     def ontoPiece(using pieces: PieceState): RegionI =
       region.filter(v => !pieces.contains(v))
     

@@ -17,10 +17,10 @@ import boards.dsl.shortcuts.{State, given_HistoryState, piece}
  */
 sealed trait Effect extends Rule:
   
-  final def successors(state: HistoryState): LazyList[GameState] =
-    LazyList.empty
+  private[dsl] final def successors(state: HistoryState) =
+    LazyList.from(effect(state))
     
-  def effect(state: HistoryState): Some[GameState]
+  private[dsl] override def effect(state: HistoryState): Some[GameState]
   
   final def |> (that: => Effect): Effect =
     if this != Effect.identity
@@ -92,6 +92,7 @@ object Effect:
     Effect.destroy(Pieces.now.ofRegion(region))
   
   private[rules] case object IdentityEffect extends Effect:
+    
     def effect(state: HistoryState) = Some:
       state.withRule(Effect.identity)
     
