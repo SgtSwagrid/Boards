@@ -5,11 +5,11 @@ import boards.imports.math.{*, given}
 import boards.math.region.Region.HasRegionI
 import Effect.*
 import boards.math.region.Vec.HasVecI
-import boards.dsl.shortcuts.State
+import boards.dsl.Shortcuts.State
 import boards.dsl.pieces.{Piece, PieceFilter, PieceType}
 
 import scala.collection.mutable
-import boards.dsl.shortcuts.{State, given_HistoryState, piece}
+import boards.dsl.Shortcuts.{State, given_HistoryState, piece}
 
 /**
  * A `Rule` for modifying the `InstantaneousState` in some regular manner.

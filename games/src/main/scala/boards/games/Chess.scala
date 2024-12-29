@@ -1,19 +1,10 @@
-package boards.games
-
-import boards.dsl.meta.Game
-import boards.dsl.pieces.PieceType.{DynamicPiece, MoveablePiece, TexturedPiece}
-import boards.dsl.pieces.PieceUpdate.Move
-import boards.imports.games.{*, given}
-import boards.imports.math.{*, given}
-import boards.dsl.shortcuts.{*, given}
-import boards.math.region.Box
-import boards.math.region.Coordinates.*
+package boards.games; import boards.imports.all.{*, given}
 
 object Chess extends Game (
   name = "Chess",
   numPlayers = Seq(2),
   playerNames = Seq("White", "Black"),
-  playerColours = Seq(Colour.Chess.Light, Colour.Chess.Dark),
+  playerColours = Seq(Colour.British.LynxWhite, Colour.British.MattPurple),
 ):
   
   val board = Box(8, 8)
@@ -37,9 +28,8 @@ object Chess extends Game (
     TexturedPiece(Texture.WhiteQueen, Texture.BlackQueen),
     MoveablePiece(Dir.octagonal.rayFromHere.toEnemy.untilFriendly)
   
-  object King extends
-    TexturedPiece(Texture.WhiteKing, Texture.BlackKing),
-    DynamicPiece(King.r_move | King.r_castle):
+  object King extends TexturedPiece(Texture.WhiteKing, Texture.BlackKing):
+    def rule = r_move | r_castle
     
     def r_move(using Piece) = Control.moveThis:
       Dir.octagonal.fromHere.avoidFriendly
@@ -57,9 +47,8 @@ object Chess extends Game (
             king.move(king + (king.directionTo(rook) * 2)) |>
             rook.relocate(king + king.directionTo(rook))
   
-  object Pawn extends
-    TexturedPiece(Texture.WhitePawn, Texture.BlackPawn),
-    DynamicPiece((Pawn.r_move | Pawn.r_capture | Pawn.r_enpassant) |> Pawn.r_promote):
+  object Pawn extends TexturedPiece(Texture.WhitePawn, Texture.BlackPawn):
+    def rule = (r_move | r_capture | r_enpassant) |> r_promote
     
     def forward (using Piece) = piece.byOwner(Dir.up, Dir.down)
     def diagonal(using Piece) = piece.byOwner(Dir.diagonallyUp, Dir.diagonallyDown)
@@ -92,6 +81,6 @@ object Chess extends Game (
   
   val r_loop = Rule.alternatingTurns:
     Pieces.ofActivePlayer.actions.require(!inCheck)
-      .orElse(Effect.stop(if inCheck then State.nextPlayer.wins else Draw))
+      .orElseStop(if inCheck then State.nextPlayer.wins else Draw)
   
   override def rules = r_setup |> r_loop

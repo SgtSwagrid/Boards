@@ -3,10 +3,10 @@ package boards.dsl.rules
 import boards.dsl.pieces.Piece
 import boards.imports.math.{*, given}
 import boards.imports.games.{*, given}
-import boards.dsl.shortcuts.{*, given}
+import boards.dsl.Shortcuts.{*, given}
 import boards.math.region.Region.HasRegionI
 import boards.math.region.Vec.HasVecI
-import boards.dsl.shortcuts.State
+import boards.dsl.Shortcuts.State
 
 object Control:
   

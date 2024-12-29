@@ -18,7 +18,6 @@ sealed trait HistoryState extends HasTurnId:
   
   /** The most recent `InstantaneousState`. */
   val now: InstantaneousState
-  val initial: InitialState
   
   val pieces: PieceState = now.pieces
   val version: Version = pieces.version
@@ -32,6 +31,10 @@ sealed trait HistoryState extends HasTurnId:
     inBounds,
   }
   
+  val initial: HistoryState = this match
+    case SuccessorState(_, previous, _) => previous.initial
+    case InitialState(_) => this
+  
   /** The previous `HistoryState`, without the most recent modification, if there is one.  */
   def previousOption: Option[HistoryState] = this match
     case SuccessorState(_, previous, _) => Some(previous)
@@ -40,7 +43,7 @@ sealed trait HistoryState extends HasTurnId:
   def previousOrThis: HistoryState = previousOption.getOrElse(this)
     
   def turnStart: HistoryState = this match
-    case SuccessorState(_, previous, _) if previous.turnId == turnId =>
+    case SuccessorState(_, previous, _) if previous.activePlayer == activePlayer =>
       previous.turnStart
     case _ => this
     
@@ -48,7 +51,7 @@ sealed trait HistoryState extends HasTurnId:
     turnStart.previousOrThis.turnStart
     
   def isNewTurn: Boolean = this match
-    case SuccessorState(_, previous, _) => previous.turnId != turnId
+    case SuccessorState(_, previous, _) => previous.activePlayer != activePlayer
     case InitialState(_) => true
     
   def when(condition: HistoryState => Boolean): Option[HistoryState] =
@@ -80,6 +83,9 @@ sealed trait HistoryState extends HasTurnId:
   def withRule(rule: Rule): GameState =
     rule.from(this)
     
+  def inert: GameState =
+    withRule(Cause.none)
+    
   /** Pair this `HistoryState` with an `Outcome` to indicate that the `Game` has ended. */
   def withOutcome(outcome: Outcome): FinalState =
     FinalState(this, outcome)
@@ -99,7 +105,6 @@ object HistoryState:
     now: InstantaneousState,
   ) extends HistoryState:
     val turnId: TurnId = TurnId.initial
-    val initial: InitialState = this
     override def toString = now.toString
   
   /**
@@ -113,7 +118,6 @@ object HistoryState:
     cause: Input,
   ) extends HistoryState:
     val turnId: TurnId = previous.turnId.next
-    val initial: InitialState = previous.initial
     override def toString = s"$previous |-($cause)-> $now"
     
   trait AtTime[X]:

@@ -61,6 +61,13 @@ object games:
   export boards.dsl.pieces.PieceView.Pieces
   export boards.dsl.pieces.PieceState.Version
   
+  export boards.dsl.pieces.PieceType.{
+    TexturedPiece,
+    DynamicPiece,
+    MoveablePiece,
+    StaticPiece,
+  }
+  
   export boards.graphics.{
     Colour,
     Pattern,

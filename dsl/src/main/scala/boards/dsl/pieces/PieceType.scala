@@ -2,7 +2,7 @@ package boards.dsl.pieces
 
 import boards.dsl.meta.PlayerId.PlayerId
 import boards.dsl.rules.{Cause, Control, Effect, Rule}
-import boards.dsl.shortcuts.piece
+import boards.dsl.Shortcuts.piece
 import boards.dsl.states.{GameState, HistoryState}
 import boards.graphics.Texture
 import boards.math.region.Region.HasRegionI

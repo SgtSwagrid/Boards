@@ -7,11 +7,7 @@ import boards.imports.games.{*, given}
 import boards.imports.math.{*, given}
 import boards.math.region.Ray
 
-object shortcuts:
-  
-  export Rule.*
-  export Cause.*
-  export Effect.*
+object Shortcuts:
   
   def State(using state: HistoryState): HistoryState = state
   

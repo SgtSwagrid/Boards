@@ -101,6 +101,13 @@ object Room:
       if !isPending && nonResigned.sizeIs == 1 then
         nonResigned.headOption
       else None
+      
+    lazy val drawByAgreement: Boolean =
+      !isPending && players.forall(_.hasOfferedDraw)
+      
+    lazy val agreedOutcome: Option[Outcome] =
+      winnerByResignation.map(winner => Winner(winner.position))
+        .orElse(Option.when(drawByAgreement)(Draw))
     
     /** Produces a version of this room with some given status. */
     def withStatus(status: Status): RichRoom =

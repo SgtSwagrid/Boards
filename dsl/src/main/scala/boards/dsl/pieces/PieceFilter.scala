@@ -3,6 +3,7 @@ package boards.dsl.pieces
 import boards.dsl.pieces.{PieceSet, PieceState, PieceView}
 import PieceFilter.*
 import boards.dsl.meta.PlayerId.PlayerId
+import boards.dsl.pieces
 import boards.dsl.pieces.PieceState.empty.region
 import boards.dsl.pieces.PieceType
 import boards.dsl.pieces.PieceUpdate.UpdateQuery
@@ -13,7 +14,7 @@ import boards.math.region.Region.{HasRegionI, RegionI}
 import boards.math.region.Vec.HasVecI
 import boards.imports.games.{*, given}
 import boards.imports.math.{*, given}
-import boards.dsl.shortcuts.{*, given}
+import boards.dsl.Shortcuts.{*, given}
 import boards.dsl.pieces.PieceView.FilteredPieceView
 
 import scala.reflect.ClassTag
@@ -58,7 +59,7 @@ trait PieceFilter extends AtTime[PieceView], PeriodQuery[UpdateQuery], OfPlayer[
   
   def between(start: HistoryState, end: HistoryState): UpdateQuery =
     UpdateQuery.of:
-      atTime(end).updates.takeWhile(_.time.toInt >= start.version.toInt)
+      atTime(end).updates.view.takeWhile(_.time.toInt >= start.version.toInt)
   
   final def actions: Rule =  Rule.union:
     now.map(_.actions)

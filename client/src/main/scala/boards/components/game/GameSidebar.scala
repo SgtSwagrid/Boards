@@ -61,9 +61,9 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
       height("50px"),
       paddingLeft("20px"), paddingTop("10px"), paddingRight("20px"),
       backgroundColor("#2f3640"),
-      if scene.status.isPending then pendingStatus
-      else if scene.outcome.isDefined then completeStatus
-      else activeStatus
+      if scene.isPending then pendingStatus
+      else if scene.isActiveHere then activeStatus
+      else completeStatus
     )
     
   private def pendingStatus =
@@ -160,13 +160,13 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
         fontSize("14px"),
         player.name,
       ),
-      if player.hasResigned then
+      if scene.isLatestState && player.hasResigned then
         p (
           className("text-error"),
           fontSize("12px"),
           "(Resigned)",
         )
-      else if player.hasOfferedDraw then
+      else if scene.isLatestState && player.hasOfferedDraw then
         p (
           className("text-warning"),
           fontSize("12px"),
@@ -194,7 +194,7 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
   
   private def playerTurnMarker(player: RichPlayer) =
     
-    when (!scene.isPending && scene.outcome.isEmpty && player.position == scene.activePlayerId) (
+    when (scene.isActiveHere && player.position == scene.activePlayerId) (
       img (
         display("inline-block"),
         float("right"),
@@ -207,7 +207,7 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
   
   private def playerWinMarker(player: RichPlayer) =
     
-    when (scene.isWinner(player.position)) (
+    when (scene.isLatestState && scene.isWinner(player.position)) (
       img (
         display("inline-block"),
         float("right"),
@@ -351,63 +351,119 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
   private def navigationButtons =
     
     div (
+      windowEvents(_.onWheel).filter(_ => scene.isComplete).collect {
+        case e if e.deltaY > 0 && !scene.isLatestState => GameRequest.ViewPreviousState(scene.currentTurnId.next)
+        case e if e.deltaY < 0 && !scene.isInitialState => GameRequest.ViewPreviousState(scene.currentTurnId.previous)
+      } --> respond,
+      
       margin("auto"),
       maxWidth("fit-content"),
-      div (
-        margin("5px"),
-        display("inline-block"),
-        className("tooltip"),
-        dataTip("To Start of Game"),
-        button (
-          className("btn btn-square btn-sm btn-ghost"),
-          img (
-            src("/assets/images/ui/game/first.svg"),
-            width("30px"), height("30px"),
+      when (!scene.isInitialState) (
+        div (
+          margin("5px"),
+          display("inline-block"),
+          className("tooltip"),
+          dataTip("To Start of Game"),
+          button (
+            className("btn btn-square btn-sm btn-ghost"),
+            img (
+              src("/assets/images/ui/game/first.svg"),
+              width("30px"), height("30px"),
+            ),
+            onClick.mapTo(GameRequest.ViewPreviousState(TurnId.initial)) --> respond,
           ),
-          onClick.mapTo(GameRequest.ViewPreviousState(TurnId.initial)) --> respond,
+        ),
+        div (
+          margin("5px"),
+          display("inline-block"),
+          className("tooltip"),
+          dataTip("To Previous Turn"),
+          button (
+            className("btn btn-square btn-sm btn-ghost"),
+            img (
+              src("/assets/images/ui/game/previous.svg"),
+              width("30px"), height("30px"),
+            ),
+            onClick.mapTo(GameRequest.ViewPreviousState(scene.currentTurnId.previous)) --> respond,
+          ),
         ),
       ),
-      div (
-        margin("5px"),
-        display("inline-block"),
-        className("tooltip"),
-        dataTip("To Previous Turn"),
-        button (
-          className("btn btn-square btn-sm btn-ghost"),
-          img (
-            src("/assets/images/ui/game/previous.svg"),
-            width("30px"), height("30px"),
+      when (scene.isInitialState) (
+        div (
+          margin("5px"),
+          display("inline-block"),
+          button (
+            className("btn btn-square btn-sm btn-ghost btn-disabled"),
+            img (
+              src("/assets/images/ui/game/first_disabled.svg"),
+              width("30px"), height("30px"),
+            ),
           ),
-          onClick.mapTo(GameRequest.ViewPreviousState(scene.turnId - 1)) --> respond,
+        ),
+        div (
+          margin("5px"),
+          display("inline-block"),
+          button (
+            className("btn btn-square btn-sm btn-ghost btn-disabled"),
+            img (
+              src("/assets/images/ui/game/previous_disabled.svg"),
+              width("30px"), height("30px"),
+            ),
+          ),
         ),
       ),
-      div (
-        margin("5px"),
-        display("inline-block"),
-        className("tooltip"),
-        dataTip("To Next Turn"),
-        button (
-          className("btn btn-square btn-sm btn-ghost"),
-          img (
-            src("/assets/images/ui/game/next.svg"),
-            width("30px"), height("30px"),
+      when (!scene.isLatestState) (
+        div (
+          margin("5px"),
+          display("inline-block"),
+          className("tooltip"),
+          dataTip("To Next Turn"),
+          button (
+            className("btn btn-square btn-sm btn-ghost"),
+            img (
+              src("/assets/images/ui/game/next.svg"),
+              width("30px"), height("30px"),
+            ),
+            onClick.mapTo(GameRequest.ViewPreviousState(scene.currentTurnId.next)) --> respond,
           ),
-          onClick.mapTo(GameRequest.ViewPreviousState(scene.turnId + 1)) --> respond,
+        ),
+        div (
+          margin("5px"),
+          display("inline-block"),
+          className("tooltip"),
+          dataTip("To End of Game"),
+          button (
+            className("btn btn-square btn-sm btn-ghost"),
+            img (
+              src("/assets/images/ui/game/last.svg"),
+              width("30px"), height("30px"),
+            ),
+            onClick.mapTo(GameRequest.ViewPreviousState(scene.latestTurnId)) --> respond,
+          ),
         ),
       ),
-      div (
-        margin("5px"),
-        display("inline-block"),
-        className("tooltip"),
-        dataTip("To End of Game"),
-        button (
-          className("btn btn-square btn-sm btn-ghost"),
-          img (
-            src("/assets/images/ui/game/last.svg"),
-            width("30px"), height("30px"),
+      when (scene.isLatestState) (
+        div (
+          margin("5px"),
+          display("inline-block"),
+          button (
+            className("btn btn-square btn-sm btn-ghost btn-disabled"),
+            img (
+              src("/assets/images/ui/game/next_disabled.svg"),
+              width("30px"), height("30px"),
+            ),
           ),
-          onClick.mapTo(GameRequest.ViewPreviousState(TurnId(-1))) --> respond,
+        ),
+        div (
+          margin("5px"),
+          display("inline-block"),
+          button (
+            className("btn btn-square btn-sm btn-ghost btn-disabled"),
+            img (
+              src("/assets/images/ui/game/last_disabled.svg"),
+              width("30px"), height("30px"),
+            ),
+          ),
         ),
       ),
     )
-    

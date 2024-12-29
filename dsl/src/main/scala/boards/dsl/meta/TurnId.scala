@@ -13,6 +13,7 @@ object TurnId:
     def % (d: Int): TurnId = TurnId(turnId % d)
     def next: TurnId = turnId + 1
     def previous: TurnId = turnId - 1
+    def isInitial: Boolean = turnId == 0
     
   def apply(turnId: Int): TurnId = turnId
   def initial: TurnId = TurnId(0)

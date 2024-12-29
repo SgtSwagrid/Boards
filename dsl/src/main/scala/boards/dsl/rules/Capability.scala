@@ -2,7 +2,7 @@ package boards.dsl.rules
 
 import boards.imports.games.{*, given}
 import boards.math.region.Region.{HasRegionI, RegionI}
-import boards.dsl.shortcuts.{*, given}
+import boards.dsl.Shortcuts.{*, given}
 
 trait Capability:
   

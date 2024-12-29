@@ -20,6 +20,7 @@ import slick.lifted.Functions.user
 
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration.DurationInt
 
 class RoomActor
   (roomId: String)
@@ -55,12 +56,12 @@ extends Actor:
     
     case Subscribe(me, out) =>
       subscribers += Subscriber(out, me)
-      out ! Scene(room, me.map(_.userId), state)
+      out ! Scene(room, me.map(_.userId), state, state)
     
     case ViewState(turnId, me, out) =>
       if room.status.isComplete then
         val moment = state.atTime((turnId + (state.turnId + 1)) % (state.turnId + 1))
-        out ! Scene(room, me, moment.withRule(Cause.none))
+        out ! Scene(room, me, moment.inert, state)
       
     case Update(me, TakeAction(inputId)) =>
       for
@@ -84,7 +85,7 @@ extends Actor:
     case Update(me, SwapPlayers(left, right)) =>
       if room.isParticipating(me) then
         for _ <- GameModel().swapPlayers(roomId)(left, right)
-        do updatePlayers()
+          do updatePlayers()
       
     case Update(me, PromotePlayer(user)) => ???
     case Update(me, ChangeGame(game)) => ???
@@ -131,7 +132,9 @@ extends Actor:
       render()
     
   def render() =
-    subscribers.foreach(sub => sub.session ! Scene(room, sub.user.map(_.userId), state))
+    context.system.scheduler.scheduleOnce(100.millis):
+      subscribers.foreach: sub =>
+        sub.session ! Scene(room, sub.user.map(_.userId), state, state)
   
 object RoomActor:
   

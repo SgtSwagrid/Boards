@@ -7,6 +7,7 @@ import boards.imports.laminar.HtmlProp
 import boards.protocol.GameProtocol.*
 import com.raquo.laminar.codecs.StringAsIsCodec
 import com.raquo.laminar.modifiers.RenderableText
+import org.scalajs.dom.Audio
 
 import scala.scalajs.js.annotation.JSExportTopLevel
 //import boards.imports.laminar.{*, given}
@@ -67,13 +68,24 @@ object GameView extends View:
   private val sceneBus: EventBus[Scene] = new EventBus[Scene]
   private val scene: Signal[Scene] = sceneBus.events.startWith(Scene.empty)
   
-  val boardPadding = 50
+  private val starts: EventStream[?] = scene.map(_.isPending).changes.distinct.filter(x => !x)
+  private val updates: EventStream[?] = scene.map(_.pieces).changes.distinct
+  private val wins: EventStream[?] = scene.map(_.iWon).changes.distinct.filter(x => x)
+  private val losses: EventStream[?] = scene.map(_.iLost).changes.distinct.filter(x => x)
+  private val draws: EventStream[?] = scene.map(_.isDraw).changes.distinct.filter(x => x)
+  
+  private val startSound = Audio("/assets/audio/start.mp3")
+  private val placeSound = Audio("/assets/audio/place.mp3")
+  private val winSound = Audio("/assets/audio/win.mp3")
+  private val loseSound = Audio("/assets/audio/lose.mp3")
+  private val drawSound = Audio("/assets/audio/draw.mp3")
+  
+  val boardPadding = 30
   
   def content = div (
     socket.connect,
     socket.connected.filter(_ => autoJoin).mapTo(GameRequest.JoinRoom) --> socket.send,
     socket.received --> sceneBus.writer,
-    //socket.received --> {x => println(x.choices)},
     
     Navbar(),
     
@@ -86,6 +98,11 @@ object GameView extends View:
       left(s"${GameSidebar.sidebarWidth + boardPadding}px"),
       right(s"${boardPadding}px"),
       GameBoard(sceneBus, socket.send).apply,
+      starts --> { _ => startSound.play() },
+      updates --> { _ => placeSound.play() },
+      wins --> { _ => winSound.play() },
+      losses --> { _ => loseSound.play() },
+      draws --> { _ => drawSound.play() },
     ),
     Footer(),
   )

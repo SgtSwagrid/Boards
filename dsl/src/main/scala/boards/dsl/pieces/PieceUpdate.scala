@@ -10,6 +10,8 @@ import boards.math.region.Vec.HasVecI
 import boards.math.region.Ray
 import boards.util.extensions.CollectionOps.contramap
 
+import scala.collection.View
+
 sealed trait PieceUpdate extends PieceRef, HasRegionI:
   val time: Version
 
@@ -59,31 +61,31 @@ object PieceUpdate:
   
   trait UpdateQuery:
     
-    val updates: Seq[PieceUpdate]
+    val updates: Iterable[PieceUpdate]
     
-    lazy val creates: LazyList[Create] = LazyList.from(updates).collect:
+    lazy val creates: Iterable[Create] = updates.view.collect:
       case create: Create => create
     
-    lazy val moves: LazyList[Move] = LazyList.from(updates).collect:
+    lazy val moves: Iterable[Move] = updates.view.collect:
       case move: Move => move
       
-    def movesTo(region: HasRegionI): LazyList[Move] =
+    def movesTo(region: HasRegionI): Iterable[Move] =
       moves.filter(_.to in region)
       
-    def movesFrom(region: HasRegionI): LazyList[Move] =
+    def movesFrom(region: HasRegionI): Iterable[Move] =
       moves.filter(_.from in region)
     
-    lazy val destroys: LazyList[Destroy] = LazyList.from(updates).collect:
+    lazy val destroys: Iterable[Destroy] = updates.view.collect:
       case destroy: Destroy => destroy
       
-    def updated: PieceSet = PieceSet(updates*)
-    def created: PieceSet = PieceSet(creates*)
-    def moved: PieceSet = PieceSet(moves*)
+    def updated: PieceSet = PieceSet(updates.toSeq*)
+    def created: PieceSet = PieceSet(creates.toSeq*)
+    def moved: PieceSet = PieceSet(moves.toSeq*)
     def movedTo(region: HasRegionI): PieceSet =
-      PieceSet(movesTo(region)*)
+      PieceSet(movesTo(region).toSeq*)
     def movedFrom(region: HasRegionI): PieceSet =
-      PieceSet(movesFrom(region)*)
-    def destroyed: PieceSet = PieceSet(destroys*)
+      PieceSet(movesFrom(region).toSeq*)
+    def destroyed: PieceSet = PieceSet(destroys.toSeq*)
     
     def hasChanged: Boolean = updates.nonEmpty
     def hasCreated: Boolean = creates.nonEmpty
@@ -99,9 +101,9 @@ object PieceUpdate:
     
   object UpdateQuery:
     
-    def of(updates: Seq[PieceUpdate]): UpdateQuery =
+    def of(updates: Iterable[PieceUpdate]): UpdateQuery =
       UpdateQuery.Of(updates)
     
     private[pieces] case class Of (
-      updates: Seq[PieceUpdate]
+      updates: Iterable[PieceUpdate]
     ) extends UpdateQuery

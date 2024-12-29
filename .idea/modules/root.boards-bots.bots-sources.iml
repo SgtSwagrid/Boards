@@ -32,8 +32,8 @@
   <component name="SharedSourcesOwnerModules">
     <option name="ownersModuleNames">
       <list>
-        <option value="root.boards-bots.botsJVM" />
         <option value="root.boards-bots.botsJS" />
+        <option value="root.boards-bots.botsJVM" />
         <option value="root.boards-server" />
       </list>
     </option>

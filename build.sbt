@@ -9,9 +9,6 @@ ThisBuild / scalaVersion := "3.6.2"
 ThisBuild / scalacOptions ++= Seq (
   "-Xmax-inlines", "128",
 )
-ThisBuild / javaOptions ++= Seq (
-  "-Xmx8G",
-)
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
@@ -66,6 +63,7 @@ lazy val server = project
     name := "boards-server",
     javaOptions ++= Seq (
       "-Dplay.editor=http://localhost:63342/api/file/?file=%s&line=%s",
+      "-Xmx8G",
     ),
     libraryDependencies ++= Seq (
       "com.h2database" %  "h2"              % "2.3.232",
@@ -106,6 +104,15 @@ lazy val common = crossProject(JSPlatform, JVMPlatform)
     Lib.circe,
   )
 
+lazy val dsl = crossProject(JSPlatform, JVMPlatform)
+  .crossType(CrossType.Pure)
+  .enablePlugins(ScalaJSWeb)
+  .in(file("dsl"))
+  .settings (
+    name := "boards-dsl",
+    Lib.circe,
+  )
+
 lazy val games = crossProject(JSPlatform, JVMPlatform)
   .crossType(CrossType.Pure)
   .dependsOn(dsl)
@@ -123,14 +130,5 @@ lazy val bots = crossProject(JSPlatform, JVMPlatform)
   .in(file("bots"))
   .settings (
     name := "boards-bots",
-    Lib.circe,
-  )
-
-lazy val dsl = crossProject(JSPlatform, JVMPlatform)
-  .crossType(CrossType.Pure)
-  .enablePlugins(ScalaJSWeb)
-  .in(file("dsl"))
-  .settings (
-    name := "boards-dsl",
     Lib.circe,
   )

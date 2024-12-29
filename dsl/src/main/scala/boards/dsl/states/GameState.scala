@@ -31,6 +31,7 @@ sealed trait GameState extends Capability:
     nextPlayer,
     inactivePlayers,
     inBounds,
+    inert,
   }
   
   lazy val next: LazyList[GameState] =
@@ -55,8 +56,6 @@ sealed trait GameState extends Capability:
     case ActiveState(history, _) => ActiveState(history, rule)
     case state: FinalState => state
     
-  def inert: GameState = withRule(Cause.none)
-    
   /** If the game hasn't yet ended, update the `Rule` by the given function. */
   def updateRule(f: Rule => Rule): GameState = this match
     case ActiveState(history, rule) => ActiveState(history, f(rule))
@@ -66,6 +65,9 @@ sealed trait GameState extends Capability:
   def outcomeOption: Option[Outcome] = this match
     case ActiveState(_, _) => None
     case FinalState(_, outcome) => Some(outcome)
+    
+  def applyInput(input: Input): Option[GameState] =
+    next.find(_.latestInput.contains(input))
     
   def applyInputById(inputId: Int): Option[GameState] =
     Option.when(inputId >= 0 && next.sizeIs > inputId)(next(inputId))

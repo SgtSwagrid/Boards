@@ -7,7 +7,7 @@ import boards.dsl.pieces.{Piece, PieceFilter, PieceSet}
 import boards.dsl.rules.Effect.SequenceEffect
 import boards.math.region.Region.HasRegionI
 import boards.math.region.Vec.HasVecI
-import boards.dsl.shortcuts.{given_HistoryState, piece}
+import boards.dsl.Shortcuts.{given_HistoryState, piece}
 import boards.math.region.Ray
 
 import scala.annotation.tailrec

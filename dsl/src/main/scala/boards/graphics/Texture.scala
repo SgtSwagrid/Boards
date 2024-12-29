@@ -1,6 +1,6 @@
 package boards.graphics
 
-case class Texture(file: String)
+case class Texture(file: String, size: Float = 1.0F)
 
 case object Texture:
   
@@ -29,3 +29,6 @@ case object Texture:
   val BlackMantri = Texture("chess/black_queen.svg")
   val BlackRaja   = Texture("chess/black_king.svg")
   val BlackPadati = Texture("chess/black_pawn.svg")
+  
+  val WhiteArrow = Texture("amazons/white_arrow.svg", 0.8F)
+  val BlackArrow = Texture("amazons/black_arrow.svg", 0.8F)

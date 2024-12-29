@@ -13,6 +13,7 @@ import boards.dsl.rules
 import boards.dsl.states.GameState
 import boards.math.region.RegionMap.RegionMapI
 import boards.math.region.{Region, RegionMap}
+import io.circe.Decoder.state
 
 /**
  * A representation of the current game state.
@@ -30,7 +31,7 @@ import boards.math.region.{Region, RegionMap}
  * @param pieces The pieces which currently exist on the board.
  * @param choices The set of legally permissible inputs for this user in the current state.
  * @param diff The tiles which were modified during the previous turn.
- * @param outcome The result of the game, if it has ended.
+ * @param logicalOutcome The result of the game, if it has ended.
  * @param time The number of actions which have already been taken.
  */
 case class Scene (
@@ -44,8 +45,9 @@ case class Scene (
   pieces: Seq[PieceData] = Seq.empty,
   choices: Seq[Choice[Input]] = Seq.empty,
   diff: RegionI = Region.empty,
-  outcome: Option[Outcome] = None,
-  turnId: TurnId = TurnId.initial,
+  logicalOutcome: Option[Outcome] = None,
+  currentTurnId: TurnId = TurnId.initial,
+  latestTurnId: TurnId = TurnId.initial,
   
 ) derives Codec.AsObject:
   
@@ -75,33 +77,42 @@ case class Scene (
   lazy val piecesByPos: Map[VecI, PieceData] = pieces.map(p => p.position -> p).toMap
   
   /** Whether this participant is currently signed in. */
-  lazy val iAmRegistered: Boolean = userId.isDefined
+  def iAmRegistered: Boolean = userId.isDefined
   
   /** The player whose turn it currently is. */
-  lazy val activePlayer: RichPlayer = player(activePlayerId)
+  def activePlayer: RichPlayer = player(activePlayerId)
   
   /** All the players that are playing on this device. */
-  lazy val myPlayers: Seq[RichPlayer] =
+  def myPlayers: Seq[RichPlayer] =
     userId.toSeq.flatMap(userId => playersByUser.get(userId).toSeq.flatten)
   
   /** Whether at least one player is playing on this device. */
-  lazy val iAmPlaying: Boolean = myPlayers.sizeIs > 0
+  def iAmPlaying: Boolean = myPlayers.sizeIs > 0
   /** Whether exactly one player is playing on this device. */
-  lazy val iAmPlayingAlone: Boolean = myPlayers.sizeIs == 1
+  def iAmPlayingAlone: Boolean = myPlayers.sizeIs == 1
   /** Whether more than one player is playing on this device. */
-  lazy val iAmPlayingHotseat: Boolean = myPlayers.sizeIs > 1
+  def iAmPlayingHotseat: Boolean = myPlayers.sizeIs > 1
   
   /** Whether the given player is controlled on this device. */
   def isMe(playerId: PlayerId): Boolean = myPlayers.exists(_.position == playerId)
   
   /** Whether it is the turn of a player on this device. */
-  lazy val isMyTurn: Boolean = userId.contains(activePlayer.userId)
+  def isMyTurn: Boolean = userId.contains(activePlayer.userId)
   /** Whether it is the turn of the only player on this device. */
-  lazy val isMyTurnAlone: Boolean = isMyTurn && !iAmPlayingHotseat
+  def isMyTurnAlone: Boolean = isMyTurn && !iAmPlayingHotseat
+  
+  def isInitialState: Boolean = currentTurnId.isInitial
+  def isLatestState: Boolean = currentTurnId == latestTurnId
+    
+  def isActiveHere: Boolean =
+    isActive || (isComplete && !isLatestState)
+  
+  def outcome: Option[Outcome] =
+    logicalOutcome.orElse(agreedOutcome)
   
   /** The winner of the game, if there is one. */
-  lazy val winner: Option[RichPlayer] =
-    (outcome match
+  def winner: Option[RichPlayer] =
+    (logicalOutcome match
       case Some(Winner(winner)) => Some(player(winner))
       case _ => None
     ).orElse(winnerByResignation)
@@ -109,21 +120,21 @@ case class Scene (
   def isWinner(playerId: PlayerId): Boolean = winner.exists(_.position == playerId)
     
   /** Whether the game has a winner. */
-  lazy val hasWinner: Boolean = winner.isDefined
+  def hasWinner: Boolean = winner.isDefined
   /** Whether the game was a draw. */
-  lazy val isDraw: Boolean = isComplete&& !hasWinner
+  def isDraw: Boolean = isComplete && !hasWinner
   
   /** Whether a player on this device won the game. */
-  lazy val iWon: Boolean =
+  def iWon: Boolean =
     winner.exists(winner => userId.contains(winner.userId))
   /** Whether the only player on this device won the game. */
-  lazy val iWonAlone: Boolean = iWon && iAmPlayingAlone
+  def iWonAlone: Boolean = iWon && iAmPlayingAlone
     
   /** Whether a player on another device won the game. */
-  lazy val iLost: Boolean =
+  def iLost: Boolean =
     userId.isDefined && winner.exists(winner => !userId.contains(winner.userId))
   /** Whether the only player on this device lost the game. */
-  lazy val iLostAlone: Boolean = iLost && iAmPlayingAlone
+  def iLostAlone: Boolean = iLost && iAmPlayingAlone
   
   lazy val (activePlayers, resignedPlayers, drawnPlayers) =
     val (active, inactive) =  players.partition(p => !p.hasResigned && !p.hasOfferedDraw)
@@ -136,13 +147,13 @@ case class Scene (
     (active, resigned, drawn)
   
   /** Whether any of the players on this device have resigned. */
-  lazy val iHaveResigned: Boolean = myResignedPlayers.nonEmpty
+  def iHaveResigned: Boolean = myResignedPlayers.nonEmpty
   /** Whether all the players on this device have resigned. */
-  lazy val iHaveResignedAll: Boolean = iHaveResigned && myActivePlayers.isEmpty && myDrawnPlayers.isEmpty
+  def iHaveResignedAll: Boolean = iHaveResigned && myActivePlayers.isEmpty && myDrawnPlayers.isEmpty
   /** Whether any of the players on this device have offered a draw. */
-  lazy val iHaveOfferedDraw: Boolean = myDrawnPlayers.nonEmpty
+  def iHaveOfferedDraw: Boolean = myDrawnPlayers.nonEmpty
   /** Whether some player has offered a draw. */
-  lazy val someoneHasOfferedDraw: Boolean = drawnPlayers.nonEmpty
+  def someoneHasOfferedDraw: Boolean = drawnPlayers.nonEmpty
   
   export room.*
 
@@ -202,44 +213,46 @@ object Scene:
   def apply (
     room: RichRoom,
     userId: Option[Int],
-    state: GameState,
+    currentState: GameState,
+    latestState: GameState,
   ): Scene =
     
-    val board = state.now.board.zipWithPosition.mapLabels: (pos, colour) =>
+    val board = currentState.now.board.zipWithPosition.mapLabels: (pos, colour) =>
       Tile (
         pos,
         Shape.Rectangle(1, 1),
-        state.now.board.label(pos).get,
-        state.now.pieces.at(pos).map(_.texture),
+        currentState.board.label(pos).get,
+        currentState.pieces.at(pos).map(_.texture),
       )
       
-    val pieces = state.now.pieces.pieces.map: piece =>
+    val pieces = currentState.now.pieces.pieces.map: piece =>
       PieceData(piece.pieceId, piece.position, piece.texture)
     
     val choices =
       val isMyTurn = room.isActive &&
-        userId.contains(room.player(state.activePlayer).userId) &&
-        !room.player(state.activePlayer).hasResigned
+        userId.contains(room.player(currentState.activePlayer).userId) &&
+        !room.player(currentState.activePlayer).hasResigned
       if !isMyTurn then Seq.empty else
-        state.next.zipWithIndex.map: (successor, id) =>
-          Choice(successor.latestInput.get, Scene(room, userId, successor.inert), id)
-          
-    val diff =
-      given HistoryState = state.history
-      if state.history.isNewTurn
-      then state.pieces.duringPreviousTurn.updatedRegion
-      else state.pieces.sinceTurnStart.updatedRegion
+        currentState.next.zipWithIndex.map: (successor, id) =>
+          Choice(successor.latestInput.get, Scene(room, userId, successor.inert, successor.inert), id)
     
+    val diff =
+      given HistoryState = currentState.history
+      if currentState.history.isNewTurn
+      then currentState.pieces.duringPreviousTurn.updatedRegion
+      else currentState.pieces.sinceTurnStart.updatedRegion
+      
     new Scene (
       room           = room,
       userId         = userId,
-      activePlayerId = state.activePlayer,
+      activePlayerId = currentState.activePlayer,
       board          = board,
       pieces         = pieces,
       choices        = choices,
       diff           = diff,
-      outcome        = state.outcomeOption,
-      turnId         = state.turnId,
+      logicalOutcome = latestState.outcomeOption,
+      currentTurnId  = currentState.turnId,
+      latestTurnId   = latestState.turnId,
     )
     
   /** An empty scene without any board or players. */
