@@ -4,7 +4,11 @@ object UserProtocol:
   
   private val EMAIL_REGEX = """^[a-zA-Z0-9\.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
   
-  case class User(userId: Int, username: String)
+  case class User (
+    userId: Int,
+    username: String,
+    joined: Long,
+  )
   
   case class LoginForm (
     username: String,
@@ -19,7 +23,8 @@ object UserProtocol:
   case class RegistrationForm (
     username: String,
     email: String,
-    password: String
+    password: String,
+    passwordRepeat: String,
   ):
     import RegistrationError.*
     import Limits.*
@@ -49,6 +54,7 @@ object UserProtocol:
         PasswordTooShort(password.length, MIN_LENGTH_PASSWORD))
       _ <- Either.cond(password.length <= MAX_LENGTH_PASSWORD, (),
         PasswordTooLong(password.length, MAX_LENGTH_PASSWORD))
+      _ <- Either.cond(password == passwordRepeat, (), PasswordMismatch)
     yield ()
   
   enum RegistrationError:
@@ -60,6 +66,7 @@ object UserProtocol:
     case EmailTooLong(email: String, length: Int, maxLength: Int)
     case PasswordTooShort(length: Int, minLength: Int)
     case PasswordTooLong(length: Int, maxLength: Int)
+    case PasswordMismatch
     
   type RegistrationResponse = Either[RegistrationError, Int]
     

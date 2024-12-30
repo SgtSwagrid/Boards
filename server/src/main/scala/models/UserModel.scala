@@ -17,6 +17,9 @@ class UserModel(using db: Database, ec: ExecutionContext):
   def getUserById(id: Int): Future[Option[UserRow]] =
     db.run(UserTable.users.filter(_.id === id).result.headOption)
     
+  def getUserByName(username: String): Future[Option[UserRow]] =
+    db.run(UserTable.users.filter(_.username === username).result.headOption)
+    
   def login(form: LoginForm): Future[LoginResponse] =
     
     import LoginError.*
@@ -44,7 +47,7 @@ class UserModel(using db: Database, ec: ExecutionContext):
   private def validateRegistration(form: RegistrationForm): DBIO[Either[RegistrationError, Unit]] =
     
     import RegistrationError.*
-    val RegistrationForm(username, email, password) = form
+    val RegistrationForm(username, email, password, repeatPassword) = form
     
     for
       usernameExists <- usernameExists(username)
@@ -67,9 +70,9 @@ class UserModel(using db: Database, ec: ExecutionContext):
       .result.map(_.nonEmpty)
     
   private def createUser(form: RegistrationForm): DBIO[Int] =
-    val RegistrationForm(username, email, password) = form
+    val RegistrationForm(username, email, password, _) = form
     UserTable.users.returning(UserTable.users.map(_.id)) +=
-      UserRow(-1, username, email, hashPassword(password))
+      UserRow(-1, username, email, hashPassword(password), System.currentTimeMillis())
     
   private def hashPassword(password: String): String =
     BCrypt.hashpw(password, BCrypt.gensalt())

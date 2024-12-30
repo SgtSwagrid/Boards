@@ -1,18 +1,30 @@
 package boards.views
 
 import boards.Catalogue
+import boards.components.{Footer, Navbar}
+import boards.dsl.meta.Game
 import boards.protocol.GameProtocol.{CreateRoomRequest, CreateRoomResponse}
-import boards.imports.laminar.{*, given}
 import com.raquo.laminar.api.L.*
 import boards.imports.circe.{*, given}
+import boards.protocol.UserProtocol.User
+import io.laminext.fetch.circe.Fetch
+import org.scalajs.dom.document
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.scalajs.js.annotation.JSExportTopLevel
+import io.laminext.fetch.circe.jsonRequestBody
+import io.laminext.fetch.circe.fetchEventStreamBuilderSyntaxCirce
+import boards.util.Navigation
 
 @JSExportTopLevel("StartView")
 object StartView extends View:
+    
+  def createRequest(game: String) =
+    Fetch.post("/start", body=CreateRoomRequest(game))
+      .decode[CreateRoomResponse].map(_.data)
   
-  def content = div (
-    Navbar(),
+  def content(user: Option[User]) = div (
+    Navbar(user),
     div (
       className("grid gap-2 xs:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mx-auto"),
       position("absolute"),
@@ -20,10 +32,8 @@ object StartView extends View:
       width("fit-content"),
       Catalogue.all.map: game =>
         div (
-          onClick.flatMapTo:
-            Fetch.post("/start", body=CreateRoomRequest(game.name))
-              .decode[CreateRoomResponse].map(_.data)
-          --> (response => Navigation.goto(s"/game/${response.roomId}")),
+          onClick.flatMapTo(createRequest(game.name))
+            --> (response => Navigation.goto(s"/game/${response.roomId}")),
           className("card bg-neutral shadow-xl hover:brightness-125 active:brightness-150"),
           width("300px"),
           margin("25px"),

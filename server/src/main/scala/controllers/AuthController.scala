@@ -46,7 +46,7 @@ class AuthController @Inject() (
     
   def current = Action.async: (request: Request[AnyContent]) =>
     AuthController.currentUser(request).map: userRow =>
-      Ok(userRow.map(u => User(u.id, u.username)).asJson.toString)
+      Ok(userRow.map(_.toUser).asJson.toString)
 
 object AuthController:
 

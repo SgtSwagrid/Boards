@@ -5,6 +5,7 @@ import boards.graphics.Scene
 import boards.graphics.Scene.{PieceData, Tile}
 import boards.imports.laminar.HtmlProp
 import boards.protocol.GameProtocol.*
+import boards.protocol.UserProtocol.User
 import com.raquo.laminar.codecs.StringAsIsCodec
 import com.raquo.laminar.modifiers.RenderableText
 import org.scalajs.dom.Audio
@@ -82,12 +83,12 @@ object GameView extends View:
   
   val boardPadding = 30
   
-  def content = div (
+  def content(user: Option[User]) = div (
     socket.connect,
     socket.connected.filter(_ => autoJoin).mapTo(GameRequest.JoinRoom) --> socket.send,
     socket.received --> sceneBus.writer,
     
-    Navbar(),
+    Navbar(user),
     
     child <-- scene.map(scene => GameSidebar(scene, socket.send).apply),
     

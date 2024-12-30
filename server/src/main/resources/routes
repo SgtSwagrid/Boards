@@ -1,24 +1,27 @@
-GET /                controllers.ApplicationController.indexView
+GET /                       controllers.ApplicationController.indexView
 
-GET /start           controllers.ApplicationController.startView
+GET /start                  controllers.ApplicationController.startView
 +nocsrf
-POST /start          controllers.ApplicationController.startRoom
+POST /start                 controllers.ApplicationController.startRoom
 
-GET /browse          controllers.ApplicationController.browseView
+GET /browse                 controllers.ApplicationController.browseView
 
-GET /game/:id        controllers.GameController.gameView(id: String, join: Boolean = false)
-GET /game/:id/join   controllers.GameController.gameView(id: String, join: Boolean = true)
-GET /game/:id/socket controllers.GameController.gameSocket(id: String)
+GET /game/:id               controllers.GameController.gameView(id: String, join: Boolean = false)
+GET /game/:id/join          controllers.GameController.gameView(id: String, join: Boolean = true)
+GET /game/:id/socket        controllers.GameController.gameSocket(id: String)
 
-GET /login           controllers.AuthController.loginView
+GET /user/:username         controllers.ApplicationController.profileView(username: String)
+GET /user/:username/details controllers.ApplicationController.userDetails(username: String)
+
+GET /login                  controllers.AuthController.loginView
 
 +nocsrf
-POST /auth/login     controllers.AuthController.login
+POST /auth/login            controllers.AuthController.login
 +nocsrf
-POST /auth/register  controllers.AuthController.register
+POST /auth/register         controllers.AuthController.register
 +nocsrf
-POST /auth/logout    controllers.AuthController.logout
+POST /auth/logout           controllers.AuthController.logout
 +nocsrf
-POST /auth/current   controllers.AuthController.current
+POST /auth/current          controllers.AuthController.current
 
-GET /assets/*file    controllers.Assets.versioned(path="/public", file: Asset)
+GET /assets/*file           controllers.Assets.versioned(path="/public", file: Asset)

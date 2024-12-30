@@ -48,6 +48,8 @@ class ReactiveCanvas(id: String = "canvas"):
   def bounds: DOMRect = element.getBoundingClientRect()
   
   def apply: HtmlElement = canvasTag (
+    onLoad --> updates,
+    windowEvents(_.onResize) --> updates,
     idAttr(id),
     width("100%"),
     height("100%"),
@@ -101,8 +103,10 @@ class ReactiveCanvas(id: String = "canvas"):
       context.fillRect(pos.x, pos.y, size.x, size.y)
       context.shadowBlur = 0
   
+  val updates: EventBus[Any] = new EventBus[Any]
+  
   val size: Signal[VecI] =
-    EventStream.merge(windowEvents(_.onLoad), windowEvents(_.onResize)).map: _ =>
+    updates.stream.delay(100).map: _ =>
       element.width = bounds.width.toInt
       element.height = bounds.height.toInt
       element.oncontextmenu = e =>

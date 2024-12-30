@@ -2,7 +2,7 @@ package controllers
 
 import boards.protocol.GameProtocol.{CreateRoomRequest, CreateRoomResponse}
 import boards.imports.circe.{*, given}
-import models.GameModel
+import models.{GameModel, UserModel}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import play.api.mvc.*
 import slick.jdbc.H2Profile.api.*
@@ -23,8 +23,9 @@ class ApplicationController @Inject() (
   def indexView = Action: (request: Request[AnyContent]) =>
     Ok(views.html.PageTemplate("IndexView"))
     
-  def startView = Action: (request: Request[AnyContent]) =>
-    Ok(views.html.PageTemplate("StartView"))
+  def startView = Action.async: (request: Request[AnyContent]) =>
+    AuthController.withUser(request): user =>
+      Ok(views.html.PageTemplate("StartView"))
   
   def browseView = Action: (request: Request[AnyContent]) =>
     Ok(views.html.PageTemplate("BrowseView"))
@@ -34,3 +35,12 @@ class ApplicationController @Inject() (
       AuthController.withForm[CreateRoomRequest](request): form =>
         GameModel().createRoom(user.id, form.gameId)
           .map(room => Ok(CreateRoomResponse(room.id).asJson.toString))
+        
+  def profileView(username: String) =
+    Action: (request: Request[AnyContent]) =>
+      Ok(views.html.PageTemplate("ProfileView"))
+      
+  def userDetails(username: String) =
+    Action.async: (request: Request[AnyContent]) =>
+      UserModel().getUserByName(username)
+        .map(user => Ok(user.map(_.toUser).asJson.toString))

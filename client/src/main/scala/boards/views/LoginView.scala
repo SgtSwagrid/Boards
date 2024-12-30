@@ -3,18 +3,18 @@ package boards.views
 import boards.imports.laminar.{*, given}
 import com.raquo.laminar.api.L.*
 import boards.imports.circe.{*, given}
-import boards.protocol.UserProtocol.{LoginError, LoginForm, LoginResponse, RegistrationError, RegistrationForm, RegistrationResponse}
+import boards.protocol.UserProtocol.{LoginError, LoginForm, LoginResponse, RegistrationError, RegistrationForm, RegistrationResponse, User}
 import boards.protocol.UserProtocol.LoginError.*
 import boards.protocol.UserProtocol.RegistrationError.*
 
 @JSExportTopLevel("LoginView")
 object LoginView extends View:
   
-  def content =
+  def content(user: Option[User]) =
     val loginError = Var[Option[LoginError]](None)
     val registerError = Var[Option[RegistrationError]](None)
     div (
-      Navbar(),
+      Navbar(user),
       div (paddingTop("100px"),
         div (className("card w-96 bg-neutral shadow-xl mx-auto"),
           div (className("card-body"),
@@ -88,7 +88,7 @@ object LoginView extends View:
     val submit = new EventBus[Unit]
     
     val result = submit.events.flatMapTo:
-      val form = RegistrationForm(username.now(), email.now(), password1.now())
+      val form = RegistrationForm(username.now(), email.now(), password1.now(), password2.now())
       Fetch.post("/auth/register", body=form)
         .decode[RegistrationResponse].map(_.data)
     
@@ -123,6 +123,7 @@ object LoginView extends View:
           case EmailTooLong(_, _, max) => s"The email address may not be more than $max characters."
           case PasswordTooShort(_, min) => s"The password may not be less than $min characters."
           case PasswordTooLong(_, max) => s"The password may not be more than $max characters."
+          case PasswordMismatch => "The passwords do not match."
       .map(_.map(error => p(className("text-error"), error))),
       
       button (

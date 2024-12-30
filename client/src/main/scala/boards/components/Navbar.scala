@@ -12,9 +12,7 @@ object Navbar:
     
   val navbarHeight: Int = 80
   
-  def apply() =
-    
-    val user = Fetch.post("/auth/current").decode[Option[User]].map(_.data)
+  def apply(user: Option[User]) =
     
     div (
       className("navbar bg-base-200"),
@@ -29,7 +27,9 @@ object Navbar:
       zIndex("100"),
       div (className("navbar-start"),
         ExpandingButton("/assets/images/ui/navbar/start.svg", "Start Game"):
-          Navigation.goto("/start")
+          if user.isDefined
+          then Navigation.goto("/start")
+          else Navigation.goto("/login", "next" -> "/start")
         ,
         ExpandingButton("/assets/images/ui/navbar/browse.svg", "Browse Games"):
           Navigation.goto("/browse")
@@ -41,23 +41,22 @@ object Navbar:
           "Boards"
         )
       ),
-      div (className("navbar-end"),
+      div (
+        className("navbar-end"),
       
-      child.maybe <-- user.map: u =>
-        u.map: user =>
+        user.map: user =>
           a (
             className("btn btn-ghost text-sm"),
             user.username,
             onClick --> Navigation.goto(s"/user/${user.username}")
           )
-      ,
-      
-      child <-- user.map:
-        case Some(user) =>
-          ExpandingButton("/assets/images/ui/navbar/logout.svg", "Logout"):
-            onClick.flatMapTo(Fetch.post("/auth/logout").raw) --> Navigation.goto("/")
-        case None =>
-          ExpandingButton("/assets/images/ui/navbar/login.svg", "Login or Register"):
-            Navigation.goto("/login", "next" -> window.location.href)
+        ,
+        user match
+          case Some(user) =>
+            ExpandingButton("/assets/images/ui/navbar/logout.svg", "Logout"):
+              onClick.flatMapTo(Fetch.post("/auth/logout").raw) --> Navigation.goto("/")
+          case None =>
+            ExpandingButton("/assets/images/ui/navbar/login.svg", "Login or Register"):
+              Navigation.goto("/login", "next" -> window.location.href)
       )
     )

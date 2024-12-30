@@ -20,7 +20,7 @@ object Footer:
       className("items-center grid-flow-col"),
       img(width("50px"), height("50px"), src("/assets/images/ui/icon.svg")),
       p (
-        "Created by Alec Dorrington.",
+        "Created by Alec Dorrington",
         br(),
         "Copyright © 2024"
       )

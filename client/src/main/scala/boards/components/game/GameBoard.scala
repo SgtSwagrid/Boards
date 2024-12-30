@@ -303,7 +303,8 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
     canvas.apply,
     
     // Redraw the board when something changes.
-    Signal.combine(scene, pieceSprites, hover, dragged, provisionalInput, canvas.config).changes --> draw.tupled,
+    Signal.combine(scene, pieceSprites, hover, dragged, provisionalInput, canvas.config) --> draw.tupled,
+    scene.changes --> canvas.updates,
     
     // Respond to mouse input.
     onMouseMove --> Mouse.moves,

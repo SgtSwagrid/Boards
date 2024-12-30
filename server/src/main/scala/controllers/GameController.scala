@@ -45,7 +45,7 @@ class GameController @Inject() (
           case Some(room) => Right (
             ActorFlow
               .actorRef[String, Scene] { out => SessionActor.props (
-                out, system, room.id, user.map(user => User(user.id, user.username))
+                out, system, room.id, user.map(_.toUser)
               )}
               .map(_.asJson.toString)
           )

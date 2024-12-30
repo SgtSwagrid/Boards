@@ -32,8 +32,8 @@
   <component name="SharedSourcesOwnerModules">
     <option name="ownersModuleNames">
       <list>
-        <option value="root.boards-dsl.dslJVM" />
         <option value="root.boards-server" />
+        <option value="root.boards-dsl.dslJVM" />
         <option value="root.boards-dsl.dslJS" />
       </list>
     </option>

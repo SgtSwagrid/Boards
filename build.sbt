@@ -49,14 +49,14 @@ lazy val root = project
     server,
     client,
     common.jvm, common.js,
+    dsl.jvm,    dsl.js,
     games.jvm,  games.js,
     bots.jvm,   bots.js,
-    dsl.jvm,    dsl.js
   )
 
 lazy val server = project
   .in(file("server"))
-  .dependsOn(common.jvm, games.jvm)
+  .dependsOn(common.jvm, dsl.jvm, games.jvm, bots.jvm)
   .enablePlugins(PlayScala)
   .disablePlugins(PlayLayoutPlugin)
   .settings (
@@ -75,7 +75,7 @@ lazy val server = project
     Lib.slick,
     Lib.circe,
     dependencyOverrides += "org.slf4j" % "slf4j-api" % "2.0.16",
-    scalaJSProjects := Seq(client, common.js, games.js, bots.js, dsl.js),
+    scalaJSProjects := Seq(client, common.js, dsl.js, games.js, bots.js),
     Assets / pipelineStages := Seq(scalaJSPipeline),
     Assets / WebKeys.packagePrefix := "public/",
     Compile / compile := ((Compile / compile) dependsOn scalaJSPipeline).value,
@@ -83,7 +83,7 @@ lazy val server = project
 
 lazy val client = project
   .in(file("client"))
-  .dependsOn(common.js, games.js, bots.js, dsl.js)
+  .dependsOn(common.js, dsl.js, games.js, bots.js)
   .enablePlugins(ScalaJSPlugin, ScalaJSWeb)
   .settings (
     name := "boards-client",
@@ -96,7 +96,7 @@ lazy val client = project
 
 lazy val common = crossProject(JSPlatform, JVMPlatform)
   .crossType(CrossType.Pure)
-  .dependsOn(games, bots, dsl)
+  .dependsOn(dsl, games, bots)
   .enablePlugins(ScalaJSWeb)
   .in(file("common"))
   .settings (

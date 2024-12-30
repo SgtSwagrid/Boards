@@ -3,7 +3,7 @@
   <component name="DisplayModuleName">
     <option name="name" value="commonJS" />
   </component>
-  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_22">
+  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_21">
     <output url="file://$MODULE_DIR$/../../common/.js/target/scala-3.6.2/classes" />
     <output-test url="file://$MODULE_DIR$/../../common/.js/target/scala-3.6.2/test-classes" />
     <exclude-output />
