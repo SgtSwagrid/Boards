@@ -1,7 +1,7 @@
 # Boards 4.0
 
 This is an ongoing project featuring:
-1. _BoardLang_, a [DSL](https://en.wikipedia.org/wiki/Domain-specific_language) for easily creating [combinatorial](https://brilliant.org/wiki/combinatorial-games-definition/) and turn-based board games in [Scala](https://www.scala-lang.org/).
+1. _BoardLang_, a library-level [DSL](https://en.wikipedia.org/wiki/Domain-specific_language) for easily creating [combinatorial](https://brilliant.org/wiki/combinatorial-games-definition/) and turn-based board games in [Scala](https://www.scala-lang.org/).
 2. A collection of simple games implemented using _BoardLang_. (WIP)
 3. [Minimax](https://en.wikipedia.org/wiki/Minimax) and [RL](https://en.wikipedia.org/wiki/Reinforcement_learning) based solvers to play (2), implemented in a game-independent manner. (COMING SOON)
 4. A web interface for playing (2) against (3) or other human players. (WIP)
