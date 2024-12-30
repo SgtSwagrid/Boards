@@ -38,7 +38,7 @@ Boards is written entirely in [Scala](https://www.scala-lang.org/), and in order
 Boards relies on the following open-source libraries, this installation of which should be handled automatically by sbt:
 
 * The [Play Framework](https://www.playframework.com/) for handling web requests on the server.
-* [Slick](https://scala-slick.org/) for database access by [functional relational mapping](https://pekko.apache.org/docs/pekko/current/general/actors.html).
+* [Slick](https://scala-slick.org/) for database access by [functional relational mapping](https://scala-slick.org/talks/2014-06-09_33rd_Degree/Functional%20Relational%20Mapping%20with%20Slick.pdf).
 * [H2](https://www.h2database.com/html/main.html) for running an embedded database.
 * [Apache Pekko](https://pekko.apache.org/), an [actor](https://pekko.apache.org/docs/pekko/current/general/actors.html) framework, used here for managing server-side state in relation to web socket sessions.
 * [Circe](https://circe.github.io/circe/) for automatic serialisation/deserialisation to/from JSON.
