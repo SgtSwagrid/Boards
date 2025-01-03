@@ -1,7 +1,7 @@
 # Boards 4.0
 
 This is an ongoing project featuring:
-1. _BoardLang_, a [DSL](https://en.wikipedia.org/wiki/Domain-specific_language) for easily creating [combinatorial](https://brilliant.org/wiki/combinatorial-games-definition/) games in [Scala](https://www.scala-lang.org/).
+1. _BoardLang_, a library-level [DSL](https://en.wikipedia.org/wiki/Domain-specific_language) for easily creating [combinatorial](https://brilliant.org/wiki/combinatorial-games-definition/) and turn-based board games in [Scala](https://www.scala-lang.org/).
 2. A collection of simple games implemented using _BoardLang_. (WIP)
 3. [Minimax](https://en.wikipedia.org/wiki/Minimax) and [RL](https://en.wikipedia.org/wiki/Reinforcement_learning) based solvers to play (2), implemented in a game-independent manner. (COMING SOON)
 4. A web interface for playing (2) against (3) or other human players. (WIP)
@@ -9,6 +9,7 @@ This is an ongoing project featuring:
 Featured games (this list will continually expand):
 1. [Chess](https://en.wikipedia.org/wiki/Chess)
 2. [Chaturanga](https://en.wikipedia.org/wiki/Chaturanga)
+3. [Amazons](https://en.wikipedia.org/wiki/Game_of_the_Amazons)
 
 This is a continuation from a long lineage of similar projects ([1.0](https://github.com/SgtSwagrid/boards-1.0), [2.0](https://github.com/SgtSwagrid/boards-2.0), [3.0](https://github.com/SgtSwagrid/boards-3.0)).
 
@@ -37,7 +38,7 @@ Boards is written entirely in [Scala](https://www.scala-lang.org/), and in order
 Boards relies on the following open-source libraries, this installation of which should be handled automatically by sbt:
 
 * The [Play Framework](https://www.playframework.com/) for handling web requests on the server.
-* [Slick](https://scala-slick.org/) for database access by [functional relational mapping](https://pekko.apache.org/docs/pekko/current/general/actors.html).
+* [Slick](https://scala-slick.org/) for database access by [functional relational mapping](https://scala-slick.org/talks/2014-06-09_33rd_Degree/Functional%20Relational%20Mapping%20with%20Slick.pdf).
 * [H2](https://www.h2database.com/html/main.html) for running an embedded database.
 * [Apache Pekko](https://pekko.apache.org/), an [actor](https://pekko.apache.org/docs/pekko/current/general/actors.html) framework, used here for managing server-side state in relation to web socket sessions.
 * [Circe](https://circe.github.io/circe/) for automatic serialisation/deserialisation to/from JSON.
@@ -53,7 +54,7 @@ git clone https://github.com/SgtSwagrid/Boards.git
 
 To run a local development server, navigate to the `Boards` directory and run:
 ```
-sbt "project server" "~run"
+sbt "project server" "run"
 ```
 You should then be able to access the website at `localhost:9000` in your browser.
 
@@ -90,9 +91,8 @@ For the game board and pieces:
 
 Mathematical types:
 * `VecI`: An integer vector representing a position on the `Board`.
-* `Ker`: A set of vectors describing a region in space.
-* `Dir`: A direction or set thereof, used for describing _relative_ positions.
-* `Ray`: A specific kind of `Ker` formed by making up to some number of steps in some `Dir`.
+* `RegionI`: A set of vectors describing a region in space.
+* `Ray`: A specific kind of `Region` formed by making up to some number of steps in some direction(s).
 
 ### Rule Semantics
 
@@ -115,7 +115,7 @@ In some games, there are even multiple global game phases. For instance, it is c
 ### Types of Rule
 
 Any `Rule` is actually a [tree](https://en.wikipedia.org/wiki/Tree_(abstract_data_type)) of `Rule`s, of the following basic kinds:
-* `Generator`: The leaves of the `Rule` tree. A `Generator` simply enumerates legal `Action`s and the direct consequences thereof. For example, a king in chess might provide a `Generator` which produces one `Move` action for each [octagonal](https://www.researchgate.net/figure/A-2-d-octagon-and-its-four-Octagonal-directions-Observe-that-octagonal-directions-within_fig1_332078957) direction.
+* `Cause`: The leaves of the `Rule` tree. A `Generator` simply enumerates legal `Action`s. For example, a king in chess might provide a `Generator` which produces one `Drag` input for each [octagonal](https://www.researchgate.net/figure/A-2-d-octagon-and-its-four-Octagonal-directions-Observe-that-octagonal-directions-within_fig1_332078957) direction.
 * `Effect`: A passive effect which is only indirectly caused by the `Action` of the `Player`. For instance, when we [castle](https://www.chess.com/terms/castling-chess) in chess, a `Generator` allows the king to move, but then a susequent `Effect` ensures that the rook moves too as a result.
 * `Combinator`: A composition of multiple simpler `Rule`s, for reasoning about `Action` sequencing. For example, in chess, we need to take the _union_ of `Rule`s from individual `Piece`s to indicate that the `Player` can choose which `Piece` to move, then _sequence_ this with `Effect.endTurn`, then _repeat_ indefinitely. `Combinator`s deliberately hide the dynamic nature of the current `Rule`, and automatically decide which `Rule` should apply next after each `Action`.
 
@@ -138,14 +138,14 @@ We can't have chess without a chessboard!
 // A chessboard is an 8x8 grid.
 override val Board = Kernel.box(8, 8)
   // The following is only required for aesthetic reasons:
-  .paint(Pattern.Checkered(Colour.Chess.Dark, Colour.Chess.Light))
+  .withLabels(Pattern.Checkered(Colour.Chess.Dark, Colour.Chess.Light))
 ```
 
 We may want to define some types of pieces, otherwise there won't be much to do in our game:
 ```scala
-object Pawn extends PieceType.WithTexture(Texture.WhitePawn, Texture.BlackPawn)
+object Pawn extends TexturedPiece(Texture.WhitePawn, Texture.BlackPawn)
 
-object King extends PieceType.WithTexture(Texture.WhiteKing, Texture.BlackKing)
+object King extends TexturedPiece(Texture.WhiteKing, Texture.BlackKing)
 
 ...
 ```
