@@ -5,6 +5,8 @@ import boards.imports.math.{*, given}
 import Rule.*
 import Cause.UnionCause
 import Effect.SequenceEffect
+import boards.dsl.meta.PlayerRef.PlayerRef
+import boards.dsl.Shortcuts.given_HistoryState
 
 import scala.annotation.targetName
 import scala.collection.mutable
@@ -40,6 +42,9 @@ trait Rule:
     
   def orElseStop(outcome: HistoryState ?=> Outcome): Rule =
     orElse(Effect.stop(outcome))
+    
+  def orElseDraw: Rule =
+    orElseStop(Draw)
   
   final def optional: Rule =
     this | Effect.identity
@@ -94,8 +99,11 @@ object Rule:
   def repeatForever(rule: HistoryState ?=> Rule): Rule =
     Rule(rule).repeatForever
     
-  def alternatingTurns(rule: HistoryState ?=> Rule): Rule =
-    Rule(rule).alternatingTurns
+  def alternatingTurns(rule: (HistoryState, PlayerRef) ?=> Rule): Rule =
+    Rule:
+      given PlayerRef = summon[HistoryState].activePlayer
+      rule
+    .alternatingTurns
   
   private[rules] class UnionRule (
     left: => Rule,

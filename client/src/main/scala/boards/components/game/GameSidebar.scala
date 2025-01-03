@@ -1,7 +1,9 @@
 package boards.components.game
 
 import boards.components.{Footer, Navbar, SVG}
+import boards.dsl.meta.Game.Property
 import boards.dsl.meta.TurnId
+import boards.games.TicTacToe.x
 import boards.graphics.{Colour, Scene}
 import boards.protocol.GameProtocol.GameRequest
 import boards.protocol.Room.{RichPlayer, Status}
@@ -10,6 +12,7 @@ import boards.util.extensions.SequenceOps.interweave
 import boards.util.extensions.ColourOps.textColour
 import com.raquo.laminar.api.L.{*, given}
 import com.raquo.laminar.codecs.StringAsIsCodec
+import com.raquo.laminar.keys.HtmlProp
 
 
 object GameSidebar:
@@ -20,10 +23,13 @@ object GameSidebar:
  * @param scene The current scene to display as provided by the server.
  * @param respond An observer for providing responses to the server.
  */
-class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
+class GameSidebar(scene: Signal[Scene], respond: Observer[GameRequest]):
   
-  private val dataTip: HtmlAttr[String] =
-    htmlAttr("data-tip", StringAsIsCodec)
+  private val dataTip: HtmlAttr[String] = htmlAttr("data-tip", StringAsIsCodec)
+  
+  private val min: HtmlProp[String, String] = HtmlProp("min", StringAsIsCodec)
+  private val max: HtmlProp[String, String] = HtmlProp("max", StringAsIsCodec)
+  private val step: HtmlProp[String, String] = HtmlProp("step", StringAsIsCodec)
   
   def apply: HtmlElement =
     
@@ -34,18 +40,29 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
       left("0px"),
       width(s"${GameSidebar.sidebarWidth}px"),
       backgroundColor("#353b48"),
-      headerPanel,
-      statusPanel,
-      playerPanel,
-      buttonPanel,
+      div (
+        backgroundColor("#353b48"),
+        zIndex("2"),
+        child <-- scene.map(implicit scene => headerPanel),
+        child <-- scene.map(implicit scene => statusPanel),
+        child <-- scene.map(implicit scene => playerPanel),
+      ),
+      div (
+        bottom("0"), left("0"), right("0"),
+        position("absolute"),
+        backgroundColor("#353b48"),
+        configPanel,
+        child <-- scene.map(implicit scene => buttonPanel),
+      ),
     )
   
-  private def headerPanel =
+  private def headerPanel(using scene: Scene) =
     
     div (
       top("0"), left("0"), right("0"),
       height("60px"),
       paddingLeft("20px"), paddingTop("10px"),
+      zIndex("4"),
       //className("bg-primary-content"),
       backgroundColor("#fbc531"),
       span (
@@ -54,19 +71,20 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
       ),
     )
   
-  private def statusPanel =
+  private def statusPanel(using scene: Scene) =
     
     div (
       top("0"), left("0"), right("0"),
       height("50px"),
       paddingLeft("20px"), paddingTop("10px"), paddingRight("20px"),
       backgroundColor("#2f3640"),
+      zIndex("4"),
       if scene.isPending then pendingStatus
       else if scene.isActiveHere then activeStatus
       else completeStatus
     )
     
-  private def pendingStatus =
+  private def pendingStatus(using scene: Scene) =
     
     p (
       textAlign("center"),
@@ -74,7 +92,7 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
       "Waiting to Start",
     )
     
-  private def activeStatus =
+  private def activeStatus(using scene: Scene) =
     
     p (
       textAlign("center"),
@@ -87,7 +105,7 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
       if scene.isMyTurnAlone then " Turn" else " to Play",
     )
     
-  private def completeStatus =
+  private def completeStatus(using scene: Scene) =
     
     scene.winner match
       case Some(winner) =>
@@ -108,7 +126,7 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
           "Draw",
         )
   
-  private def playerPanel =
+  private def playerPanel(using scene: Scene) =
     
     div (
       top("0"), left("0"), right("0"),
@@ -118,7 +136,7 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
           case Seq(left, right) => playerDivider(left, right)
     )
   
-  private def playerInfo(player: RichPlayer) =
+  private def playerInfo(player: RichPlayer)(using scene: Scene) =
     
     span (
       display("block"),
@@ -130,7 +148,7 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
       playerWinMarker(player),
     )
   
-  private def playerIcon =
+  private def playerIcon(using scene: Scene) =
     
     img (
       display("inline-block"),
@@ -141,7 +159,7 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
       marginTop("10px"),
     )
   
-  private def playerName(player: RichPlayer) =
+  private def playerName(player: RichPlayer)(using scene: Scene) =
     
     div (
       display("inline-block"),
@@ -175,7 +193,7 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
       else emptyNode,
     )
   
-  private def removePlayerButton(player: RichPlayer) =
+  private def removePlayerButton(player: RichPlayer)(using scene: Scene) =
     
     when (scene.isPending && scene.iAmPlaying) (
       div (
@@ -192,7 +210,7 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
       ),
     )
   
-  private def playerTurnMarker(player: RichPlayer) =
+  private def playerTurnMarker(player: RichPlayer)(using scene: Scene) =
     
     when (scene.isActiveHere && player.position == scene.activePlayerId) (
       img (
@@ -205,7 +223,7 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
       ),
     )
   
-  private def playerWinMarker(player: RichPlayer) =
+  private def playerWinMarker(player: RichPlayer)(using scene: Scene) =
     
     when (scene.isLatestState && scene.isWinner(player.position)) (
       img (
@@ -218,7 +236,7 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
       ),
     )
   
-  private def playerDivider(left: RichPlayer, right: RichPlayer) =
+  private def playerDivider(left: RichPlayer, right: RichPlayer)(using scene: Scene) =
     
     val canSwap = scene.isPending && scene.iAmPlaying
     
@@ -240,14 +258,65 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
         ),
       ),
     )
-  
-  private def buttonPanel =
+    
+  private def configPanel =
+    
+    val showSliders = scene.map(scene => scene.isPending && scene.iAmPlaying).distinct
     
     div (
-      bottom("0"), left("0"), right("0"),
+      position("relative"),
+      bottom("0px"),
+      child <-- showSliders.map: showSliders =>
+        div (
+          padding("20px"),
+          children <-- scene.map(scene => scene.game.properties.map(prop => (prop, scene)))
+            .split(_(0).name) { case (_, (property, initialScene), _) =>
+              propertySlider(property, initialScene.property(property.name), showSliders)
+            }
+        )
+    )
+    
+  private def propertySlider(property: Property, default: Int, showSlider: Boolean = false) =
+    
+    val updates = new EventBus[Int]
+    
+    div (
+      div(className("divider"), marginTop("0px"), marginBottom("5px")),
+      scene.map(_.property(property.name)).changes.distinct --> updates.writer,
+      padding("5px"),
+      span (
+        fontSize("16px"),
+        b (
+          property.name,
+        ),
+        b (
+          display("inline-block"),
+          float("right"),
+          color(Colour.British.RiseNShine.hexString),
+          text <-- updates.stream.startWith(default),
+        ),
+      ),
+      when (showSlider) (
+        input (
+          marginTop("5px"),
+          `type`("range"),
+          className("range"),
+          min(property.min.toString),
+          max(property.max.toString),
+          value <-- updates.stream.startWith(default).map(_.toString),
+          step("1"),
+          onInput.mapToValue.map(i => GameRequest.SetProperty(property.name, i.toInt)) --> respond,
+          onInput.mapToValue.map(_.toInt) --> updates.writer,
+        ),
+      ),
+    )
+  
+  private def buttonPanel(using scene: Scene) =
+    
+    div (
       padding("20px"),
-      position("absolute"),
       backgroundColor("#2f3640"),
+      zIndex("3"),
       if scene.isPending then div (
         leaveButton,
         joinButton,
@@ -260,7 +329,7 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
       else emptyNode,
     )
   
-  private def leaveButton =
+  private def leaveButton(using scene: Scene) =
     
     when (scene.iAmPlaying) (
       button (
@@ -272,7 +341,7 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
       )
     )
   
-  private def joinButton =
+  private def joinButton(using scene: Scene) =
     
     when (!scene.isFull) (
       button (
@@ -286,7 +355,7 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
       ),
     )
   
-  private def startButton =
+  private def startButton(using scene: Scene) =
     
     when (scene.canStart && scene.iAmPlaying) (
       button (
@@ -298,7 +367,7 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
       ),
     )
   
-  private def drawButton =
+  private def drawButton(using scene: Scene) =
     
     if scene.iHaveResignedAll then emptyNode else
       if !scene.iHaveOfferedDraw then
@@ -320,7 +389,7 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
           onClick.mapTo(GameRequest.OfferDraw(false, scene.myDrawnPlayers.map(_.position)*)) --> respond,
         )
   
-  private def resignButton =
+  private def resignButton(using scene: Scene) =
     
     val (toRejoin, toResign) =
       (if scene.isMyTurn then Seq(scene.activePlayer) else scene.myPlayers)
@@ -348,7 +417,7 @@ class GameSidebar(scene: Scene, respond: Observer[GameRequest]):
       )
     else emptyNode
     
-  private def navigationButtons =
+  private def navigationButtons(using scene: Scene) =
     
     div (
       windowEvents(_.onWheel).filter(_ => scene.isComplete).collect {

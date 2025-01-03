@@ -78,17 +78,27 @@ extends Actor:
     case Update(me, InviteToRoom(user)) => ???
     
     case Update(me, RemovePlayers(positions*)) =>
-      if room.isParticipating(me) then
+      if room.isParticipating(me) && room.isPending then
         for _ <- GameModel().leaveRoom(roomId)(positions*)
         do updatePlayers()
     
     case Update(me, SwapPlayers(left, right)) =>
-      if room.isParticipating(me) then
+      if room.isParticipating(me) && room.isPending then
         for _ <- GameModel().swapPlayers(roomId)(left, right)
           do updatePlayers()
       
     case Update(me, PromotePlayer(user)) => ???
     case Update(me, ChangeGame(game)) => ???
+    
+    case Update(me, SetProperty(property, value)) =>
+      if room.isParticipating(me) && room.isPending then
+        for
+          room <- GameModel().setProperty(roomId, property, value)
+          state <- GameModel().getGameState(roomId)
+        do
+          this.room = room.withPlayers(this.room.simplePlayers)
+          this.state = state
+          render()
     
     case Update(me, JoinRoom) =>
       for _ <- GameModel().joinRoom(roomId, me)

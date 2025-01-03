@@ -1,30 +1,26 @@
 package boards.games; import boards.imports.all.{*, given}
 
-object Amazons extends Game (
-  name = "Amazons",
-  numPlayers = Seq(2),
-  playerNames = Seq("White", "Black"),
-  playerColours = Seq(Colour.British.LynxWhite, Colour.British.MattPurple),
-):
+object Amazons extends Game:
   
-  val board = Box(10, 10)
+  override val name = "Amazons"
+  
+  val white = Player(0, "White", Colour.British.LynxWhite)
+  val black = Player(1, "Black", Colour.British.MattPurple)
+  override val players = Seq(white, black)
+  
+  override val board = Box(10, 10)
     .withLabels(Pattern.Checkered(Colour.Chess.Dark, Colour.Chess.Light))
   
-  val Seq(white, black) = Seq(0, 1).map(PlayerId.apply)
+  override def setup =
+    Amazon.create(white, VecI(0, 3) | VecI(3, 0) | VecI(6, 0) | VecI(9, 3)) |>
+    Amazon.create(black, VecI(0, 6) | VecI(3, 9) | VecI(6, 9) | VecI(9, 6))
+  
+  override def loop = Rule.alternatingTurns:
+    Pieces.ofActivePlayer.actions.orElseStop(State.nextPlayer.wins)
   
   object Amazon extends TexturedPiece(Texture.WhiteQueen, Texture.BlackQueen):
-    def rule = r_move |> r_shoot
-    def r_move(using Piece, HistoryState) = Control.moveThis(Dir.octagonal.rayFromPiece.untilPiece)
-    def r_shoot(using Piece, HistoryState) = Arrow.placeMine(Dir.octagonal.rayFromPiece.untilPiece)
+    def rule =
+      Control.moveThis(Dir.octagonal.rayFromPiece.untilPiece) |>
+      Arrow.placeMine(Dir.octagonal.rayFromPiece.untilPiece)
     
   object Arrow extends StaticPiece, TexturedPiece(Texture.WhiteArrow, Texture.BlackArrow)
-  
-  def rules = r_setup |> r_loop
-  
-  def r_setup =
-    val r_white = Amazon.create(white, VecI(0, 3) | VecI(3, 0) | VecI(6, 0) | VecI(9, 3))
-    val r_black = Amazon.create(black, VecI(0, 6) | VecI(3, 9) | VecI(6, 9) | VecI(9, 6))
-    r_white |> r_black
-    
-  def r_loop = Rule.alternatingTurns:
-    Pieces.ofActivePlayer.actions.orElseStop(State.nextPlayer.wins)

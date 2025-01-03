@@ -1,6 +1,6 @@
 package boards.dsl.pieces
 
-import boards.dsl.meta.PlayerId.PlayerId
+import boards.dsl.meta.PlayerRef.{PlayerRef, PlayerId}
 import boards.dsl.pieces.PieceRef.PieceId
 import boards.dsl.pieces.PieceUpdate
 import boards.imports.games.{*, given}
@@ -17,8 +17,8 @@ sealed trait PieceUpdate extends PieceRef, HasRegionI:
 
 object PieceUpdate:
   
-  def create(pieceId: PieceId, pieceType: PieceType, position: HasVecI, owner: PlayerId, time: Version): Create =
-    Create(pieceId, pieceType, position.position, owner, time)
+  def create(pieceId: PieceId, pieceType: PieceType, position: HasVecI, owner: PlayerRef, time: Version): Create =
+    Create(pieceId, pieceType, position.position, owner.playerId, time)
     
   def move(pieceId: PieceId, from: HasVecI, to: HasVecI, time: Version): Move =
     Move(pieceId, from.position, to.position, time)
@@ -32,8 +32,7 @@ object PieceUpdate:
     position: VecI,
     owner: PlayerId,
     override val time: Version,
-  ) extends PieceUpdate:
-    val region: RegionI = position.region
+  ) extends PieceUpdate, HasVecI:
     override def toString = s"$pieceType -> $position"
   
   case class Move (
@@ -53,8 +52,7 @@ object PieceUpdate:
     protected[pieces] val pieceId: PieceId,
     position: VecI,
     override val time: Version,
-  ) extends PieceUpdate:
-    val region: RegionI = position.region
+  ) extends PieceUpdate, HasVecI:
     override def toString = s"$position -> ∅"
   
   given Ordering[PieceUpdate] = Ordering.Int.contramap(_.time.toInt)
@@ -98,6 +96,8 @@ object PieceUpdate:
     
     def updatedRegion: RegionI =
       updates.foldLeft(Region.empty[Int])(_ | _)
+      
+    def latest(using HistoryState): Piece = creates.head.now.pieces.head
     
   object UpdateQuery:
     

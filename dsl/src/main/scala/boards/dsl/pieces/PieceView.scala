@@ -1,6 +1,6 @@
 package boards.dsl.pieces
 
-import boards.dsl.meta.PlayerId.PlayerId
+import boards.dsl.meta.PlayerRef.{PlayerId, PlayerRef}
 import boards.dsl.pieces.PieceState.Version
 import boards.dsl.pieces.PieceRef
 import boards.dsl.pieces.PieceUpdate.UpdateQuery
@@ -33,11 +33,11 @@ trait PieceView extends PieceSet, UpdateQuery, OfPlayer[PieceView], HasRegionI:
   final def contains(position: HasVecI): Boolean =
     at(position).isDefined
   
-  final def isFriendly(position: HasVecI)(using playerId: PlayerId): Boolean =
-    at(position).exists(_.owner == playerId)
+  final def isFriendly(position: HasVecI)(using player: PlayerRef): Boolean =
+    at(position).exists(_.owner == player)
   
-  final def isEnemy(position: HasVecI)(using playerId: PlayerId): Boolean =
-    at(position).exists(_.owner != playerId)
+  final def isEnemy(position: HasVecI)(using player: PlayerRef): Boolean =
+    at(position).exists(_.owner != player)
   
   final def region: RegionI =
     Region.from(pieces.map(_.position))
@@ -45,8 +45,8 @@ trait PieceView extends PieceSet, UpdateQuery, OfPlayer[PieceView], HasRegionI:
   final def filter(filter: PieceFilter): PieceView =
     filter.apply(this)
   
-  final override def ofPlayer(playerIds: PlayerId*): PieceView =
-    filter(PieceFilter.ofPlayer(playerIds*))
+  final override def ofPlayer(players: PlayerRef*): PieceView =
+    filter(PieceFilter.ofPlayer(players*))
   
   final override def ofType(pieceTypes: PieceType*): PieceView =
     filter(PieceFilter.ofType(pieceTypes*))

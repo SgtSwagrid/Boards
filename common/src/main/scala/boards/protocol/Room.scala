@@ -1,6 +1,6 @@
 package boards.protocol
 
-import boards.imports.games.{*, given}
+import boards.imports.games.{Player => _, *, given}
 import boards.protocol.UserProtocol.User
 import boards.util.extensions.IntOps.*
 import Room.*
@@ -18,6 +18,7 @@ case class Room (
   id: String,
   gameId: String,
   status: Status,
+  properties: Map[String, Int] = Map.empty,
 ):
   /** The game which is being played in this room. */
   lazy val game: Game = Catalogue.byName.getOrElse(gameId, Game.none)
@@ -33,6 +34,9 @@ case class Room (
   
   /** Augment a room with direct knowledge of its participants. */
   def withPlayers(players: Seq[Player] = Seq.empty): RichRoom = RichRoom(this, players)
+  
+  def property(name: String): Int =
+    properties.getOrElse(name, game.properties.find(_.name == name).map(_.default).get)
   
 object Room:
   
@@ -56,8 +60,8 @@ object Room:
     lazy val players: Seq[RichPlayer] = simplePlayers.map: player =>
       RichPlayer (
         player = player,
-        name = game.playerNames(player.position.toInt),
-        colour = game.playerColours(player.position.toInt),
+        name = game.players(player.position.toInt).name,
+        colour = game.players(player.position.toInt).colour,
         isHotseat = simplePlayers.filter(_.userId == player.userId).sizeIs > 1,
         hotseatOrder = simplePlayers.filter(_.userId == player.userId).count(_.position.toInt < player.position.toInt),
       )

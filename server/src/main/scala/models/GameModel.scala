@@ -1,8 +1,8 @@
 package models
 
 import boards.Catalogue
-import boards.dsl.meta.{Game, PlayerId}
-import boards.dsl.meta.PlayerId.PlayerId
+import boards.dsl.meta.Game
+import boards.dsl.meta.PlayerRef.PlayerId
 import boards.dsl.states.GameState
 import boards.protocol.GameProtocol.*
 import boards.protocol.Room
@@ -99,6 +99,15 @@ class GameModel(using db: Database, ec: ExecutionContext):
     ).sortBy(_.position)
     db.run(action)
     
+  def setProperty(roomId: String, property: String, value: Int): Future[Room] =
+    val action = for
+      room <- Action.getRoom(roomId)
+      if room.isPending
+      updated = room.copy(properties = room.properties + (property -> value))
+      _ <- RoomTable.rooms.insertOrUpdate(updated)
+    yield updated
+    db.run(action).recover{e => e.printStackTrace(); ???}
+    
   def startGame(roomId: String): Future[Room] =
     val action = for
       room <- Action.getRoom(roomId)
@@ -163,7 +172,7 @@ class GameModel(using db: Database, ec: ExecutionContext):
       numPlayers <- Action.getNumPlayers(roomId)
       inputs <- Action.getInputHistory(roomId)
       requiredPlayers = room.game.numPlayers.filter(_ >= numPlayers).min
-      initial = room.game.initial(Game.GameConfig(requiredPlayers))
+      initial = room.game.initial(Game.GameConfig(requiredPlayers, room.properties))
       current = inputs.foldLeft[GameState](initial): (state, action) =>
         state.applyInputById(action.inputId).get
     yield current

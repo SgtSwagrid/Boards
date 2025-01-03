@@ -1,14 +1,14 @@
 package boards.dsl.pieces
 
-import boards.dsl.meta.PlayerId.PlayerId
+import boards.dsl.meta.PlayerRef.PlayerRef
 import boards.dsl.states.InstantaneousState
 
 trait OfPlayer[+X]:
   
-  def ofPlayer(playerIds: PlayerId*): X
+  def ofPlayer(player: PlayerRef*): X
   
-  def ofOtherPlayers(playerIds: PlayerId*)(using state: InstantaneousState): X =
-    ofPlayer(state.otherPlayers(playerIds*)*)
+  def ofOtherPlayers(players: PlayerRef*)(using state: InstantaneousState): X =
+    ofPlayer(state.otherPlayers(players*)*)
   
   def ofActivePlayer(using state: InstantaneousState): X =
     ofPlayer(state.activePlayer)

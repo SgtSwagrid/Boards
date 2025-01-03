@@ -108,7 +108,10 @@ object GameState:
   
   /** A flag describing the outcome of the game, i.e. who won or was it a draw? */
   enum Outcome:
+    
     /** Indicates that the game resulted in this `Player` winning. */
     case Winner(winner: PlayerId)
     /** Indicates that the game resulted in a draw. */
     case Draw
+    
+    def declare: Effect = Effect.stop(this)

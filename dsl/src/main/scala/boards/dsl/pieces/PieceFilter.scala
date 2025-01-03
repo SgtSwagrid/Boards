@@ -2,7 +2,7 @@ package boards.dsl.pieces
 
 import boards.dsl.pieces.{PieceSet, PieceState, PieceView}
 import PieceFilter.*
-import boards.dsl.meta.PlayerId.PlayerId
+import boards.dsl.meta.PlayerRef
 import boards.dsl.pieces
 import boards.dsl.pieces.PieceState.empty.region
 import boards.dsl.pieces.PieceType
@@ -15,6 +15,7 @@ import boards.math.region.Vec.HasVecI
 import boards.imports.games.{*, given}
 import boards.imports.math.{*, given}
 import boards.dsl.Shortcuts.{*, given}
+import boards.dsl.meta.PlayerRef.PlayerRef
 import boards.dsl.pieces.PieceView.FilteredPieceView
 
 import scala.reflect.ClassTag
@@ -39,8 +40,8 @@ trait PieceFilter extends AtTime[PieceView], PeriodQuery[UpdateQuery], OfPlayer[
   final def ^ (that: PieceFilter): PieceFilter =
     SymmetricDifferenceFilter(this, that)
     
-  def ofPlayer(playerIds: PlayerId*): PieceFilter =
-    this & PieceFilter.ofPlayer(playerIds*)
+  def ofPlayer(players: PlayerRef*): PieceFilter =
+    this & PieceFilter.ofPlayer(players*)
     
   def ofType(pieceTypes: PieceType*): PieceFilter =
     this & PieceFilter.ofType(pieceTypes*)
@@ -106,8 +107,8 @@ object PieceFilter extends OfPlayer[PieceFilter]:
   val empty: PieceFilter = EmptyFilter
   val all: PieceFilter = UniversalFilter
   
-  def ofPlayer(playerIds: PlayerId*): PieceFilter =
-    PlayerFilter(playerIds*)
+  def ofPlayer(players: PlayerRef*): PieceFilter =
+    PlayerFilter(players*)
   
   def ofType(pieceTypes: PieceType*): PieceFilter =
     TypeFilter(pieceTypes*)
@@ -128,12 +129,13 @@ object PieceFilter extends OfPlayer[PieceFilter]:
     def applyBase(pieces: PieceState): PieceView = pieces
   
   private class PlayerFilter (
-    playerIds: PlayerId*,
+    players: PlayerRef*,
   ) extends PieceFilter:
     
     def applyBase(pieces: PieceState): PieceView =
       pieces.restrictTo:
-        playerIds
+        players
+          .map(_.playerId)
           .flatMap(pieces.piecesByOwner.get)
           .foldLeft(PieceSet.empty)(_ | _)
         

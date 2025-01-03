@@ -32,3 +32,6 @@ case object Texture:
   
   val WhiteArrow = Texture("amazons/white_arrow.svg", 0.8F)
   val BlackArrow = Texture("amazons/black_arrow.svg", 0.8F)
+  
+  val X = Texture("tictactoe/x.svg", 0.4F)
+  val O = Texture("tictactoe/o.svg", 0.4F)

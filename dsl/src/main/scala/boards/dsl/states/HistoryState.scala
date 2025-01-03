@@ -4,6 +4,7 @@ import boards.dsl.meta.TurnId.HasTurnId
 import boards.dsl.states.HistoryState.*
 import boards.imports.games.{*, given}
 import boards.imports.math.{*, given}
+import boards.dsl.rules.Input
 import io.circe.Decoder.state
 import boards.dsl.pieces.PieceState
 import com.sun.org.apache.xalan.internal.lib.ExsltDatetime.time

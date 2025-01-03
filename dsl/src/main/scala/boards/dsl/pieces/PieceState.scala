@@ -1,6 +1,6 @@
 package boards.dsl.pieces
 
-import boards.dsl.meta.PlayerId.PlayerId
+import boards.dsl.meta.PlayerRef.{PlayerId, PlayerRef}
 import boards.dsl.pieces.PieceState.Version
 import boards.dsl.pieces.{Piece, PieceRef, PieceType}
 import boards.dsl.pieces.PieceRef.PieceId
@@ -44,7 +44,7 @@ case class PieceState (
   def createPiece[P <: PieceType: ClassTag] (
     pieceType: P,
     position: HasVecI,
-    owner: PlayerId,
+    owner: PlayerRef,
   ): PieceState =
     if !board.contains(position) then this
     else at(position) match
@@ -55,7 +55,7 @@ case class PieceState (
           nextPieceId,
           pieceType,
           position.position,
-          owner,
+          owner.playerId,
           update,
           None,
         )
@@ -63,7 +63,7 @@ case class PieceState (
           selected = selected | piece,
           piecesById = piecesById + (piece.pieceId -> piece),
           piecesByPos = piecesByPos + (position.position -> piece.pieceId),
-          piecesByOwner = piecesByOwner + (owner -> (piece | ofPlayer(owner))),
+          piecesByOwner = piecesByOwner + (owner.playerId -> (piece | ofPlayer(owner))),
           piecesByType = piecesByType + (pieceType -> (piece | ofType(pieceType))),
           piecesByClass = piecesByClass + (pieceType.getClass -> (piece | ofClass(pieceType.getClass))),
           updates = update +: updates,

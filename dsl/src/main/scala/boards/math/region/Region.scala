@@ -103,7 +103,7 @@ trait Region[@specialized X : Ring : Ordering] extends
     val offset = (asRegionI.boundingBox, that.region.boundingBox) match
       case (BoundingBox.NonEmpty(start1, _), BoundingBox.NonEmpty(start2, _)) =>
         align.relativeOffset(this.size.asFinite.asVecI, that.region.size.asFinite)
-          + (start1 - start2).map { case Finite(x) => x }
+          + (start1 - start2).map(_.asFinite)
       case _ => VecI.zero(Math.max(dim, that.region.dim))
     
     asRegionI | (that.region + offset)
@@ -136,6 +136,9 @@ trait Region[@specialized X : Ring : Ordering] extends
     
   def withLabels[A](f: Vec[X] => A): RegionMap[X, A] =
     toRegionMap.zipWithPosition.mapLabels((v, _) => f(v))
+    
+  def uniformLabels[A](a: A): RegionMap[X, A] =
+    withLabels(_ => a)
   
   protected def asRegionI(using X =:= Int): RegionI =
     this.asInstanceOf[RegionI]

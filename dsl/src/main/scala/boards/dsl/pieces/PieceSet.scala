@@ -1,6 +1,7 @@
 package boards.dsl.pieces
 
-import boards.dsl.pieces.{Piece, PieceRef, PieceState, PieceSet, PieceView}
+import boards.dsl.pieces.PieceRef.PieceId
+import boards.dsl.pieces.{Piece, PieceRef, PieceSet, PieceState, PieceView}
 import boards.dsl.rules.{Control, Effect, Rule}
 import boards.dsl.states.HistoryState
 import boards.math.region.Region.HasRegionI

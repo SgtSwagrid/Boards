@@ -1,63 +1,50 @@
 package boards.dsl.meta
 
-import Game.{Board, GameConfig}
+import Game.{Board, GameConfig, Property}
+import boards.dsl.meta.PlayerRef.Player
 import boards.imports.games.{*, given}
 import boards.imports.math.{*, given}
-import boards.math.region.Region
+import boards.math.region.{Region, RegionMap}
 import boards.math.region.RegionMap.RegionMapI
 import boards.util.extensions.CollectionOps.contramap
 import io.circe.Codec
 
 import scala.annotation.targetName
 
-abstract class Game (
-  data: Game.Metadata
-):
+abstract class Game:
   
-  def this (
-    name: String = "",
-    numPlayers: Seq[Int] = Seq(2),
-    playerNames: Seq[String] = Seq.empty,
-    playerColours: Seq[boards.graphics.Colour] = Seq.empty,
-  ) =
-    this(Game.Metadata(
-      if name.isEmpty then ""/*getClass.getSimpleName*/ else name,
-      numPlayers,
-      if playerNames.isEmpty then (1 to numPlayers.max)
-        .map(i => s"Player $i") else playerNames,
-      if playerColours.isEmpty then Seq.fill(numPlayers.max)(Colour.White) else playerColours,
-    ))
+  val name: String = ""
+  val numPlayers: Seq[Int] = Seq(2)
+  val players: Seq[Player] =
+    (0 until numPlayers.max).map(i => Player(i, s"Player ${i + 1}", Colour.White))
+  val properties: Seq[Property] = Seq.empty
   
-  export data.*
-  
-  protected val board: Board
+  protected val board: Board = RegionMap.empty
   
   final def initial(config: GameConfig): GameState =
     GameState.initial(HistoryState.initial(InstantaneousState.initial(board, config)), rules)
   
-  def rules: Rule
+  def rules: Rule = setup |> loop
+  def setup: Rule = Effect.identity
+  def loop: Rule = Effect.identity
   
 object Game:
   
   type Board = RegionMapI[boards.graphics.Colour]
   
-  def none: Game = new Game(name = "Game"):
-    def setup(config: GameConfig) = InstantaneousState.empty
-    def rules = Cause.none
-    val board = Region.empty.fill(Colour.White)
+  def none: Game = new Game {}
   
-  case class Metadata (
+  case class Property (
     name: String,
-    numPlayers: Seq[Int],
-    playerNames: Seq[String],
-    playerColours: Seq[boards.graphics.Colour],
-  )
-    
-  case class PlayerData (
-    name: String,
-    colour: Colour,
-  )
+    values: Seq[Int],
+    default: Int,
+  ):
+    export values.{min, max}
+    def get(using config: GameConfig) =
+      config.properties.getOrElse(name, default)
   
   case class GameConfig (
-    numPlayers: Int,
-  )
+    numPlayers: Int = 2,
+    properties: Map[String, Int] = Map.empty,
+  ):
+    def apply(property: String): Int = properties(property)

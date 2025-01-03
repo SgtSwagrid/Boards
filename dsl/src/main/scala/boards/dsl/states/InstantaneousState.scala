@@ -1,22 +1,22 @@
 package boards.dsl.states
 
 import boards.dsl.meta.Game.GameConfig
-import boards.dsl.meta.PlayerId.PlayerId
 import boards.graphics.Colour
 import boards.imports.games.{*, given}
 import boards.imports.math.{*, given}
 import boards.math.region.{Region, RegionMap}
 import boards.math.region.RegionMap.RegionMapI
 import boards.dsl.meta.Game.Board
-import boards.dsl.meta.PlayerId.{+, -}
+import boards.dsl.meta.PlayerRef.+
+import boards.dsl.meta.PlayerRef.{PlayerId, PlayerRef}
 
 import scala.collection.immutable.BitSet
 import scala.reflect.ClassTag
 
 case class InstantaneousState (
-  board: RegionMapI[Colour],
-  pieces: PieceState,
-  config: GameConfig,
+  board: RegionMapI[Colour] = RegionMap.empty,
+  pieces: PieceState = PieceState.empty,
+  config: GameConfig = GameConfig(0, Map.empty),
   activePlayer: PlayerId = PlayerId.initial,
 ):
   
@@ -29,17 +29,19 @@ case class InstantaneousState (
   def endTurn: InstantaneousState = endTurn()
   
   def players: Seq[PlayerId] =
-    Seq.range(0, config.numPlayers)
-      .map(PlayerId.apply)
-  def otherPlayers(playerIds: PlayerId*): Seq[PlayerId] =
-    players.filter(p => !playerIds.contains(p))
-  def inactivePlayers: Seq[PlayerId] =
+    Seq.range(0, config.numPlayers).map(PlayerId.apply)
+  def otherPlayers(players: PlayerRef*): Seq[PlayerRef] =
+    players.filter(p => !players.contains(p))
+  def inactivePlayers: Seq[PlayerRef] =
     otherPlayers(activePlayer)
   def nextPlayer: PlayerId = activePlayer.next
   def previousPlayer: PlayerId = activePlayer.previous
   
   def withPieces(pieces: PieceState): InstantaneousState = copy(pieces = pieces)
   def updatePieces(f: PieceState => PieceState): InstantaneousState = copy(pieces = f(pieces))
+  
+  def withBoard(board: Board): InstantaneousState =
+    copy(board = board, pieces = PieceState.forBoard(board))
   
   override def toString = pieces.toString
     
@@ -49,4 +51,4 @@ object InstantaneousState:
     InstantaneousState(board, PieceState.forBoard(board), config)
     
   def empty: InstantaneousState =
-    new InstantaneousState(RegionMap.empty, PieceState.empty, GameConfig(0))
+    new InstantaneousState()

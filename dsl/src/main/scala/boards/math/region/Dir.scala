@@ -70,6 +70,14 @@ object Dir:
   /** The 2 up-diagonal directions (topLeft, topRight) in 2D. */
   val diagonallyUp: RegionI = Dir.topLeft | Dir.topRight
   
+  val positiveDiagonal: RegionI = Dir.topRight | Dir.bottomLeft
+  
+  val negativeDiagonal: RegionI = Dir.topLeft | Dir.bottomRight
+  
+  val orthogonalPairs: Seq[RegionI] = Seq(horizontal, vertical)
+  val diagonalPairs: Seq[RegionI] = Seq(positiveDiagonal, negativeDiagonal)
+  val octagonalPairs: Seq[RegionI] = orthogonalPairs ++ diagonalPairs
+  
   /**
    * Enumerates all the directions in (`steps.size`)-dimensional space such that
    * each provided step size integer appears as the absolute value of exactly one component of the direction vector.

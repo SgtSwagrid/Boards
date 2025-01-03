@@ -1,5 +1,6 @@
 package boards.dsl.pieces
 
+import boards.dsl.meta.PlayerRef.PlayerId
 import boards.dsl.rules.{Cause, Control, Effect, Rule}
 import boards.dsl.states.HistoryState.{AtTime, PeriodQuery}
 import boards.dsl.pieces.PieceState
@@ -44,7 +45,7 @@ case class Piece private[pieces] (
     Rule(pieceType.rule(using state, this))
   
   def ownedBy(player: PlayerId): Boolean = owner == player
-  def byOwner[X](x: X*): X = x(owner.toInt)
+  def byOwner[X](x: X*): X = x(owner.playerId.toInt)
   infix def is(pieceType: Any): Boolean = this.pieceType == pieceType
   def is[Q](using C: ClassTag[Q]): Boolean =
     pieceType.getClass == C.runtimeClass

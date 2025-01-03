@@ -5,16 +5,14 @@ object games:
   export boards.dsl.meta.Game
   export Game.{
     Board,
-    Metadata,
-    PlayerData,
     GameConfig,
+    Property,
   }
   
   export boards.dsl.meta.TurnId
   export boards.dsl.meta.TurnId.{TurnId, previous, next, toInt, given}
   
-  export boards.dsl.meta.PlayerId
-  export boards.dsl.meta.PlayerId.{PlayerId, previous, next, given}
+  export boards.dsl.meta.PlayerRef.{PlayerId, PlayerRef, Player, previous, next, given}
   
   export boards.dsl.rules.{
     Rule,

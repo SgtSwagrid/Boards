@@ -10,6 +10,8 @@ import boards.dsl.pieces.{Piece, PieceFilter, PieceType}
 
 import scala.collection.mutable
 import boards.dsl.Shortcuts.{State, given_HistoryState, piece}
+import boards.dsl.meta.PlayerRef
+import boards.dsl.meta.PlayerRef.PlayerRef
 
 /**
  * A `Rule` for modifying the `InstantaneousState` in some regular manner.
@@ -26,8 +28,6 @@ sealed trait Effect extends Rule:
     if this != Effect.identity
     then SequenceEffect(this, that)
     else that
-  
-  def structure(state: HistoryState) = "."
 
 object Effect:
   
@@ -41,11 +41,14 @@ object Effect:
   
   def endTurn: Effect = EndTurnEffect
   
-  def stop(outcome: HistoryState ?=> Outcome): Rule =
+  def stop(outcome: HistoryState ?=> Outcome): Effect =
     TerminalEffect(state => outcome(using state))
   
+  def stopWhen(condition: HistoryState ?=> Boolean)(outcome: HistoryState ?=> Outcome): Rule =
+    Effect(if condition then Effect.stop(outcome) else Effect.identity)
+  
   def create (
-    owner: HistoryState ?=> PlayerId,
+    owner: HistoryState ?=> PlayerRef,
     region: HistoryState ?=> HasRegionI,
     pieceTypes: PieceType*,
   ): Effect =
@@ -54,7 +57,7 @@ object Effect:
   def createMine (
     region: HistoryState ?=> HasRegionI,
     pieceTypes: PieceType*,
-  ) (using owner: PlayerId): Effect =
+  ) (using owner: PlayerRef): Effect =
     Effect.create(owner, region, pieceTypes*)
   
   def relocate (
@@ -90,6 +93,11 @@ object Effect:
     region: HistoryState ?=> HasRegionI,
   ): Effect =
     Effect.destroy(Pieces.now.ofRegion(region))
+    
+  def setBoard (
+    board: HistoryState ?=> Board,
+  ): Effect =
+    Effect(BoardEffect(board))
   
   private[rules] case object IdentityEffect extends Effect:
     
@@ -104,6 +112,14 @@ object Effect:
     def effect(state: HistoryState) =
       right.effect(left.effect(state).value.history)
   
+  private[rules] case class BoardEffect (
+    board: Board,
+  ) extends Effect:
+    
+    final def effect(state: HistoryState) = Some:
+      state.replace(state.now.withBoard(board))
+        .withRule(Effect.identity)
+  
   private[rules] sealed trait PieceEffect extends Effect:
     
     final def effect(state: HistoryState) = Some:
@@ -113,7 +129,7 @@ object Effect:
     def effect(pieces: PieceState): PieceState
   
   private[rules] case class CreateEffect (
-    owner: PlayerId,
+    owner: PlayerRef,
     region: RegionI,
     pieceTypes: IndexedSeq[PieceType],
   ) extends PieceEffect:

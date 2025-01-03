@@ -90,7 +90,7 @@ object GameView extends View:
     
     Navbar(user),
     
-    child <-- scene.map(scene => GameSidebar(scene, socket.send).apply),
+    GameSidebar(scene, socket.send).apply,
     
     div (
       position("absolute"),

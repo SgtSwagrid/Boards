@@ -1,16 +1,27 @@
 package boards.games; import boards.imports.all.{*, given}
 
-object Chess extends Game (
-  name = "Chess",
-  numPlayers = Seq(2),
-  playerNames = Seq("White", "Black"),
-  playerColours = Seq(Colour.British.LynxWhite, Colour.British.MattPurple),
-):
+object Chess extends Game:
   
-  val board = Box(8, 8)
+  override val name = "Chess"
+  
+  val white = Player(0, "White", Colour.British.LynxWhite)
+  val black = Player(1, "Black", Colour.British.MattPurple)
+  override val players = Seq(white, black)
+  
+  override val board = Box(8, 8)
     .withLabels(Pattern.Checkered(Colour.Chess.Dark, Colour.Chess.Light))
   
-  val Seq(white, black) = Seq(0, 1).map(PlayerId.apply)
+  override def setup =
+    board.row(7).create(black, Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook) |>
+    board.row(6).create(black, Pawn) |>
+    board.row(1).create(white, Pawn) |>
+    board.row(0).create(white, Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook)
+  
+  override def loop = Rule.alternatingTurns:
+    Pieces.ofActivePlayer.actions.require(!inCheck)
+      .orElseStop(if inCheck then State.nextPlayer.wins else Draw)
+  
+  def inCheck(using state: HistoryState) = King.ofActivePlayer.inCheck
   
   object Rook extends
     TexturedPiece(Texture.WhiteRook, Texture.BlackRook),
@@ -70,17 +81,3 @@ object Chess extends Game (
       
     def r_promote(using Piece) = Rule.maybe(piece.y == goal):
       piece.promote(Rook, Knight, Bishop, Queen)
-  
-  val r_setup =
-    board.row(7).create(black, Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook) |>
-    board.row(6).create(black, Pawn)                                                    |>
-    board.row(1).create(white, Pawn)                                                    |>
-    board.row(0).create(white, Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook)
-    
-  def inCheck(using state: HistoryState) = King.ofActivePlayer.inCheck
-  
-  val r_loop = Rule.alternatingTurns:
-    Pieces.ofActivePlayer.actions.require(!inCheck)
-      .orElseStop(if inCheck then State.nextPlayer.wins else Draw)
-  
-  override def rules = r_setup |> r_loop

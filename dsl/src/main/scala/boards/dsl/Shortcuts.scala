@@ -1,8 +1,9 @@
 package boards.dsl
 
-import boards.dsl.pieces.{Piece, PieceState}
+import boards.dsl.meta.PlayerRef.PlayerRef
+import boards.dsl.pieces.{Piece, PieceType, PieceState, PieceRef, PieceView}
 import boards.dsl.rules.{Cause, Effect, Rule}
-import boards.dsl.states.{GameState, InstantaneousState}
+import boards.dsl.states.{GameState, HistoryState, InstantaneousState}
 import boards.imports.games.{*, given}
 import boards.imports.math.{*, given}
 import boards.math.region.Ray
@@ -10,6 +11,7 @@ import boards.math.region.Ray
 object Shortcuts:
   
   def State(using state: HistoryState): HistoryState = state
+  def Config(using HistoryState): GameConfig = State.config
   
   def hypothetically[T](state: HistoryState)(f: HistoryState ?=> T): T =
     f(using state)
@@ -27,10 +29,10 @@ object Shortcuts:
     def toEmpty(using pieces: PieceState): Ray =
       ray.takeTo(v => !pieces.contains(v))
     
-    def toFriendly(using pieces: PieceState, playerId: PlayerId): Ray =
+    def toFriendly(using pieces: PieceState, playerId: PlayerRef): Ray =
       ray.takeTo(pieces.isFriendly)
     
-    def toEnemy(using pieces: PieceState, playerId: PlayerId): Ray =
+    def toEnemy(using pieces: PieceState, playerId: PlayerRef): Ray =
       ray.takeTo(pieces.isEnemy)
     
     def untilPiece(using pieces: PieceState): Ray =
@@ -39,11 +41,23 @@ object Shortcuts:
     def untilEmpty(using pieces: PieceState): Ray =
       ray.takeTo(v => !pieces.contains(v))
     
-    def untilFriendly(using pieces: PieceState, playerId: PlayerId): Ray =
+    def untilFriendly(using pieces: PieceState, playerId: PlayerRef): Ray =
       ray.takeUntil(pieces.isFriendly)
     
-    def untilEnemy(using pieces: PieceState, playerId: PlayerId): Ray =
+    def untilEnemy(using pieces: PieceState, playerId: PlayerRef): Ray =
       ray.takeUntil(pieces.isEnemy)
+      
+    def whilePiece(using pieces: PieceState): Ray =
+      ray.takeWhile(pieces.contains)
+      
+    def whileEmpty(using pieces: PieceState): Ray =
+      ray.takeWhile(v => !pieces.contains(v))
+      
+    def whileFriendly(using pieces: PieceState, playerId: PlayerRef): Ray =
+      ray.takeWhile(pieces.isFriendly)
+      
+    def whileEnemy(using pieces: PieceState, playerId: PlayerRef): Ray =
+      ray.takeWhile(pieces.isEnemy)
   
   extension (region: RegionI)
     
@@ -51,21 +65,21 @@ object Shortcuts:
       region.rayFrom(piece.now.region)
     
     def ontoPiece(using pieces: PieceState): RegionI =
-      region.filter(v => !pieces.contains(v))
-    
-    def ontoEmpty(using pieces: PieceState): RegionI =
       region.filter(pieces.contains)
     
-    def ontoFriendly(using pieces: PieceState, playerId: PlayerId): RegionI =
+    def ontoEmpty(using pieces: PieceState): RegionI =
+      region.filter(v => !pieces.contains(v))
+    
+    def ontoFriendly(using pieces: PieceState, playerId: PlayerRef): RegionI =
       region.filter(pieces.isFriendly)
     
-    def ontoEnemy(using pieces: PieceState, playerId: PlayerId): RegionI =
+    def ontoEnemy(using pieces: PieceState, playerId: PlayerRef): RegionI =
       region.filter(pieces.isEnemy)
     
-    def avoidFriendly(using pieces: PieceState, playerId: PlayerId): RegionI =
+    def avoidFriendly(using pieces: PieceState, playerId: PlayerRef): RegionI =
       region.filter(!pieces.isFriendly)
     
-    def avoidEnemy(using pieces: PieceState, playerId: PlayerId): RegionI =
+    def avoidEnemy(using pieces: PieceState, playerId: PlayerRef): RegionI =
       region.filter(!pieces.isEnemy)
       
     def pieces(using HistoryState): PieceView =
@@ -76,47 +90,50 @@ object Shortcuts:
     def clickRegion: Cause = Cause.click(region)
     
     def place (
-      owner: HistoryState ?=> PlayerId,
+      owner: HistoryState ?=> PlayerRef,
       pieceTypes: PieceType*,
     ): Rule =
       Control.place(owner, region, pieceTypes*)
       
     def placeMine (
       pieceTypes: PieceType*,
-    ) (using PlayerId): Rule =
+    ) (using PlayerRef): Rule =
       Control.placeMine(region, pieceTypes*)
       
     def fill (
-      owner: HistoryState ?=> PlayerId,
+      owner: HistoryState ?=> PlayerRef,
       pieceTypes: PieceType*,
     ): Rule =
       Control.fill(owner, region, pieceTypes*)
       
     def fillMine (
       pieceTypes: PieceType*,
-    ) (using PlayerId): Rule =
+    ) (using PlayerRef): Rule =
       Control.fillMine(region, pieceTypes*)
       
     def create (
-      owner: HistoryState ?=> PlayerId,
+      owner: HistoryState ?=> PlayerRef,
       pieceTypes: PieceType*,
     ): Effect =
       Effect.create(owner, region, pieceTypes*)
       
     def createMine (
       pieceTypes: PieceType*,
-    ) (using PlayerId): Effect =
+    ) (using PlayerRef): Effect =
       Effect.createMine(region, pieceTypes*)
     
   extension (position: VecI)
     
     def click(using HistoryState): Cause = Cause.click(position)
+    
+  extension (board: Board)
+    def use: Effect = Effect.setBoard(board)
   
-  def byPlayer[X](x: X*)(using playerId: PlayerId): X = x(playerId.toInt)
+  def byPlayer[X](x: X*)(using player: PlayerRef): X = x(player.playerId.toInt)
   
   given (using state: GameState): HistoryState = state.history
   given (using state: HistoryState): InstantaneousState = state.now
-  given (using piece: Piece): PlayerId = piece.owner
+  given (using piece: Piece): PlayerRef = piece.owner
   given (using state: InstantaneousState): RegionI = state.board
   given (using state: InstantaneousState): PieceState = state.pieces
   given (using state: InstantaneousState): GameConfig = state.config

@@ -7,11 +7,13 @@ import boards.dsl.Shortcuts.{*, given}
 import boards.math.region.Region.HasRegionI
 import boards.math.region.Vec.HasVecI
 import boards.dsl.Shortcuts.State
+import boards.dsl.meta.PlayerRef
+import boards.dsl.meta.PlayerRef.PlayerRef
 
 object Control:
   
   def place (
-    owner: HistoryState ?=> PlayerId,
+    owner: HistoryState ?=> PlayerRef,
     region: HistoryState ?=> HasRegionI,
     pieceTypes: PieceType*,
   ): Rule = Rule.union:
@@ -25,11 +27,11 @@ object Control:
   def placeMine (
     region: HistoryState ?=> HasRegionI,
     pieceTypes: PieceType*,
-  ) (using owner: PlayerId): Rule =
+  ) (using owner: PlayerRef): Rule =
     place(owner, region, pieceTypes*)
     
   def fill (
-    owner: HistoryState ?=> PlayerId,
+    owner: HistoryState ?=> PlayerRef,
     region: HistoryState ?=> HasRegionI,
     pieceTypes: PieceType*,
   ): Rule =
@@ -38,7 +40,7 @@ object Control:
   def fillMine (
     region: HistoryState ?=> HasRegionI,
     pieceTypes: PieceType*,
-  ) (using owner: PlayerId): Rule =
+  ) (using owner: PlayerRef): Rule =
     fill(owner, region, pieceTypes*)
     
   def move (

@@ -20,6 +20,8 @@ object GameProtocol:
     case SwapPlayers(left: PlayerId, right: PlayerId)
     /** Make this player the group leader. */
     case PromotePlayer(userId: Int)
+    
+    case SetProperty(setting: String, value: Int)
     /** Change this room to a different game. */
     case ChangeGame(gameId: Int)
     /** Request to the join the room; automatically accepted if there is still space. */

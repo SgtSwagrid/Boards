@@ -124,7 +124,7 @@ case class Scene (
   /** Whether the game was a draw. */
   def isDraw: Boolean = isComplete && !hasWinner
   
-  /** Whether a player on this device won the game. */
+
   def iWon: Boolean =
     winner.exists(winner => userId.contains(winner.userId))
   /** Whether the only player on this device won the game. */
