@@ -83,7 +83,7 @@ case class Scene (
   def activePlayer: RichPlayer = player(activePlayerId)
   
   /** All the players that are playing on this device. */
-  def myPlayers: Seq[RichPlayer] =
+  lazy val myPlayers: Seq[RichPlayer] =
     userId.toSeq.flatMap(userId => playersByUser.get(userId).toSeq.flatten)
   
   /** Whether at least one player is playing on this device. */
@@ -92,6 +92,8 @@ case class Scene (
   def iAmPlayingAlone: Boolean = myPlayers.sizeIs == 1
   /** Whether more than one player is playing on this device. */
   def iAmPlayingHotseat: Boolean = myPlayers.sizeIs > 1
+  /** Whether all players are playing on this device. */
+  def iAmPlayingExclusivelyHotseat: Boolean = isExclusivelyHotseat && iAmPlaying
   
   /** Whether the given player is controlled on this device. */
   def isMe(playerId: PlayerId): Boolean = myPlayers.exists(_.position == playerId)
@@ -103,7 +105,7 @@ case class Scene (
   
   def isInitialState: Boolean = currentTurnId.isInitial
   def isLatestState: Boolean = currentTurnId == latestTurnId
-    
+  
   def isActiveHere: Boolean =
     isActive || (isComplete && !isLatestState)
   
@@ -111,25 +113,25 @@ case class Scene (
     logicalOutcome.orElse(agreedOutcome)
   
   /** The winner of the game, if there is one. */
-  def winner: Option[RichPlayer] =
+  lazy val winner: Option[RichPlayer] =
     (logicalOutcome match
       case Some(Winner(winner)) => Some(player(winner))
       case _ => None
     ).orElse(winnerByResignation)
   /** Whether the given player has won the game. */
   def isWinner(playerId: PlayerId): Boolean = winner.exists(_.position == playerId)
-    
+  
   /** Whether the game has a winner. */
   def hasWinner: Boolean = winner.isDefined
   /** Whether the game was a draw. */
   def isDraw: Boolean = isComplete && !hasWinner
   
-
+  
   def iWon: Boolean =
     winner.exists(winner => userId.contains(winner.userId))
   /** Whether the only player on this device won the game. */
   def iWonAlone: Boolean = iWon && iAmPlayingAlone
-    
+  
   /** Whether a player on another device won the game. */
   def iLost: Boolean =
     userId.isDefined && winner.exists(winner => !userId.contains(winner.userId))
@@ -154,6 +156,11 @@ case class Scene (
   def iHaveOfferedDraw: Boolean = myDrawnPlayers.nonEmpty
   /** Whether some player has offered a draw. */
   def someoneHasOfferedDraw: Boolean = drawnPlayers.nonEmpty
+  
+  def iCanOfferRematch: Boolean = iAmPlaying && rematch.isEmpty
+  
+  def iCanJoinRematch: Boolean = iAmPlaying && rematch.exists: rematch =>
+    rematch.isPending && rematch.players.size < rematch.maxPlayers && !rematch.userIds.contains(userId.get)
   
   export room.*
 
@@ -241,7 +248,7 @@ object Scene:
       if currentState.history.isNewTurn
       then currentState.pieces.duringPreviousTurn.updatedRegion
       else currentState.pieces.sinceTurnStart.updatedRegion
-      
+    
     new Scene (
       room           = room,
       userId         = userId,

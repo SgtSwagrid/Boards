@@ -14,9 +14,10 @@ import scala.annotation.targetName
 abstract class Game:
   
   val name: String = ""
-  val numPlayers: Seq[Int] = Seq(2)
-  val players: Seq[Player] =
-    (0 until numPlayers.max).map(i => Player(i, s"Player ${i + 1}", Colour.White))
+  def numPlayers: Seq[Int] = Seq(players.size)
+  def players: Seq[Player] =
+    (0 until numPlayers.maxOption.getOrElse(0))
+      .map(i => Player(i, s"Player ${i + 1}", Colour.White))
   val properties: Seq[Property] = Seq.empty
   
   protected val board: Board = RegionMap.empty
@@ -32,7 +33,7 @@ object Game:
   
   type Board = RegionMapI[boards.graphics.Colour]
   
-  def none: Game = new Game {}
+  def none: Game = new Game { override val numPlayers = Seq(0) }
   
   case class Property (
     name: String,
@@ -48,3 +49,6 @@ object Game:
     properties: Map[String, Int] = Map.empty,
   ):
     def apply(property: String): Int = properties(property)
+    
+  object GameConfig:
+    def empty = GameConfig()

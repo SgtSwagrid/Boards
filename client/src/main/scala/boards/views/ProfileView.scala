@@ -15,10 +15,10 @@ import scala.scalajs.js.annotation.JSExportTopLevel
 @JSExportTopLevel("ProfileView")
 object ProfileView extends View:
   
-  private val username: String =
+  private lazy val username: String =
     document.documentURI.split("/").dropWhile(_ != "user").drop(1).head
     
-  private val user: Signal[Option[User]] =
+  private lazy val user: Signal[Option[User]] =
     Fetch.get(s"/user/${username}/details").decode[Option[User]].map(_.data)
       .startWith(None)
   

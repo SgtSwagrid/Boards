@@ -1,6 +1,6 @@
 package controllers
 
-import boards.protocol.GameProtocol.{CreateRoomRequest, CreateRoomResponse}
+import boards.protocol.GameProtocol.{CreateRoomRequest, CreateRoomResponse, ForkRoomRequest}
 import boards.imports.circe.{*, given}
 import models.{GameModel, UserModel}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}

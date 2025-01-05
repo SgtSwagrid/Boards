@@ -1,19 +1,20 @@
 package boards.components.game
 
-import boards.components.{Footer, Navbar, SVG}
+import boards.components.{BlockButton, Footer, Navbar, SVG}
 import boards.dsl.meta.Game.Property
 import boards.dsl.meta.TurnId
-import boards.games.TicTacToe.x
 import boards.graphics.{Colour, Scene}
 import boards.protocol.GameProtocol.GameRequest
 import boards.protocol.Room.{RichPlayer, Status}
+import boards.html.Tags.*
 import boards.util.Navigation.goto
 import boards.util.extensions.SequenceOps.interweave
 import boards.util.extensions.ColourOps.textColour
 import com.raquo.laminar.api.L.{*, given}
 import com.raquo.laminar.codecs.StringAsIsCodec
 import com.raquo.laminar.keys.HtmlProp
-
+import com.raquo.laminar.api.features.unitArrows
+import org.scalajs.dom.window.navigator
 
 object GameSidebar:
   val sidebarWidth: Int = 250
@@ -24,12 +25,6 @@ object GameSidebar:
  * @param respond An observer for providing responses to the server.
  */
 class GameSidebar(scene: Signal[Scene], respond: Observer[GameRequest]):
-  
-  private val dataTip: HtmlAttr[String] = htmlAttr("data-tip", StringAsIsCodec)
-  
-  private val min: HtmlProp[String, String] = HtmlProp("min", StringAsIsCodec)
-  private val max: HtmlProp[String, String] = HtmlProp("max", StringAsIsCodec)
-  private val step: HtmlProp[String, String] = HtmlProp("step", StringAsIsCodec)
   
   def apply: HtmlElement =
     
@@ -43,7 +38,7 @@ class GameSidebar(scene: Signal[Scene], respond: Observer[GameRequest]):
       div (
         backgroundColor("#353b48"),
         zIndex("2"),
-        child <-- scene.map(implicit scene => headerPanel),
+        headerPanel,
         child <-- scene.map(implicit scene => statusPanel),
         child <-- scene.map(implicit scene => playerPanel),
       ),
@@ -56,22 +51,78 @@ class GameSidebar(scene: Signal[Scene], respond: Observer[GameRequest]):
       ),
     )
   
-  private def headerPanel(using scene: Scene) =
+  private def headerPanel =
+    
+    val showCopyMessage = new EventBus[Boolean]
     
     div (
       top("0"), left("0"), right("0"),
+      paddingLeft("20px"),
+      paddingTop <-- scene.map: scene =>
+        if scene.forkedFrom.isDefined || scene.rematchOf.isDefined then "5px" else "10px"
+      ,
       height("60px"),
-      paddingLeft("20px"), paddingTop("10px"),
       zIndex("4"),
-      //className("bg-primary-content"),
       backgroundColor("#fbc531"),
-      span (
-        b(scene.room.game.name, fontSize("25px"), color("#2f3640")),
-        b(s"#${scene.room.id}", fontSize("14px"), color("#84817a"), marginLeft("5px")),
-      ),
+      children <-- scene.map { scene => Seq (
+        span (
+          b (
+            scene.room.game.name,
+            fontSize("25px"),
+            color("#2f3640"),
+          ),
+          span (
+            marginLeft("5px"),
+            cursor("pointer"),
+            className <-- showCopyMessage.stream.startWith(false).map:
+              case true => "tooltip tooltip-open tooltip-bottom tooltip-primary"
+              case false => ""
+            ,
+            dataTip("Copied!"),
+            b (
+              s"#${scene.room.id}",
+              fontSize("14px"),
+              color("#74716a"),
+              onClick --> copyToClipboard(scene.room.id),
+              onClick.mapTo(true) --> showCopyMessage.writer,
+              onClick.mapTo(false) --> showCopyMessage.writer.delay(1000),
+            ),
+          ),
+        ),
+        scene.forkedFrom.map(_.id) zip scene.forkedTurn match {
+          case Some((forkedFrom, forkedTurn)) =>
+            p (
+              fontSize("12px"),
+              color("#74716a"),
+              marginTop("-5px"),
+              "Forked from ",
+              a (
+                s"#$forkedFrom:$forkedTurn",
+                color(Colour.British.MattPurple.hexString),
+                href(s"/game/$forkedFrom:$forkedTurn"),
+              ),
+            )
+          case None => emptyNode
+        },
+        scene.rematchOf.map(_.id) match {
+          case Some(rematchOf) =>
+            p (
+              fontSize("12px"),
+              color("#74716a"),
+              marginTop("-5px"),
+              "Rematch of ",
+              a (
+                s"#$rematchOf",
+                color(Colour.British.MattPurple.hexString),
+                href(s"/game/$rematchOf"),
+              ),
+            )
+          case None => emptyNode
+        }
+      )}
     )
   
-  private def statusPanel(using scene: Scene) =
+  private def statusPanel =
     
     div (
       top("0"), left("0"), right("0"),
@@ -79,12 +130,14 @@ class GameSidebar(scene: Signal[Scene], respond: Observer[GameRequest]):
       paddingLeft("20px"), paddingTop("10px"), paddingRight("20px"),
       backgroundColor("#2f3640"),
       zIndex("4"),
-      if scene.isPending then pendingStatus
-      else if scene.isActiveHere then activeStatus
-      else completeStatus
+      child <-- scene.map { implicit scene =>
+        if scene.isPending then pendingStatus
+        else if scene.isActiveHere then activeStatus
+        else completeStatus
+      }
     )
     
-  private def pendingStatus(using scene: Scene) =
+  private def pendingStatus =
     
     p (
       textAlign("center"),
@@ -261,7 +314,9 @@ class GameSidebar(scene: Signal[Scene], respond: Observer[GameRequest]):
     
   private def configPanel =
     
-    val showSliders = scene.map(scene => scene.isPending && scene.iAmPlaying).distinct
+    val showSliders = scene.map: scene =>
+      scene.isPending && scene.iAmPlaying && scene.forkedFrom.isEmpty
+    .distinct
     
     div (
       position("relative"),
@@ -324,18 +379,17 @@ class GameSidebar(scene: Signal[Scene], respond: Observer[GameRequest]):
       ) else if scene.isActive && scene.iAmPlaying then div (
         drawButton,
         resignButton,
-      ) else if scene.isComplete then
-        navigationButtons
-      else emptyNode,
+      ) else if scene.isComplete then div (
+        rematchButton,
+        forkButton,
+        navigationButtons,
+      ) else emptyNode,
     )
   
   private def leaveButton(using scene: Scene) =
     
     when (scene.iAmPlaying) (
-      button (
-        className("btn btn-error"),
-        width("100%"),
-        marginBottom("10px"),
+      BlockButton("error") (
         "Leave Game",
         onClick.mapTo(GameRequest.RemovePlayers(scene.myPlayers.map(_.position)*)) --> respond,
       )
@@ -344,24 +398,18 @@ class GameSidebar(scene: Signal[Scene], respond: Observer[GameRequest]):
   private def joinButton(using scene: Scene) =
     
     when (!scene.isFull) (
-      button (
-        className("btn btn-info"),
-        width("100%"),
-        marginBottom("10px"),
+      BlockButton("info") (
         if scene.iAmPlaying then "Add Hotseat Player" else "Join Game",
         if scene.iAmRegistered
-        then onClick.mapTo(GameRequest.JoinRoom) --> respond
-        else onClick --> (_ => goto("/login", "next" -> s"/game/${scene.room.id}/join"))
+        then onClick.mapTo(GameRequest.JoinRoom(1)) --> respond
+        else onClick --> goto("/login", "next" -> s"/game/${scene.room.id}/join"),
       ),
     )
   
   private def startButton(using scene: Scene) =
     
     when (scene.canStart && scene.iAmPlaying) (
-      button (
-        className("btn btn-accent"),
-        width("100%"),
-        margin("0 0 10px 0"),
+      BlockButton("accent") (
         "Start Game",
         onClick.mapTo(GameRequest.StartGame) --> respond,
       ),
@@ -371,20 +419,14 @@ class GameSidebar(scene: Signal[Scene], respond: Observer[GameRequest]):
     
     if scene.iHaveResignedAll then emptyNode else
       if !scene.iHaveOfferedDraw then
-        button (
-          className("btn btn-warning"),
-          width("100%"),
-          marginBottom("10px"),
+        BlockButton("warning") (
           if scene.isExclusivelyHotseat then "Declare Draw"
           else if scene.someoneHasOfferedDraw then "Accept Draw"
           else "Offer Draw",
           onClick.mapTo(GameRequest.OfferDraw(true, scene.myActivePlayers.map(_.position)*)) --> respond,
         )
       else
-        button (
-          className("btn btn-warning"),
-          width("100%"),
-          marginBottom("10px"),
+        BlockButton("warning") (
           "Revoke Draw",
           onClick.mapTo(GameRequest.OfferDraw(false, scene.myDrawnPlayers.map(_.position)*)) --> respond,
         )
@@ -396,33 +438,50 @@ class GameSidebar(scene: Signal[Scene], respond: Observer[GameRequest]):
         .partition(_.hasResigned)
     
     if toResign.nonEmpty then
-      button (
-        className("btn btn-error"),
-        width("100%"),
-        marginBottom("10px"),
+      BlockButton("error") (
         if scene.iAmPlayingAlone then "Resign Game"
         else if toResign.sizeIs == 1 then s"Resign as ${toResign.head.name}"
         else "Resign All",
-        onClick.mapTo(GameRequest.Resign(true, toResign.map(_.position) *)) --> respond,
+        onClick.mapTo(GameRequest.Resign(true, toResign.map(_.position)*)) --> respond,
       )
     else if toRejoin.nonEmpty then
-      button (
-        className("btn btn-info"),
-        width("100%"),
-        marginBottom("10px"),
+      BlockButton("info") (
         if scene.iAmPlayingAlone then "Rejoin Game"
         else if toRejoin.sizeIs == 1 then s"Rejoin as ${toRejoin.head.name}"
         else "Rejoin All",
-        onClick.mapTo(GameRequest.Resign(false, toRejoin.map(_.position) *)) --> respond,
+        onClick.mapTo(GameRequest.Resign(false, toRejoin.map(_.position)*)) --> respond,
       )
     else emptyNode
     
+  private def rematchButton(using scene: Scene) =
+    
+    if scene.iCanOfferRematch || scene.iCanJoinRematch then BlockButton("warning") (
+      if scene.rematch.isEmpty
+      then if scene.iAmPlayingExclusivelyHotseat then "Play Rematch" else "Offer Rematch"
+      else "Accept Rematch",
+      onClick.mapTo(GameRequest.OfferRematch) --> respond,
+    ) else if scene.rematch.nonEmpty then BlockButton("warning") (
+      "View Rematch",
+      onClick --> goto(s"/game/${scene.rematch.get.id}"),
+    ) else emptyNode
+    
+  private def forkButton(using scene: Scene) =
+    
+    if scene.logicalOutcome.isDefined && !scene.isActiveHere then emptyNode else
+      BlockButton("info") (
+        "Fork From Here",
+        if scene.iAmRegistered
+        then onClick.mapTo(GameRequest.ForkState(Some(scene.currentTurnId))) --> respond
+        else onClick --> goto("/login", "next" -> s"/game/${scene.room.id}:${scene.currentTurnId}/fork"),
+      )
+    
+  /** The forward and back buttons which appear when the game is over to browse past states. */
   private def navigationButtons(using scene: Scene) =
     
     div (
       windowEvents(_.onWheel).filter(_ => scene.isComplete).collect {
-        case e if e.deltaY > 0 && !scene.isLatestState => GameRequest.ViewPreviousState(scene.currentTurnId.next)
-        case e if e.deltaY < 0 && !scene.isInitialState => GameRequest.ViewPreviousState(scene.currentTurnId.previous)
+        case e if e.deltaY > 0 && !scene.isLatestState => GameRequest.ViewTurnId(scene.currentTurnId.next)
+        case e if e.deltaY < 0 && !scene.isInitialState => GameRequest.ViewTurnId(scene.currentTurnId.previous)
       } --> respond,
       
       margin("auto"),
@@ -439,7 +498,7 @@ class GameSidebar(scene: Signal[Scene], respond: Observer[GameRequest]):
               src("/assets/images/ui/game/first.svg"),
               width("30px"), height("30px"),
             ),
-            onClick.mapTo(GameRequest.ViewPreviousState(TurnId.initial)) --> respond,
+            onClick.mapTo(GameRequest.ViewTurnId(TurnId.initial)) --> respond,
           ),
         ),
         div (
@@ -453,7 +512,7 @@ class GameSidebar(scene: Signal[Scene], respond: Observer[GameRequest]):
               src("/assets/images/ui/game/previous.svg"),
               width("30px"), height("30px"),
             ),
-            onClick.mapTo(GameRequest.ViewPreviousState(scene.currentTurnId.previous)) --> respond,
+            onClick.mapTo(GameRequest.ViewTurnId(scene.currentTurnId.previous)) --> respond,
           ),
         ),
       ),
@@ -493,7 +552,7 @@ class GameSidebar(scene: Signal[Scene], respond: Observer[GameRequest]):
               src("/assets/images/ui/game/next.svg"),
               width("30px"), height("30px"),
             ),
-            onClick.mapTo(GameRequest.ViewPreviousState(scene.currentTurnId.next)) --> respond,
+            onClick.mapTo(GameRequest.ViewTurnId(scene.currentTurnId.next)) --> respond,
           ),
         ),
         div (
@@ -507,7 +566,7 @@ class GameSidebar(scene: Signal[Scene], respond: Observer[GameRequest]):
               src("/assets/images/ui/game/last.svg"),
               width("30px"), height("30px"),
             ),
-            onClick.mapTo(GameRequest.ViewPreviousState(scene.latestTurnId)) --> respond,
+            onClick.mapTo(GameRequest.ViewTurnId(scene.latestTurnId)) --> respond,
           ),
         ),
       ),
@@ -536,3 +595,8 @@ class GameSidebar(scene: Signal[Scene], respond: Observer[GameRequest]):
         ),
       ),
     )
+    
+  private def copyToClipboard(text: String): Unit =
+    navigator.clipboard.writeText(text)
+  
+end GameSidebar

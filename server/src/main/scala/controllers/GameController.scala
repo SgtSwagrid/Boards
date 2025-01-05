@@ -1,7 +1,7 @@
 package controllers
 
 import boards.graphics.Scene
-import boards.protocol.GameProtocol.GameRequest
+import boards.protocol.GameProtocol.{GameRequest, GameResponse}
 import play.api.*
 import play.api.mvc.*
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
@@ -28,14 +28,8 @@ class GameController @Inject() (
   
   val system = summon[ActorSystem].actorOf(SystemActor.props, "system")
   
-  def gameView(id: String, join: Boolean) =
-    if join then
-      Action.async: (request: Request[AnyContent]) =>
-        AuthController.withUser(request): _ =>
-          Ok(views.html.PageTemplate("GameView"))
-    else
-      Action: (request: Request[AnyContent]) =>
-        Ok(views.html.PageTemplate("GameView"))
+  def gameView(id: String) = Action: (request: Request[AnyContent]) =>
+    Ok(views.html.PageTemplate("GameView"))
     
   def gameSocket(id: String) = WebSocket.acceptOrResult[String, String]: request =>
     AuthController.currentUser(request)
@@ -44,7 +38,7 @@ class GameController @Inject() (
         room match
           case Some(room) => Right (
             ActorFlow
-              .actorRef[String, Scene] { out => SessionActor.props (
+              .actorRef[String, GameResponse] { out => SessionActor.props (
                 out, system, room.id, user.map(_.toUser)
               )}
               .map(_.asJson.toString)

@@ -6,6 +6,7 @@ import boards.util.extensions.IntOps.*
 import Room.*
 import boards.Catalogue
 import boards.dsl.meta.Game
+import boards.imports.circe.{*, given}
 
 /**
  * A game room, representing a specific instance of a game being played.
@@ -19,21 +20,23 @@ case class Room (
   gameId: String,
   status: Status,
   properties: Map[String, Int] = Map.empty,
+  
+  forkedFrom: Option[String] = None,
+  forkedTurn: Option[TurnId] = None,
+  rematchOf: Option[String] = None,
+  rematch: Option[String] = None,
 ):
   /** The game which is being played in this room. */
   lazy val game: Game = Catalogue.byName.getOrElse(gameId, Game.none)
   
   /** The permissible options for number of players according to the game. */
-  lazy val requiredNumPlayers: Seq[Int] = game.numPlayers
+  lazy val possiblePlayerCounts: Seq[Int] = game.numPlayers
   /** The minimum number of players according to the game. */
-  lazy val minPlayers: Int = requiredNumPlayers.min
+  lazy val minPlayers: Int = possiblePlayerCounts.min
   /** The maximum number of players according to the game. */
-  lazy val maxPlayers: Int = requiredNumPlayers.max
+  lazy val maxPlayers: Int = possiblePlayerCounts.max
   
   export status.{isPending, isActive, isComplete}
-  
-  /** Augment a room with direct knowledge of its participants. */
-  def withPlayers(players: Seq[Player] = Seq.empty): RichRoom = RichRoom(this, players)
   
   def property(name: String): Int =
     properties.getOrElse(name, game.properties.find(_.name == name).map(_.default).get)
@@ -41,36 +44,33 @@ case class Room (
 object Room:
   
   /** An empty room with no game or players. */
-  def empty: RichRoom = Room("00000", "", Status.Pending).withPlayers()
+  def empty: RichRoom = RichRoom(RoomWithPlayers(Room("00000", "", Status.Pending), Seq.empty))
   
-  /**
-   * A game room, representing a specific instance of a game being played.
-   *
-   * This class is a version of 'Room' which is augmented with some additional information.
-   *
-   * @param baseRoom The basic information about this room.
-   * @param simplePlayers The basic information about the players in this room.
-   */
-  case class RichRoom (
+  case class RoomWithPlayers (
     baseRoom: Room,
-    simplePlayers: Seq[Player],
-  ):
+    private val simplePlayers: Seq[Player],
+  ) derives Codec.AsObject:
     
     /** The players who are participating in this room, in turn order. */
     lazy val players: Seq[RichPlayer] = simplePlayers.map: player =>
-      RichPlayer (
+      RichPlayer(
         player = player,
         name = game.players(player.position.toInt).name,
         colour = game.players(player.position.toInt).colour,
         isHotseat = simplePlayers.filter(_.userId == player.userId).sizeIs > 1,
-        hotseatOrder = simplePlayers.filter(_.userId == player.userId).count(_.position.toInt < player.position.toInt),
+        hotseatOrder = simplePlayers.filter(_.userId == player.userId)
+          .count(_.position.toInt < player.position.toInt),
       )
-      
+    
     def player(playerId: PlayerId): RichPlayer = players(playerId.toInt)
-      
+    
     /** The players who are participating in this room, grouped by the device they are playing on. */
     lazy val playersByUser: Map[Int, Seq[RichPlayer]] =
       players.groupBy(_.userId)
+    
+    /** The IDs of all users who are participating in this game with at least one player. */
+    lazy val users: Seq[Int] = playersByUser.keys.toSeq
+    
     /** Find all the players who are controlled by the current user. */
     def playersOf(userId: Int): Seq[RichPlayer] =
       playersByUser.get(userId).toSeq.flatten
@@ -78,16 +78,11 @@ object Room:
     lazy val userIds: Seq[Int] = players.map(_.userId).distinct
     /** Whether the given user is participating in this room. */
     def isParticipating(userId: Int): Boolean = userIds.contains(userId)
-      
+    
     /** The number of players currently participating in this room. */
     lazy val numPlayers: Int = simplePlayers.size
     /** The number of distinct users currently participating in this room. */
     lazy val numUsers: Int = playersByUser.keys.size
-    
-    /** Whether the game can currently be started. */
-    lazy val canStart: Boolean = isPending && game.numPlayers.contains(numPlayers)
-    /** Whether all players slots are already filled up. */
-    lazy val isFull: Boolean = numPlayers >= maxPlayers
     
     /** Whether some device has multiple players. */
     lazy val isHotseat: Boolean = numUsers < numPlayers
@@ -105,19 +100,48 @@ object Room:
       if !isPending && nonResigned.sizeIs == 1 then
         nonResigned.headOption
       else None
-      
+    
     lazy val drawByAgreement: Boolean =
       !isPending && players.forall(_.hasOfferedDraw)
-      
+    
     lazy val agreedOutcome: Option[Outcome] =
       winnerByResignation.map(winner => Winner(winner.position))
         .orElse(Option.when(drawByAgreement)(Draw))
     
+    export baseRoom.*
+  
+  /**
+   * A game room, representing a specific instance of a game being played.
+   *
+   * This class is a version of 'Room' which is augmented with some additional information.
+   *
+   * @param baseRoom The basic information about this room.
+   * @param simplePlayers The basic information about the players in this room.
+   * @param numPlayersInPrevious If this game is a fork, the number of players who played in the original game.
+   */
+  case class RichRoom (
+    baseRoom: RoomWithPlayers,
+    forkedFrom: Option[RoomWithPlayers] = None,
+    rematchOf: Option[RoomWithPlayers] = None,
+    rematch: Option[RoomWithPlayers] = None,
+  ) derives Codec.AsObject:
+    
+    export baseRoom.{baseRoom => _, forkedFrom => _, rematchOf => _, rematch => _, *}
+    
+    lazy val permittedPlayerCounts: Seq[Int] =
+      forkedFrom.map(_.numPlayers) match
+        case Some(numPlayers) => Seq(numPlayers)
+        case None => possiblePlayerCounts
+    
+    /** Whether the game can currently be started. */
+    lazy val canStart: Boolean = isPending && permittedPlayerCounts.contains(numPlayers)
+    
+    /** Whether all players slots are already filled up. */
+    lazy val isFull: Boolean = numPlayers >= permittedPlayerCounts.max
+    
     /** Produces a version of this room with some given status. */
     def withStatus(status: Status): RichRoom =
-      baseRoom.copy(status = status).withPlayers(simplePlayers)
-    
-    export baseRoom.*
+      copy(baseRoom = baseRoom.copy(baseRoom = baseRoom.baseRoom.copy(status = status)))
   
   /**
    * The status of a room (i.e. pending/active/complete).

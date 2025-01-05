@@ -6,9 +6,10 @@ POST /start                 controllers.ApplicationController.startRoom
 
 GET /browse                 controllers.ApplicationController.browseView
 
-GET /game/:id               controllers.GameController.gameView(id: String, join: Boolean = false)
-GET /game/:id/join          controllers.GameController.gameView(id: String, join: Boolean = true)
+GET /game/:id               controllers.GameController.gameView(id: String)
 GET /game/:id/socket        controllers.GameController.gameSocket(id: String)
+GET /game/:id/join          controllers.GameController.gameView(id: String)
+GET /game/:id/fork          controllers.GameController.gameView(id: String)
 
 GET /user/:username         controllers.ApplicationController.profileView(username: String)
 GET /user/:username/details controllers.ApplicationController.userDetails(username: String)

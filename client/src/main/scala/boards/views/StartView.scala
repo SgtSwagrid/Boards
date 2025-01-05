@@ -14,7 +14,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.scalajs.js.annotation.JSExportTopLevel
 import io.laminext.fetch.circe.jsonRequestBody
 import io.laminext.fetch.circe.fetchEventStreamBuilderSyntaxCirce
-import boards.util.Navigation
+import boards.util.Navigation.*
 
 @JSExportTopLevel("StartView")
 object StartView extends View:
@@ -33,7 +33,7 @@ object StartView extends View:
       Catalogue.all.map: game =>
         div (
           onClick.flatMapTo(createRequest(game.name))
-            --> (response => Navigation.goto(s"/game/${response.roomId}")),
+            --> (response => goto(s"/game/${response.roomId}")),
           className("card bg-neutral shadow-xl hover:brightness-125 active:brightness-150"),
           width("300px"),
           margin("25px"),

@@ -1,5 +1,6 @@
 package boards.protocol
 
+import boards.graphics.Scene
 import boards.imports.games.{*, given}
 
 /** Messages sent between the client and server regarding a game or room. */
@@ -21,11 +22,12 @@ object GameProtocol:
     /** Make this player the group leader. */
     case PromotePlayer(userId: Int)
     
+    /** Configure the game (only possible before starting). */
     case SetProperty(setting: String, value: Int)
     /** Change this room to a different game. */
     case ChangeGame(gameId: Int)
     /** Request to the join the room; automatically accepted if there is still space. */
-    case JoinRoom
+    case JoinRoom(multiplicity: Int)
     /**
      * Start the game.
      * Will fail if the game has already started or if there are not enough players.
@@ -38,10 +40,18 @@ object GameProtocol:
     case Resign(resign: Boolean, positions: PlayerId*)
     /** Offer a draw or accept an offer for a draw. */
     case OfferDraw(draw: Boolean, positions: PlayerId*)
+    /** Offer a rematch to the opponent (only possible after finishing). */
+    case OfferRematch
+    case ForkState(turnId: Option[TurnId])
     /** See the game state from a previous turn. */
-    case ViewPreviousState(turnId: TurnId)
+    case ViewTurnId(turnId: TurnId)
+    
+  enum GameResponse:
+    case Render(scene: Scene)
+    case Goto(boardId: String)
   
   /** A request sent by the user to create a new room. */
   case class CreateRoomRequest(gameId: String)
+  case class ForkRoomRequest(roomId: String, turnId: TurnId)
   /** A response sent by the server upon receiving a CreateRoomRequest. */
   case class CreateRoomResponse(roomId: String)

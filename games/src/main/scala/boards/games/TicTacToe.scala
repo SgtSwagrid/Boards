@@ -8,12 +8,12 @@ object TicTacToe extends Game:
   val o = Player(1, "O", Colour.British.VanadylBlue)
   override val players = Seq(x, o)
   
-  val size   = Game.Property("Size",   3 to 11, default = 7)
-  val target = Game.Property("Target", 3 to 11, default = 5)
+  val size   = Property("Size",   3 to 11, default = 7)
+  val target = Property("Target", 3 to 11, default = 5)
   override val properties = Seq(size, target)
   
-  override def setup = Effect:
-    Box(size.get, size.get).uniformLabels(Colour.White).use
+  override def setup = Effect.setBoard:
+    Box(size.get, size.get).uniformLabels(Colour.White)
   
   override def loop = Rule.alternatingTurns:
     State.board.ontoEmpty.placeMine(Stone) |>
@@ -23,4 +23,4 @@ object TicTacToe extends Game:
   def streak(using HistoryState, PlayerRef)(piece: Piece) =
     Dir.octagonalPairs.map(_.rayFrom(piece, true).whileFriendly.area.asFinite).max
   
-  object Stone extends StaticPiece, TexturedPiece(Texture.X, Texture.O)
+  object Stone extends StaticPiece, TexturedPiece(Texture.X, Texture.O, Texture.WhiteQueen)

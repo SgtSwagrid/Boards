@@ -47,14 +47,6 @@ class ReactiveCanvas(id: String = "canvas"):
   lazy val context = element.getContext("2d").asInstanceOf[CanvasRenderingContext2D]
   def bounds: DOMRect = element.getBoundingClientRect()
   
-  def apply: HtmlElement = canvasTag (
-    onLoad --> updates,
-    windowEvents(_.onResize) --> updates,
-    idAttr(id),
-    width("100%"),
-    height("100%"),
-  )
-  
   def fillRect(pos: VecI, size: VecI, colour: Colour, alpha: Float = 1.0) =
     context.fillStyle = colour.hexString
     context.globalAlpha = alpha
@@ -114,6 +106,14 @@ class ReactiveCanvas(id: String = "canvas"):
         e.stopPropagation()
       VecI(bounds.width.toInt, bounds.height.toInt)
     .startWith(VecI.zero(2))
+  
+  val apply: HtmlElement = canvasTag (
+    onLoad --> updates,
+    windowEvents(_.onResize) --> updates,
+    idAttr(id),
+    width("100%"),
+    height("100%"),
+  )
 
 object ReactiveCanvas:
   

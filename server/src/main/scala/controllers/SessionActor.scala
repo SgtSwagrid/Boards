@@ -26,17 +26,13 @@ class SessionActor (
   given ExecutionContext = context.system.dispatcher
   given Timeout = 5.seconds
   
-  val roomActor = (system ? roomId).mapTo[ActorRef]
+  val roomActor = (system ? SystemActor.Protocol.OpenRoom(roomId)).mapTo[ActorRef]
   roomActor.map(_ ! RoomActor.Protocol.Subscribe(user, out))
   
   def receive =
     case message: String =>
-      decode[GameRequest](message).toOption.foreach:
-        case GameRequest.ViewPreviousState(time) =>
-          roomActor.map(_ ! RoomActor.Protocol.ViewState(time, user.map(_.userId), out))
-        case request: GameRequest =>
-          user.foreach: user =>
-            roomActor.map[Unit](_ ! RoomActor.Protocol.Update(user.userId, request))
+      decode[GameRequest](message).toOption.foreach: request =>
+        roomActor.map[Unit](_ ! RoomActor.Protocol.Act(user.map(_.userId), out, request))
 
 object SessionActor:
   def props(out: ActorRef, system: ActorRef, roomId: String, user: Option[User])(using Database) =

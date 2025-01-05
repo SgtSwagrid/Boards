@@ -1,5 +1,6 @@
 package controllers
 
+import RoomActor.Subscriber
 import RoomActor.Protocol.*
 import boards.dsl.meta.TurnId.TurnId
 import boards.dsl.rules.Cause
@@ -23,29 +24,34 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.DurationInt
 
 class RoomActor
-  (roomId: String)
+  (roomId: String, system: ActorRef)
   (using Database)
 extends Actor:
   
   given ExecutionContext = context.system.dispatcher
   
-  case class Subscriber(session: ActorRef, user: Option[User])
-  
-  val subscribers: mutable.Set[Subscriber] = mutable.Set.empty
+  val subscribers: mutable.Map[ActorRef, Subscriber] = mutable.Map.empty
   
   var room: RichRoom = Room.empty
   var state: GameState = GameState.empty
   
-  for
-    room <- GameModel().getRoomById(roomId)
-    state <- GameModel().getGameState(roomId)
-    players <- GameModel().getPlayers(roomId)
-  do
-    this.room = room.get.withPlayers(players)
-    this.state = state
-    render()
+  self ! ReloadRoom
+  self ! ReloadState
   
-  updatePlayers()
+  /** Provide all active clients with the latest information so that the scene may be updated. */
+  def render(): Unit =
+    subscribers.values.foreach(render)
+      
+  /** Provide a given client with the latest information so that the scene may be updated. */
+  def render(sub: Subscriber): Unit =
+  
+    // If the client is currently viewing an old state, we need to provide them with this instead.
+    val stateAtTime = sub.turnId match
+      case Some(turnId) => state.atTime((turnId + (state.turnId + 1)) % (state.turnId + 1)).inert
+      case None => state
+      
+    // Construct a scene summarising all relevant information and send it to the client.
+    sub.session ! GameResponse.Render(Scene(room, sub.user.map(_.userId), stateAtTime, state))
   
   private def canTakeAction(userId: Int): Boolean =
     room.isActive &&
@@ -54,16 +60,30 @@ extends Actor:
   
   def receive =
     
-    case Subscribe(me, out) =>
-      subscribers += Subscriber(out, me)
-      out ! Scene(room, me.map(_.userId), state, state)
+    case ReloadRoom =>
+      for room <- GameModel().getRichRoom(roomId)
+      do
+        this.room = room
+        render()
     
-    case ViewState(turnId, me, out) =>
+    case ReloadState =>
+      for state <- GameModel().getGameState(roomId)
+      do
+        this.state = state
+        render()
+    
+    case Subscribe(me, out) =>
+      val sub = Subscriber(out, me)
+      subscribers += out -> sub
+      render(sub)
+    
+    case Act(me, out, ViewTurnId(turnId)) =>
       if room.status.isComplete then
-        val moment = state.atTime((turnId + (state.turnId + 1)) % (state.turnId + 1))
-        out ! Scene(room, me, moment.inert, state)
+        val sub = subscribers(out).copy(turnId = Some(turnId))
+        subscribers += out -> sub
+        render(sub)
       
-    case Update(me, TakeAction(inputId)) =>
+    case Act(Some(me), out, TakeAction(inputId)) =>
       for
         result <- state.applyInputById(inputId)
         if canTakeAction(me)
@@ -73,85 +93,93 @@ extends Actor:
         this.state = result
         if result.isFinal then
           this.room = this.room.withStatus(Status.Complete)
-        render()
-      
-    case Update(me, InviteToRoom(user)) => ???
-    
-    case Update(me, RemovePlayers(positions*)) =>
-      if room.isParticipating(me) && room.isPending then
-        for _ <- GameModel().leaveRoom(roomId)(positions*)
-        do updatePlayers()
-    
-    case Update(me, SwapPlayers(left, right)) =>
-      if room.isParticipating(me) && room.isPending then
-        for _ <- GameModel().swapPlayers(roomId)(left, right)
-          do updatePlayers()
-      
-    case Update(me, PromotePlayer(user)) => ???
-    case Update(me, ChangeGame(game)) => ???
-    
-    case Update(me, SetProperty(property, value)) =>
-      if room.isParticipating(me) && room.isPending then
-        for
-          room <- GameModel().setProperty(roomId, property, value)
-          state <- GameModel().getGameState(roomId)
-        do
-          this.room = room.withPlayers(this.room.simplePlayers)
-          this.state = state
+        context.system.scheduler.scheduleOnce(100.millis):
           render()
+      
+    case Act(Some(me), out, InviteToRoom(user)) => ???
     
-    case Update(me, JoinRoom) =>
-      for _ <- GameModel().joinRoom(roomId, me)
-      do updatePlayers()
+    case Act(Some(me), out, RemovePlayers(positions*)) =>
+      if room.isParticipating(me) && room.isPending then
+        for _ <- GameModel().leaveRoom(roomId)(positions*) do
+          self ! ReloadRoom
+          if room.forkedFrom.isEmpty then self ! ReloadState
+          if room.rematchOf.nonEmpty then system ! SystemActor.Protocol.ReloadRoom(room.rematchOf.get.id)
     
-    case Update(me, StartGame) =>
+    case Act(Some(me), out, SwapPlayers(left, right)) =>
+      if room.isParticipating(me) && room.isPending then
+        for _ <- GameModel().swapPlayers(roomId)(left, right) do
+          self ! ReloadRoom
+      
+    case Act(Some(me), out, PromotePlayer(user)) => ???
+    
+    case Act(Some(me), out, ChangeGame(game)) => ???
+    
+    case Act(Some(me), out, SetProperty(property, value)) =>
+      if room.isParticipating(me) && room.isPending then
+        for _ <- GameModel().setProperty(roomId, property, value) do
+          self ! ReloadRoom
+          self ! ReloadState
+    
+    case Act(Some(me), out, JoinRoom(multiplicity)) =>
+      if room.isPending then
+        for _ <- GameModel().joinRoom(roomId, me, multiplicity) do
+          self ! ReloadRoom
+          if room.forkedFrom.isEmpty then self ! ReloadState
+          if room.rematchOf.nonEmpty then system ! SystemActor.Protocol.ReloadRoom(room.rematchOf.get.id)
+    
+    case Act(Some(me), out, StartGame) =>
       if room.isParticipating(me) then
-        for room <- GameModel().startGame(roomId) do
-          this.room = room.withPlayers(this.room.simplePlayers)
-          render()
+        for _ <- GameModel().startGame(roomId) do
+          self ! ReloadRoom
     
-    case Update(me, CancelRoom) => ???
+    case Act(Some(me), out, CancelRoom) => ???
     
-    case Update(me, Resign(resign, positions*)) =>
+    case Act(Some(me), out, Resign(resign, positions*)) =>
       for
         players <- GameModel().getPlayers(roomId)
         // Ensure user can't resign on behalf of a player on another device.
         myPositions = players.filter(_.userId == me).map(_.position).filter(positions.contains)
         _ <- GameModel().resign(roomId, resign)(myPositions*)
-        room <- GameModel().getRoomById(roomId).map(_.get)
-        players <- GameModel().getPlayers(roomId)
-      do
-        this.room = room.withPlayers(players)
-        render()
+      do self ! ReloadRoom
     
-    case Update(me, OfferDraw(draw, positions*)) =>
+    case Act(Some(me), out, OfferDraw(draw, positions*)) =>
       for
         players <- GameModel().getPlayers(roomId)
         // Ensure user can't offer draw on behalf of a player on another device.
         myPositions = players.filter(_.userId == me).map(_.position).filter(positions.contains)
         _ <- GameModel().offerDraw(roomId, draw)(myPositions*)
-        room <- GameModel().getRoomById(roomId).map(_.get)
-        players <- GameModel().getPlayers(roomId)
-      do
-        this.room = room.withPlayers(players)
-        render()
+      do self ! ReloadRoom
     
-  def updatePlayers() =
-    for players <- GameModel().getPlayers(roomId) do
-      this.room = this.room.withPlayers(players)
-      render()
+    case Act(Some(me), out, OfferRematch) =>
+      for rematch <- GameModel().createOrJoinRematch(me, roomId) do
+        out ! GameResponse.Goto(rematch.id)
+        self ! ReloadRoom
+        system ! SystemActor.Protocol.ReloadRoom(rematch.id)
     
-  def render() =
-    context.system.scheduler.scheduleOnce(100.millis):
-      subscribers.foreach: sub =>
-        sub.session ! Scene(room, sub.user.map(_.userId), state, state)
-  
+    case Act(Some(me), out, ForkState(turnId)) =>
+      for room <- GameModel().forkRoom(me, roomId, turnId.getOrElse(state.turnId)) do
+        out ! GameResponse.Goto(room.id)
+        
 object RoomActor:
   
-  def props(roomId: String)(using Database) =
-    Props(RoomActor(roomId))
+  def props(roomId: String, system: ActorRef)(using Database) =
+    Props(RoomActor(roomId, system))
     
   enum Protocol:
     case Subscribe(user: Option[User], out: ActorRef)
-    case Update(userId: Int, request: GameRequest)
-    case ViewState(turnId: TurnId, user: Option[Int], out: ActorRef)
+    case Act(userId: Option[Int], out: ActorRef, request: GameRequest)
+    case ReloadRoom
+    case ReloadState
+    
+  /**
+   * An active subscription for a user who is viewing or participating in this room.
+   *
+   * @param session The websocket session through with which we may communicate with the client.
+   * @param user The user who is logged in on this device, if any.
+   * @param turnId The ID of the turn that the user is currently viewing, or else None if the latest.
+   */
+  case class Subscriber (
+    session: ActorRef,
+    user: Option[User],
+    turnId: Option[TurnId] = None,
+  )

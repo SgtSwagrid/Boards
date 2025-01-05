@@ -127,7 +127,7 @@ object Shortcuts:
     def click(using HistoryState): Cause = Cause.click(position)
     
   extension (board: Board)
-    def use: Effect = Effect.setBoard(board)
+    def useAsBoard: Effect = Effect.setBoard(board)
   
   def byPlayer[X](x: X*)(using player: PlayerRef): X = x(player.playerId.toInt)
   

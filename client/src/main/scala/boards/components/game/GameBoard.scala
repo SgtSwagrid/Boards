@@ -99,7 +99,7 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
     val leftClicks = clicksOf(Mouse.Button.Left)
     
     /** The current position of the cursor in pixels relative to the canvas. */
-    val cursorPos: Signal[VecI] = moves.stream
+    val cursorPos: Signal[VecI] = moves.stream.mergeWith(leave.stream)
       .map(e => VecI(e.clientX.toInt, e.clientY.toInt))
       .startWith(VecI.zero(2))
       .map(m => VecI(m.x - canvas.bounds.left.toInt, m.y - canvas.bounds.top.toInt))
@@ -107,7 +107,9 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
   /** The tile over which the cursor is currently hovering. */
   private val hover: Signal[Option[Tile]] =
     Signal.combine(scene, canvas.config, Mouse.cursorPos).map: (scene, cfg, cursorPos) =>
-      scene.board.label(canvas.canvasToGameCoords(cursorPos)(using cfg))
+      given GameCanvas.Config = cfg
+      if !canvas.inBounds(cursorPos) then None
+      else scene.board.label(canvas.canvasToGameCoords(cursorPos))
   
   private val clicked: Signal[Option[Tile]] =
     Mouse.leftClicks
@@ -296,7 +298,7 @@ class GameBoard(sceneBus: EventBus[Scene], response: Observer[GameRequest]):
               cfg.scale * CROSS_SIZE / 3.0F, HINT_OPACITY)
             else canvas.fillCircle(pos, cfg.scale * SMALL_CIRCLE_SIZE, CIRCLE_COLOUR, HINT_OPACITY)
   
-  def apply: HtmlElement = div (
+  val apply: HtmlElement = div (
     
     width("100%"), height("100%"),
     

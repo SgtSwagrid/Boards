@@ -6,6 +6,7 @@ import boards.graphics.Scene.{PieceData, Tile}
 import boards.imports.laminar.HtmlProp
 import boards.protocol.GameProtocol.*
 import boards.protocol.UserProtocol.User
+import boards.util.Navigation.*
 import com.raquo.laminar.codecs.StringAsIsCodec
 import com.raquo.laminar.modifiers.RenderableText
 import org.scalajs.dom.Audio
@@ -17,6 +18,7 @@ import boards.imports.math.{*, given}
 import boards.imports.games.{*, given}
 import com.raquo.laminar.nodes.ChildNode
 import org.scalajs.dom.{CanvasRenderingContext2D, DOMRect, HTMLImageElement, MouseEvent}
+import com.raquo.laminar.api.features.unitArrows
 
 import scala.collection.mutable
 
@@ -57,14 +59,15 @@ import boards.components.{
 @JSExportTopLevel("GameView")
 object GameView extends View:
   
-  private val roomId: String =
-    document.documentURI.split("/").dropWhile(_ != "game").drop(1).head
-    
-  private val autoJoin: Boolean =
-    document.documentURI.split("/").contains("join")
+  private val query = document.documentURI.split("/").dropWhile(_ != "game").drop(1)
+  private lazy val roomId: String = query.head.split(":")(0)
+  private lazy val turnId: Option[TurnId] = query.head.split(":").lift(1).map(_.toInt).map(TurnId.apply)
   
-  private val socket: WebSocket[Scene, GameRequest] =
-    WebSocket.path(s"/game/$roomId/socket").json[Scene, GameRequest].build()
+  private val autoJoin: Boolean = document.documentURI.split("/").contains("join")
+  private val autoFork: Boolean = document.documentURI.split("/").contains("fork")
+  
+  private lazy val socket: WebSocket[GameResponse, GameRequest] =
+    WebSocket.path(s"/game/$roomId/socket").json[GameResponse, GameRequest].build()
     
   private val sceneBus: EventBus[Scene] = new EventBus[Scene]
   private val scene: Signal[Scene] = sceneBus.events.startWith(Scene.empty)
@@ -81,12 +84,18 @@ object GameView extends View:
   private val loseSound = Audio("/assets/audio/lose.mp3")
   private val drawSound = Audio("/assets/audio/draw.mp3")
   
+  private def playSound(sound: Audio): Unit = sound.play()
+  
   val boardPadding = 30
   
   def content(user: Option[User]) = div (
     socket.connect,
-    socket.connected.filter(_ => autoJoin).mapTo(GameRequest.JoinRoom) --> socket.send,
-    socket.received --> sceneBus.writer,
+    socket.connected.filter(_ => autoJoin).mapTo(GameRequest.JoinRoom(1)) --> socket.send,
+    socket.connected.filter(_ => autoFork).mapTo(GameRequest.ForkState(turnId)) --> socket.send,
+    socket.connected.mapTo(turnId).filter(_.isDefined).map(_.get)
+      .map(GameRequest.ViewTurnId.apply) --> socket.send,
+    socket.received.collect { case GameResponse.Render(scene) => scene } --> sceneBus.writer,
+    socket.received.collect { case GameResponse.Goto(id) => id } --> (id => goto(s"/game/$id")),
     
     Navbar(user),
     
@@ -99,11 +108,11 @@ object GameView extends View:
       left(s"${GameSidebar.sidebarWidth + boardPadding}px"),
       right(s"${boardPadding}px"),
       GameBoard(sceneBus, socket.send).apply,
-      starts --> { _ => startSound.play() },
-      updates --> { _ => placeSound.play() },
-      wins --> { _ => winSound.play() },
-      losses --> { _ => loseSound.play() },
-      draws --> { _ => drawSound.play() },
+      starts --> playSound(startSound),
+      updates --> playSound(placeSound),
+      wins --> playSound(winSound),
+      losses --> playSound(loseSound),
+      draws --> playSound(drawSound),
     ),
     Footer(),
   )

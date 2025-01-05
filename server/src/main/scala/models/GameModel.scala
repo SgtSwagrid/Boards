@@ -3,18 +3,17 @@ package models
 import boards.Catalogue
 import boards.dsl.meta.Game
 import boards.dsl.meta.PlayerRef.PlayerId
+import boards.dsl.meta.TurnId
+import boards.dsl.meta.TurnId.{*, given}
 import boards.dsl.states.GameState
 import boards.protocol.GameProtocol.*
 import boards.protocol.Room
-import boards.protocol.Room.{Player, Status}
+import boards.protocol.Room.{Player, RoomWithPlayers, RichRoom, Status}
 import boards.protocol.UserProtocol.User
 import org.mindrot.jbcrypt.BCrypt
 import slick.dbio.{DBIO, DBIOAction}
 import slick.jdbc.H2Profile.api.*
-import io.circe.generic.auto.*
-import io.circe.syntax.*
-import io.circe.*
-import io.circe.parser.*
+import boards.imports.circe.{*, given}
 import schema.{InputTable, PlayerTable, RoomTable}
 import schema.RoomTable.given
 import schema.InputTable.InputRow
@@ -25,31 +24,137 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class GameModel(using db: Database, ec: ExecutionContext):
   
-  def createRoom(userId: Int, gameId: String): Future[Room] =
-    val room = Room(generateRoomId(), gameId, Status.Pending)
-    val player = PlayerRow(userId, room.id, 0, true)
-    val action = for
-      _ <- RoomTable.rooms += room
-      _ <- PlayerTable.players += player
-    yield room
-    db.run(action)
+  def createRoom (
+    userId:     Int,
+    gameId:     String,
+    numPlayers: Int              = 1,
+    properties: Map[String, Int] = Map.empty,
+    forkedFrom: Option[String]   = None,
+    forkedTurn: Option[TurnId]   = None,
+    rematchOf:  Option[String]   = None,
+  ): Future[Room] =
+    
+    val room     = Room (
+      id         = generateRoomId(),
+      gameId     = gameId,
+      status     = Status.Pending,
+      properties = properties,
+      forkedFrom = forkedFrom,
+      forkedTurn = forkedTurn,
+      rematchOf  = rematchOf,
+      rematch    = None,
+    )
+    
+    val players = (0 until numPlayers).map: i =>
+      PlayerRow (
+        userId   = userId,
+        roomId   = room.id,
+        position = i,
+        isOwner  = true,
+      )
+    
+    db.run:
+      for
+        _ <- RoomTable.rooms += room
+        _ <- PlayerTable.players ++= players
+        
+        // If the room is a fork, copy the input history from the original room.
+        _ <- forkedFrom zip forkedTurn match
+          case Some((forkedFrom, forkedTurn)) =>
+            for
+              inputs <- DBEffect.getInputHistory(forkedFrom)
+              _ <- InputTable.inputs ++= inputs.take(forkedTurn.toInt)
+                .map(_.copy(roomId = room.id))
+            yield ()
+          case None => DBIO.successful(())
+        
+        // If the room is a rematch, update the original room to point to the new one.
+        _ <- rematchOf match
+          case Some(rematchOf) => DBQuery.room(rematchOf).map(_.rematch).update(Some(room.id))
+          case None => DBIO.successful(())
+          
+      yield room
+      
+  def forkRoom (
+    userId: Int,
+    roomId: String,
+    turnId: TurnId,
+  ): Future[Room] =
+    
+    for
+      original <- getRoomById(roomId).map(_.get)
+      fork <- createRoom (
+        userId,
+        original.gameId,
+        numPlayers=1,
+        properties=original.properties,
+        forkedFrom=Some(roomId),
+        forkedTurn=Some(turnId),
+      )
+    yield fork
+    
+  def createOrJoinRematch (
+    userId: Int,
+    roomId: String,
+  ): Future[Room] =
+    
+    for
+      original <- getRoomById(roomId).map(_.get)
+      numPlayers <- getPlayers(roomId).map(_.count(_.userId == userId))
+      rematch <- original.rematch match
+        case Some(rematchId) =>
+          for
+            rematch <- getRoomById(rematchId).map(_.get)
+            _ <- joinRoom(rematchId, userId, numPlayers)
+          yield rematch
+        case None => createRoom (
+          userId,
+          original.gameId,
+          numPlayers=numPlayers,
+          properties=original.properties,
+          rematchOf=Some(roomId),
+        )
+    yield rematch
     
   def getRoomById(roomId: String): Future[Option[Room]] =
-    db.run(Action.getRoomOption(roomId))
+    db.run(DBEffect.getRoomOption(roomId))
+    
+  def getRoomWithPlayers(roomId: String): Future[RoomWithPlayers] =
+    for
+      room <- getRoomById(roomId).map(_.get)
+      players <- getPlayers(roomId)
+    yield RoomWithPlayers(room, players)
+    
+  def getRichRoom(roomId: String): Future[RichRoom] =
+    
+    for
+      room <- getRoomWithPlayers(roomId)
+      forkedFrom <- room.forkedFrom match
+        case Some(forkedFrom) => getRoomWithPlayers(forkedFrom).map(Some.apply)
+        case None => Future.successful(None)
+      rematchOf <- room.rematchOf match
+        case Some(rematchOf) => getRoomWithPlayers(rematchOf).map(Some.apply)
+        case None => Future.successful(None)
+      rematch <- room.rematch match
+        case Some(rematch) => getRoomWithPlayers(rematch).map(Some.apply)
+        case None => Future.successful(None)
+    yield RichRoom(room, forkedFrom, rematchOf, rematch)
     
   def getGame(roomId: String): Future[Game] =
     for room <- getRoomById(roomId)
     yield Catalogue.byName(room.get.gameId)
     
-  def joinRoom(roomId: String, userId: Int): Future[PlayerRow] =
+  def joinRoom(roomId: String, userId: Int, multiplicity: Int = 1): Future[Seq[PlayerRow]] =
     val action = for
-      room <- Action.getRoom(roomId)
+      room <- DBEffect.getRoom(roomId)
       if room.isPending
-      players <- Action.getAllPlayers(roomId)
-      if players.size < room.maxPlayers
-      player = PlayerRow(userId, room.id, players.size, false)
-      _ <- PlayerTable.players += player
-    yield player
+      existingPlayers <- DBEffect.getAllPlayers(roomId)
+      if existingPlayers.size < room.maxPlayers
+      newPlayerIds = (existingPlayers.size until existingPlayers.size + multiplicity)
+        .takeWhile(_ < room.maxPlayers)
+      newPlayers = newPlayerIds.map(id => PlayerRow(userId, room.id, id, false))
+      _ <- PlayerTable.players ++= newPlayers
+    yield newPlayers
     db.run(action)
     
   def leaveRoom(roomId: String)(positions: PlayerId*): Future[Unit] =
@@ -65,13 +170,13 @@ class GameModel(using db: Database, ec: ExecutionContext):
     val action = DBIO.seq (
       g(positions.map(_.toInt)).map(PlayerId(_)).map: position =>
         for
-          room <- Action.getRoom(roomId)
+          room <- DBEffect.getRoom(roomId)
           if room.isPending
-          player <- Action.getPlayerByPos(roomId, position)
-          _ <- Query.playersByPos(roomId)(position).delete
-          updates <- Query.playersAfter(roomId, position).result
+          player <- DBEffect.getPlayerByPos(roomId, position)
+          _ <- DBQuery.playersByPos(roomId)(position).delete
+          updates <- DBQuery.playersAfter(roomId, position).result
             .map(_.map(p => p.copy(position = p.position - 1)))
-          _ <- Query.playersAfter(roomId, position).delete
+          _ <- DBQuery.playersAfter(roomId, position).delete
           _ <- PlayerTable.players ++= updates
         yield ()
     *)
@@ -79,10 +184,10 @@ class GameModel(using db: Database, ec: ExecutionContext):
     
   def swapPlayers(roomId: String)(leftId: PlayerId, rightId: PlayerId): Future[Unit] =
     val action = for
-      room <- Action.getRoom(roomId)
+      room <- DBEffect.getRoom(roomId)
       if room.isPending
-      Seq(left, right) <- Action.getPlayersByPos(roomId)(leftId, rightId)
-      _ <- Query.playersByPos(roomId)(leftId, rightId).delete
+      Seq(left, right) <- DBEffect.getPlayersByPos(roomId)(leftId, rightId)
+      _ <- DBQuery.playersByPos(roomId)(leftId, rightId).delete
       _ <- PlayerTable.players ++= Seq (
         left.copy(position = rightId.toInt),
         right.copy(position = leftId.toInt),
@@ -92,7 +197,7 @@ class GameModel(using db: Database, ec: ExecutionContext):
     
   def getPlayers(roomId: String): Future[Seq[Player]] =
     val action = for
-      players <- Action.getAllPlayers(roomId)
+      players <- DBEffect.getAllPlayers(roomId)
       users <- DBIO.sequence(players.map(_.userId).map(UserModel().Action.getUserById))
     yield (players.zip(users).map: (p, u) =>
       Player(u.id, u.username, p.roomId, PlayerId(p.position), p.isOwner, p.hasResigned, p.hasOfferedDraw)
@@ -101,7 +206,7 @@ class GameModel(using db: Database, ec: ExecutionContext):
     
   def setProperty(roomId: String, property: String, value: Int): Future[Room] =
     val action = for
-      room <- Action.getRoom(roomId)
+      room <- DBEffect.getRoom(roomId)
       if room.isPending
       updated = room.copy(properties = room.properties + (property -> value))
       _ <- RoomTable.rooms.insertOrUpdate(updated)
@@ -110,104 +215,106 @@ class GameModel(using db: Database, ec: ExecutionContext):
     
   def startGame(roomId: String): Future[Room] =
     val action = for
-      room <- Action.getRoom(roomId)
+      room <- DBEffect.getRoom(roomId)
       if room.isPending
-      numPlayers <- Action.getNumPlayers(roomId)
-      if room.requiredNumPlayers.contains(numPlayers)
-      _ <- Query.room(roomId).map(_.status).update(Status.Active)
+      numPlayers <- DBEffect.getNumPlayers(roomId)
+      if room.possiblePlayerCounts.contains(numPlayers)
+      _ <- DBQuery.room(roomId).map(_.status).update(Status.Active)
     yield room.copy(status = Status.Active)
     db.run(action.transactionally).recover{e => e.printStackTrace(); ???}
     
   def takeAction(roomId: String, userId: Int, inputId: Int, end: Boolean = false): Future[InputRow] =
     val action = for
-      room <- Action.getRoom(roomId)
+      room <- DBEffect.getRoom(roomId)
       if room.status.isActive
-      actions <- Action.getInputHistory(roomId)
+      inputs <- DBEffect.getInputHistory(roomId)
       time = System.currentTimeMillis()
-      action = InputRow(roomId, actions.size, userId, inputId, time)
-      _ <- InputTable.actions += action
+      input = InputRow(roomId, inputs.size, userId, inputId, time)
+      _ <- InputTable.inputs += input
       _ <- if end
-        then Query.room(roomId).map(_.status).update(Status.Complete)
+        then DBQuery.room(roomId).map(_.status).update(Status.Complete)
         else DBIO.successful(())
-    yield action
+    yield input
     db.run(action.transactionally).recover{e => e.printStackTrace(); ???}
     
   def resign(roomId: String, resigned: Boolean = true)(positions: PlayerId*): Future[Unit] =
     val action = for
-      room <- Action.getRoom(roomId)
+      room <- DBEffect.getRoom(roomId)
       if room.isActive
-      players <- Action.getPlayersByPos(roomId)(positions*)
-      _ <- Query.playersByPos(roomId)(positions*).delete
+      players <- DBEffect.getPlayersByPos(roomId)(positions*)
+      _ <- DBQuery.playersByPos(roomId)(positions*).delete
       _ <- PlayerTable.players ++= players.map(_.copy (
         hasResigned = resigned,
         hasOfferedDraw = false,
       ))
-      nonResigned <- Action.getAllPlayers(roomId).map(_.filter(!_.hasResigned))
+      nonResigned <- DBEffect.getAllPlayers(roomId).map(_.filter(!_.hasResigned))
       _ <- if nonResigned.sizeIs == 1
-        then Query.room(roomId).map(_.status).update(Status.Complete)
+        then DBQuery.room(roomId).map(_.status).update(Status.Complete)
         else DBIO.successful(())
     yield ()
     db.run(action.transactionally)
     
   def offerDraw(roomId: String, draw: Boolean = true)(positions: PlayerId*): Future[Unit] =
     val action = for
-      room <- Action.getRoom(roomId)
+      room <- DBEffect.getRoom(roomId)
       if room.isActive
-      players <- Action.getPlayersByPos(roomId)(positions*).map(_.filter(!_.hasResigned))
-      _ <- Query.playersByPos(roomId)(positions*).delete
+      players <- DBEffect.getPlayersByPos(roomId)(positions*).map(_.filter(!_.hasResigned))
+      _ <- DBQuery.playersByPos(roomId)(positions*).delete
       _ <- PlayerTable.players ++= players.map(_.copy (
         hasResigned = false,
         hasOfferedDraw = draw,
       ))
-      active <- Action.getAllPlayers(roomId).map(_.filter(p => !p.hasOfferedDraw && !p.hasResigned))
+      active <- DBEffect.getAllPlayers(roomId).map(_.filter(p => !p.hasOfferedDraw && !p.hasResigned))
       _ <- if active.isEmpty
-        then Query.room(roomId).map(_.status).update(Status.Complete)
+        then DBQuery.room(roomId).map(_.status).update(Status.Complete)
         else DBIO.successful(())
     yield ()
     db.run(action.transactionally)
     
   def getGameState(roomId: String): Future[GameState] =
     val action = for
-      room <- Action.getRoom(roomId)
-      numPlayers <- Action.getNumPlayers(roomId)
-      inputs <- Action.getInputHistory(roomId)
-      requiredPlayers = room.game.numPlayers.filter(_ >= numPlayers).min
+      room <- DBEffect.getRoom(roomId)
+      numPlayers <- DBEffect.getNumPlayers(roomId)
+      inputs <- DBEffect.getInputHistory(roomId)
+      requiredPlayers <- room.forkedFrom match
+        case Some(forkedFrom) => DBEffect.getNumPlayers(forkedFrom)
+        case None => DBIOAction.successful(room.game.numPlayers.filter(_ >= numPlayers).min)
       initial = room.game.initial(Game.GameConfig(requiredPlayers, room.properties))
       current = inputs.foldLeft[GameState](initial): (state, action) =>
         state.applyInputById(action.inputId).get
     yield current
     db.run(action).recover{e => e.printStackTrace(); ???}
     
-  private[models] object Action:
+  private[models] object DBEffect:
     
     def getAllPlayers(roomId: String): DBIO[Seq[PlayerRow]] =
-      Query.allPlayers(roomId).result
+      DBQuery.allPlayers(roomId).result
       
     def getNumPlayers(roomId: String): DBIO[Int] =
       getAllPlayers(roomId).map(_.size)
     
     def getPlayersByUser(roomId: String, userId: Int): DBIO[Seq[PlayerRow]] =
-      Query.playersByUser(roomId, userId).result
+      DBQuery.playersByUser(roomId, userId).result
       
     def getPlayerByPos(roomId: String, position: PlayerId): DBIO[PlayerRow] =
       getPlayerByPosOption(roomId, position).map(_.get)
       
     def getPlayerByPosOption(roomId: String, position: PlayerId): DBIO[Option[PlayerRow]] =
-      Query.playersByPos(roomId)(position).result.headOption
+      DBQuery.playersByPos(roomId)(position).result.headOption
       
     def getPlayersByPos(roomId: String)(positions: PlayerId*): DBIO[Seq[PlayerRow]] =
-      Query.playersByPos(roomId)(positions*).result
+      DBQuery.playersByPos(roomId)(positions*).result
       
     def getRoom(roomId: String): DBIO[Room] =
       getRoomOption(roomId).map(_.get)
       
     def getRoomOption(roomId: String): DBIO[Option[Room]] =
-     Query.room(roomId).result.headOption
+     DBQuery.room(roomId).result.headOption
       
     def getInputHistory(roomId: String): DBIO[Seq[InputRow]] =
-      Query.actions(roomId).result
+      DBQuery.inputs(roomId).result
       
-  private[models] object Query:
+  private[models] object DBQuery:
     
     def allPlayers(roomId: String): Query[PlayerTable, PlayerRow, Seq] =
       PlayerTable.players
@@ -229,8 +336,8 @@ class GameModel(using db: Database, ec: ExecutionContext):
     def playersAfter(roomId: String, position: PlayerId): Query[PlayerTable, PlayerRow, Seq] =
       allPlayers(roomId).filter(_.position > position.toInt)
       
-    def actions(roomId: String): Query[InputTable, InputRow, Seq] =
-      InputTable.actions.filter(_.roomId === roomId).sortBy(_.position)
+    def inputs(roomId: String): Query[InputTable, InputRow, Seq] =
+      InputTable.inputs.filter(_.roomId === roomId).sortBy(_.turnId)
       
     def room(roomId: String): Query[RoomTable, Room, Seq] =
       RoomTable.rooms.filter(_.id === roomId)
