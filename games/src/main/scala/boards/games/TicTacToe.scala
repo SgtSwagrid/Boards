@@ -9,7 +9,7 @@ object TicTacToe extends Game:
   override val players = Seq(x, o)
   
   val size   = Property("Size",   3 to 11, default = 7)
-  val target = Property("Target", 3 to 11, default = 5)
+  val target = Property("Target", 3 to 11, default = 4)
   override val properties = Seq(size, target)
   
   override def setup = Effect.setBoard:

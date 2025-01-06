@@ -51,7 +51,7 @@ object Chess extends Game:
           .filter: rook =>
             val path = king.rayTo(rook)
             !rook.hasMoved &&
-            rook.y == piece.y &&
+            rook.y == Piece.y &&
             path.interior.pieces.isEmpty &&
             !Pieces.ofInactivePlayers.following(King.createMine(path)).canMoveTo(path)
           .map: rook =>
@@ -61,11 +61,11 @@ object Chess extends Game:
   object Pawn extends TexturedPiece(Texture.WhitePawn, Texture.BlackPawn):
     def rule = (r_move | r_capture | r_enpassant) |> r_promote
     
-    def forward (using Piece) = piece.byOwner(Dir.up, Dir.down)
-    def diagonal(using Piece) = piece.byOwner(Dir.diagonallyUp, Dir.diagonallyDown)
-    def home    (using Piece) = piece.byOwner(1, 6)
-    def goal    (using Piece) = piece.byOwner(7, 0)
-    def distance(using Piece) = if piece.y == home then 2 else 1
+    def forward (using Piece) = Piece.byOwner(Dir.up, Dir.down)
+    def diagonal(using Piece) = Piece.byOwner(Dir.diagonallyUp, Dir.diagonallyDown)
+    def home    (using Piece) = Piece.byOwner(1, 6)
+    def goal    (using Piece) = Piece.byOwner(7, 0)
+    def distance(using Piece) = if Piece.y == home then 2 else 1
     
     def r_move(using Piece) = Control.moveThis:
       forward.rayFromHere.take(distance).untilPiece
@@ -76,8 +76,8 @@ object Chess extends Game:
     def r_enpassant(using Piece) = Rule.union:
       Pieces.ofType(Pawn).duringPreviousTurn.moves
         .filter(_.step.abs.y == 2)
-        .filter(_.midpoint in (piece + diagonal))
-        .map(m => piece.move(m.midpoint) |> m.destroy)
+        .filter(_.midpoint in (Piece + diagonal))
+        .map(m => Piece.move(m.midpoint) |> m.destroy)
       
-    def r_promote(using Piece) = Rule.maybe(piece.y == goal):
-      piece.promote(Rook, Knight, Bishop, Queen)
+    def r_promote(using Piece) = Rule.maybe(Piece.y == goal):
+      Piece.promote(Rook, Knight, Bishop, Queen)

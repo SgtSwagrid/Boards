@@ -9,8 +9,27 @@ import boards.math.region.Vec.{HasVecI, VecI}
 import boards.math.region.Region
 import boards.util.extensions.CollectionOps.contramap
 
+import scala.annotation.tailrec
 import scala.reflect.ClassTag
 
+/**
+  * The complete state of all [[Piece]]s on the board, at a specific moment in time.
+  * @param selected The set of all included [[PieceId]]s. Included for compatibility with [[PieceView]].
+  * @param piecesById All existing [[Piece]]s, indexed by [[PieceId]].
+  * @param piecesByPos All existing [[Piece]]s, indexed by `position`.
+  * @param piecesByOwner All existing [[Piece]]s, indexed by `ownerId`.
+  * @param piecesByType All existing [[Piece]]s, indexed by `pieceType`.
+  * @param piecesByClass All existing [[Piece]]s, indexed by the class of `pieceType`.
+  * @param updates All past modifications to the state, in reverse chronological order.
+  * @param version The current version of the state, which uniquely identifies it.
+  * @param board The region of the board on which pieces can exist.
+  * @param nextPieceId The [[PieceId]] to be assigned to the next [[Piece]] created.
+  *                    [[PieceId]]s are uniquely assigned in increasing order from `0`.
+  *
+  * @see [[PieceView]]
+  *
+  * @author Alec Dorrington
+  */
 case class PieceState (
   
   override val selected: PieceSet = PieceSet.empty,
@@ -34,14 +53,26 @@ case class PieceState (
   
   def at(position: HasVecI): Option[Piece] =
     piecesByPos.get(position.position).map(piecesById)
-    
+  
   def get(pieceRef: PieceRef): Option[Piece] =
     piecesById.get(pieceRef.pieceId)
   
   def restrictTo(pieces: PieceSet): PieceView =
     PieceView.from(this, selected & pieces)
   
-  def createPiece[P <: PieceType: ClassTag] (
+  /** Place a new [[Piece]] on the board.
+    * If the position is invalid this method does nothing.
+    * If there is already a [[Piece]] at the position, that [[Piece]] is destroyed.
+ *
+    * @param pieceType The type of [[Piece]] to create.
+    * @param position The position at which the [[Piece]] is to be placed.
+    * @param owner The ID of the player who owns the [[Piece]].
+    * @tparam P The type of [[Piece]] to create.
+ *
+    * @return A modified version of this [[PieceState]] with an extra [[Piece]] added.
+    */
+  @tailrec
+  private[dsl] def createPiece[P <: PieceType: ClassTag] (
     pieceType: P,
     position: HasVecI,
     owner: PlayerRef,
@@ -71,7 +102,17 @@ case class PieceState (
           nextPieceId = nextPieceId.next,
         )
   
-  def movePiece (
+  /** Move a [[Piece]] to a new position.
+    * If the [[Piece]] no longer exists, or the new position is invalid, this method does nothing.
+    * If the target position has another [[Piece]], that [[Piece]] is destroyed.
+ *
+    * @param piece The [[Piece]] to move somewhere else.
+    * @param position The new position for the piece.
+ *
+    * @return A modified version of this [[PieceState]] with [[Piece]] moved to a new position.
+    */
+  @tailrec
+  private[dsl] def movePiece (
     piece: PieceRef,
     position: HasVecI,
   ): PieceState =
@@ -95,7 +136,12 @@ case class PieceState (
               version = version.next,
             )
   
-  def destroyPiece (
+  /** Remove a [[Piece]] from the board.
+    * If the [[Piece]] no longer exists, this method does nothing.
+    * @param piece The [[Piece]] to remove.
+    * @return A modified version of this [[PieceState]] with [[Piece]] removed.
+    */
+  private[dsl] def destroyPiece (
     piece: PieceRef,
   ): PieceState =
     piecesById.get(piece.pieceId) match
@@ -113,10 +159,16 @@ case class PieceState (
 
 object PieceState:
   
+  /** Create an empty [[PieceSet]] for an empty [[Board]]. */
   val empty: PieceState = PieceState()
+  
+  /** Create an empty [[PieceSet]] for the given [[Board]].
+    * Each [[PieceSet]] stores the [[Board]] so that bounds checks can be applied.
+    */
   def forBoard(board: HasRegionI): PieceState =
     PieceState(board = board.region)
   
+  /** The version number of a [[PieceSet]], used for chronological comparison. */
   final class Version(val toInt: Int):
     
     def next: Version = Version(toInt + 1)

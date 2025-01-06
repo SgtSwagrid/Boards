@@ -9,8 +9,11 @@
       <option name="INDENT_FIRST_PARAMETER_CLAUSE" value="true" />
       <option name="SPACE_AFTER_MODIFIERS_CONSTRUCTOR" value="true" />
       <option name="SPACE_BEFORE_INFIX_METHOD_CALL_PARENTHESES" value="true" />
+      <option name="USE_SCALADOC2_FORMATTING" value="true" />
       <option name="SPACE_BEFORE_INFIX_LIKE_METHOD_PARENTHESES" value="true" />
       <option name="SPACES_AROUND_AT_IN_PATTERNS" value="true" />
+      <option name="NEWLINE_AFTER_ANNOTATIONS" value="true" />
+      <option name="SPACE_BEFORE_TYPE_PARAMETER_IN_DEF_LIST" value="true" />
       <option name="SPACE_BEFORE_TYPE_PARAMETER_LEADING_CONTEXT_BOUND_COLON_HK" value="false" />
       <option name="SPACE_BEFORE_TYPE_PARAMETER_REST_CONTEXT_BOUND_COLONS" value="false" />
       <option name="CALL_PARAMETERS_NEW_LINE_AFTER_LPAREN" value="2" />
@@ -25,11 +28,6 @@
       <option name="TYPE_ANNOTATION_STRUCTURAL_TYPE" value="false" />
       <option name="TYPE_ANNOTATION_EXCLUDE_MEMBER_OF_ANONYMOUS_CLASS" value="true" />
       <option name="TYPE_ANNOTATION_EXCLUDE_MEMBER_OF_PRIVATE_CLASS" value="true" />
-      <option name="SD_ALIGN_OTHER_TAGS_COMMENTS" value="false" />
-      <option name="SD_ALIGN_PARAMETERS_COMMENTS" value="false" />
-      <option name="SD_ALIGN_EXCEPTION_COMMENTS" value="false" />
-      <option name="SD_ALIGN_RETURN_COMMENTS" value="false" />
-      <option name="SD_ALIGN_LIST_ITEM_CONTENT" value="false" />
       <option name="SD_BLANK_LINE_AFTER_PARAMETERS_COMMENTS" value="true" />
       <option name="SD_BLANK_LINE_AFTER_RETURN_COMMENTS" value="true" />
       <option name="SD_BLANK_LINE_BEFORE_PARAMETERS" value="true" />
@@ -46,6 +44,7 @@
       <option name="BLANK_LINES_AFTER_CLASS_HEADER" value="1" />
       <option name="BLANK_LINES_AFTER_ANONYMOUS_CLASS_HEADER" value="1" />
       <option name="WHILE_ON_NEW_LINE" value="true" />
+      <option name="SPACE_BEFORE_METHOD_PARENTHESES" value="true" />
       <option name="CALL_PARAMETERS_RPAREN_ON_NEXT_LINE" value="true" />
       <option name="METHOD_PARAMETERS_WRAP" value="1" />
       <option name="METHOD_PARAMETERS_LPAREN_ON_NEXT_LINE" value="true" />

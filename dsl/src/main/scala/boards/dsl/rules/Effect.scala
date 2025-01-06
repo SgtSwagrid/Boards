@@ -9,14 +9,13 @@ import boards.dsl.Shortcuts.State
 import boards.dsl.pieces.{Piece, PieceFilter, PieceType}
 
 import scala.collection.mutable
-import boards.dsl.Shortcuts.{State, given_HistoryState, piece}
+import boards.dsl.Shortcuts.{State, given_HistoryState, Piece}
 import boards.dsl.meta.PlayerRef
 import boards.dsl.meta.PlayerRef.PlayerRef
 
-/**
- * A `Rule` for modifying the `InstantaneousState` in some regular manner.
- * All state updates must occur via an `Effect`.
- */
+/** A [[Rule]] for modifying the [[InstantaneousState]] in some regular manner.
+  * All state updates must occur via an [[Effect]].
+  */
 sealed trait Effect extends Rule:
   
   private[dsl] final def successors(state: HistoryState) =
@@ -31,6 +30,11 @@ sealed trait Effect extends Rule:
 
 object Effect:
   
+  /** An [[Effect]] which does nothing.
+    * Acts as the identity [[Rule]] under the [[|>]] operator.
+    *
+    * @see [[Cause.none]]
+    */
   val identity: Effect = IdentityEffect
   
   def apply(brancher: HistoryState ?=> Effect): Effect =
@@ -75,14 +79,6 @@ object Effect:
       State.pieces.ofRegion(from),
       to(using summon[HistoryState], summon[Piece].position),
     )
-    
-  /*def moveRelative (
-    pieces: HistoryState ?=> HasPieceFilter,
-    direction: HistoryState ?=> HasVecI,
-  ): Effect =
-    Effect.sequence:
-      pieces.pieceFilter.pieceIds.map: piece =>
-        Effect.move(piece, piece.now.get + direction)*/
     
   def destroy (
     pieces: HistoryState ?=> PieceFilter,
@@ -162,11 +158,9 @@ object Effect:
     def effect(state: HistoryState) =
       Some(state.replace(state.now.endTurn).withRule(Effect.identity))
   
-  /**
-   * A rule which immediately triggers the end of the game.
-   *
-   * @param outcome the outcome of the game, i.e. who won?
-   */
+  /** A rule which immediately triggers the end of the game.
+    * @param outcome the outcome of the game, i.e. who won?
+    */
   private[rules] case class TerminalEffect (
     outcome: HistoryState => Outcome,
   ) extends Effect:

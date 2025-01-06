@@ -1,15 +1,26 @@
 package boards.dsl.rules
 
-import boards.dsl.pieces.Piece
-import boards.imports.math.{*, given}
 import boards.imports.games.{*, given}
-import boards.dsl.Shortcuts.{*, given}
+import boards.imports.math.{*, given}
+import boards.dsl.Shortcuts.{State, Piece}
 import boards.math.region.Region.HasRegionI
-import boards.math.region.Vec.HasVecI
-import boards.dsl.Shortcuts.State
-import boards.dsl.meta.PlayerRef
-import boards.dsl.meta.PlayerRef.PlayerRef
+import Control.*
 
+import scala.annotation.targetName
+import scala.collection.mutable
+
+/** A [[Control]] is a shorthand for the composition of a [[Cause]] with an immediately following [[Effect]].
+  *
+  * Almost always, a [[Cause]] should have a direct and immediate corresponding [[Effect]].
+  * For instance, when a [[Piece]] is dragged to some other position, the immediate [[Effect]] should
+  * be that the [[Piece]] is actually moved to the new position.
+  * It would be tedious to have to explicitly sequence these two steps every time they are needed.
+  * Hence, the [[Control]].
+  *
+  * Since the link between [[Cause]] and [[Effect]] isn't universally so obvious or 1-to-1,
+  * it remains possible to use [[Cause]]s and [[Effect]]s individually too.
+  * However, the [[Control]] should be favoured where it is applicable, for sake of brevity.
+  */
 object Control:
   
   def place (
@@ -78,5 +89,5 @@ object Control:
     def move (
       region: (HistoryState, Piece) ?=> HasRegionI
     ): Piece ?=> Rule = Rule.union:
-      piece.now.map: piece =>
+      Piece.now.map: piece =>
         Control.move(summon[Piece], region)

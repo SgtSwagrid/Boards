@@ -19,7 +19,7 @@ object Shortcuts:
   def hypothetically[T](effect: Effect)(f: HistoryState ?=> T)(using state: HistoryState): T =
     f(using effect.effect(state).value.history)
     
-  def piece(using piece: Piece): Piece = piece
+  def Piece(using piece: Piece): Piece = piece
   
   extension (ray: Ray)
     

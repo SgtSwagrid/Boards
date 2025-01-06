@@ -18,7 +18,7 @@ import scala.collection.immutable.BitSet
 import scala.reflect.ClassTag
 
 /**
- * A game piece that exists somewhere on the game board.
+ * A game piece that exists somewhere on the game board at a particular time.
  *
  * @param pieceType A flag indicating the type of piece this is.
  * @param position The current location of the piece on the game board.
