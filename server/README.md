@@ -15,7 +15,7 @@ boards-server uses the following libraries, which will be installed automaticall
 ### Directory Structure
 
 * [scala/controllers/](./src/main/public/scala/controllers) handlers for HTTP and websocket requests.
-* [scala/models/](./src/main/public/scala/models) database actions for queryig or updating persistent state.
+* [scala/models/](./src/main/public/scala/models) database actions for querying or updating persistent state.
 * [scala/schema/](./src/main/public/scala/schema) database table schema, used to represent database tables and rows therein directly in the language.
 * [public/](./src/main/public) contains all assets (audio and textures) used by the website and games.
 * [resources/](./src/main/resources) contains configuration/routes for the Play framework, as well as database migration scripts.
