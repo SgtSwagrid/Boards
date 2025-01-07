@@ -18,12 +18,12 @@ This is a continuation from a long lineage of similar projects ([1.0](https://gi
 ### Project Structure
 
 Boards is composed of 6 subprojects, which you will find in the top-level directories of the same names:
-* `dsl` contains the implementation of the _BoardLang_ DSL.
-* `games` contains the rule specifications for the games themselves, written using `BoardLang`.
-* `bots` contains general and game-specific strategies for playing these games.
-* `server` code which is compiled to JVM bytecode for use on a web server. Handles user requests, authentication and persistence.
-* `client` code which is transpiled to JS and served to the user's web browser. Handles rendering and user input.
-* `common` code which is shared by both the `server` and `client`, and compiled into both projects. Primarily contains data formats for communication therebetween.
+* [dsl](./dsl) contains the implementation of the _BoardLang_ DSL.
+* [games](./games) contains the rule specifications for the games themselves, written using `BoardLang`.
+* [bots](./bots) contains general and game-specific strategies for playing these games.
+* [server](./server) code which is compiled to JVM bytecode for use on a web server. Handles user requests, authentication and persistence.
+* [client](./client) code which is transpiled to JS and served to the user's web browser. Handles rendering and user input.
+* [common](./common) code which is shared by both the server and client, and compiled into both projects. Primarily contains data formats for communication therebetween.
 
 ### Requirements
 
@@ -32,18 +32,6 @@ Boards is written entirely in [Scala](https://www.scala-lang.org/), and in order
 * [Scala 3.5.2](https://www.scala-lang.org/) itself.
 * [sbt](https://www.scala-sbt.org/), the pre-eminent build tool for Scala projects.
 * [Git](https://git-scm.com/) for version control.
-
-### Libraries
-
-Boards relies on the following open-source libraries, this installation of which should be handled automatically by sbt:
-
-* The [Play Framework](https://www.playframework.com/) for handling web requests on the server.
-* [Slick](https://scala-slick.org/) for database access by [functional relational mapping](https://scala-slick.org/talks/2014-06-09_33rd_Degree/Functional%20Relational%20Mapping%20with%20Slick.pdf).
-* [H2](https://www.h2database.com/html/main.html) for running an embedded database.
-* [Apache Pekko](https://pekko.apache.org/), an [actor](https://pekko.apache.org/docs/pekko/current/general/actors.html) framework, used here for managing server-side state in relation to web socket sessions.
-* [Circe](https://circe.github.io/circe/) for automatic serialisation/deserialisation to/from JSON.
-* [Laminar](https://laminar.dev/) for client-side rendering.
-* [Airstream](https://github.com/raquo/Airstream), which is required by Laminar, is a library for [functional reactive programming](https://en.wikipedia.org/wiki/Functional_reactive_programming).
 
 ### Local Execution
 
