@@ -8,8 +8,8 @@ The common subproject contains code which is common to both the client and serve
 
 ### Directory Structure
 
-* [protocol/](./src/main/scala/boards/imports) data formats for messages sent between client and server.
-* [graphics/](./src/main/scala/boards/imports) data formats for things the client should render.
+* [protocol/](./src/main/scala/boards/protocol) data formats for messages sent between client and server.
+* [graphics/](./src/main/scala/boards/graphics) data formats for things the client should render.
 * [util/](./src/main/scala/boards/util) for assorted helper functions, and custom JSON serialisation.
 * [imports/](./src/main/scala/boards/imports) for collections of standard import groups to avoid repeating them in every file.
 
