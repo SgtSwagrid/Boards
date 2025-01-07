@@ -23,6 +23,8 @@ boards-server uses the following libraries, which will be installed automaticall
 
 ### Architecture
 
+This subproject is compiled exclusively to JVM bytecode and only runs on the server.
+
 #### Models
 For most parts of the application, we use standard HTTP GET/POST requests to communicate with the client. The major exception is for the game view itself, where a websocket is the more natural choice. In the controllers directory, classes ending with "___Controller.scala" are for handling GET/POST requests, whereas classes ending with "___Actor.scala" are for handling websocket messages.
 
