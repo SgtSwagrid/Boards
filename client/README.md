@@ -13,7 +13,7 @@ boards-client uses the following libraries, which will be installed automaticall
 ### Directory Structure
 
 * [views/](./src/main/scala/boards/views) for top-level views, each corresponding to an entire page of the website.
-* [components/](./src/main/scala/boards/views) for reusable web components created using Laminar.
+* [components/](./src/main/scala/boards/components) for reusable web components created using Laminar.
 * [util/](./src/main/scala/boards/util) for assorted helper functions.
 * [imports/](./src/main/scala/boards/imports) for collections of standard import groups to avoid repeating them in every file.
 
