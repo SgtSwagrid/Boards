@@ -19,7 +19,7 @@ boards-server uses the following libraries, which will be installed automaticall
 * [scala/schema/](./src/main/public/scala/schema) database table schema, used to represent database tables and rows therein directly in the language.
 * [public/](./src/main/public) contains all assets (audio and textures) used by the website and games.
 * [resources/](./src/main/resources) contains configuration/routes for the Play framework, as well as database migration scripts.
-* [twirl](./src/main/twirl) contains webpage templates for server-side rendering.
+* [twirl/](./src/main/twirl) contains webpage templates for server-side rendering.
 
 ### Architecture
 
