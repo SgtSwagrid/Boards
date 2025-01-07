@@ -17,7 +17,8 @@ This is a continuation from a long lineage of similar projects ([1.0](https://gi
 
 ### Project Structure
 
-Boards is composed of 6 subprojects, which you will find in the top-level directories of the same names:
+Boards is composed of 6 subprojects, which you will find in the top-level directories of the same names. More information for each subproject can be found in the respective README.
+
 * [dsl](./dsl) contains the implementation of the _BoardLang_ DSL.
 * [games](./games) contains the rule specifications for the games themselves, written using `BoardLang`.
 * [bots](./bots) contains general and game-specific strategies for playing these games.
