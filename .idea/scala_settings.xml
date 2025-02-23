@@ -3,7 +3,8 @@
   <component name="ScalaProjectSettings">
     <option name="compilerHighlightingScala2" value="true" />
     <option name="dontShowConversionDialog" value="true" />
-    <option name="implicitParametersSearchDepth" value="6" />
+    <option name="implicitParametersSearchDepth" value="3" />
+    <option name="incrementalHighlighting" value="true" />
     <option name="intInjectionMapping">
       <map>
         <entry key="html" value="HTML" />
@@ -20,5 +21,6 @@
     </option>
     <option name="migrateConfigurationsNotificationShown" value="true" />
     <option name="scala3DisclaimerShown" value="true" />
+    <option name="useCompilerTypes" value="true" />
   </component>
 </project>

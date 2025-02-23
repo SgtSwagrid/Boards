@@ -1,20 +1,24 @@
 package boards.dsl.states
 
-import boards.dsl.meta.Game.GameConfig
-import boards.graphics.Colour
-import boards.imports.games.{*, given}
-import boards.imports.math.{*, given}
-import boards.math.region.{Region, RegionMap}
-import boards.math.region.RegionMap.RegionMapI
-import boards.dsl.meta.Game.Board
-import boards.dsl.meta.PlayerRef.+
-import boards.dsl.meta.PlayerRef.{PlayerId, PlayerRef}
+import boards.dsl.meta.Game.{Board, GameConfig}
+import boards.dsl.meta.PlayerRef.{PlayerId, PlayerRef, +}
+import boards.dsl.pieces.PieceState
+import boards.math.region.EmbeddedRegion
+import boards.math.region.Vec.HasVecI
 
-import scala.collection.immutable.BitSet
-import scala.reflect.ClassTag
-
+/**
+  * The state of a game at a specific moment in time, without any history.
+  *
+  * @param board The game board, describing legal piece positions and layout properties.
+  * @param pieces The current set of all pieces on the board.
+  * @param config The configuration of the game, including the number of players and any custom settings.
+  *               Remains unchanged throughout the course of the game.
+  * @param activePlayer The ID of the player whose turn it currently is.
+  *
+  * @author Alec Dorrington
+  */
 case class InstantaneousState (
-  board: RegionMapI[Colour] = RegionMap.empty,
+  board: EmbeddedRegion = EmbeddedRegion.empty,
   pieces: PieceState = PieceState.empty,
   config: GameConfig = GameConfig(0, Map.empty),
   activePlayer: PlayerId = PlayerId.initial,
@@ -22,32 +26,38 @@ case class InstantaneousState (
   
   given InstantaneousState = this
   given GameConfig = config
-  export board.contains as inBounds
   
-  def endTurn(skip: Int = 1): InstantaneousState =
+  def inBounds (v: HasVecI): Boolean = board.contains(v)
+  
+  def endTurn (skip: Int = 1): InstantaneousState =
     copy(activePlayer = activePlayer + skip)
+    
   def endTurn: InstantaneousState = endTurn()
   
   def players: Seq[PlayerId] =
     Seq.range(0, config.numPlayers).map(PlayerId.apply)
-  def otherPlayers(players: PlayerRef*): Seq[PlayerRef] =
+    
+  def otherPlayers (players: PlayerRef*): Seq[PlayerRef] =
     players.filter(p => !players.contains(p))
+    
   def inactivePlayers: Seq[PlayerRef] =
     otherPlayers(activePlayer)
+    
   def nextPlayer: PlayerId = activePlayer.next
+  
   def previousPlayer: PlayerId = activePlayer.previous
   
-  def withPieces(pieces: PieceState): InstantaneousState = copy(pieces = pieces)
-  def updatePieces(f: PieceState => PieceState): InstantaneousState = copy(pieces = f(pieces))
+  private[dsl] def withPieces (pieces: PieceState): InstantaneousState = copy(pieces = pieces)
+  private[dsl] def updatePieces (f: PieceState => PieceState): InstantaneousState = copy(pieces = f(pieces))
   
-  def withBoard(board: Board): InstantaneousState =
+  private[dsl] def withBoard (board: Board): InstantaneousState =
     copy(board = board, pieces = PieceState.forBoard(board))
   
   override def toString = pieces.toString
     
 object InstantaneousState:
   
-  def initial(board: Board, config: GameConfig): InstantaneousState =
+  def initial (board: Board) (using config: GameConfig): InstantaneousState =
     InstantaneousState(board, PieceState.forBoard(board), config)
     
   def empty: InstantaneousState =

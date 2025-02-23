@@ -1,7 +1,6 @@
 package controllers
 
 import boards.protocol.GameProtocol.{CreateRoomRequest, CreateRoomResponse, ForkRoomRequest}
-import boards.imports.circe.{*, given}
 import models.{GameModel, UserModel}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import play.api.mvc.*
@@ -10,6 +9,7 @@ import slick.jdbc.JdbcProfile
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+import io.circe.syntax.{EncoderOps, KeyOps}
 
 class ApplicationController @Inject() (
   protected val dbConfigProvider: DatabaseConfigProvider,

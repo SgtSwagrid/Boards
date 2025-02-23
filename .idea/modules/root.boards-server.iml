@@ -12,6 +12,8 @@
       <sourceFolder url="file://$MODULE_DIR$/../../server/src/main/resources" type="java-resource" />
       <sourceFolder url="file://$MODULE_DIR$/../../server/src/main/scala" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../../server/target/scala-3.6.2/routes/main" isTestSource="false" generated="true" />
+      <sourceFolder url="file://$MODULE_DIR$/../../server/target/scala-3.6.2/routes/main" isTestSource="false" generated="true" />
+      <sourceFolder url="file://$MODULE_DIR$/../../server/target/scala-3.6.2/twirl/main" isTestSource="false" generated="true" />
       <sourceFolder url="file://$MODULE_DIR$/../../server/target/scala-3.6.2/twirl/main" isTestSource="false" generated="true" />
       <excludeFolder url="file://$MODULE_DIR$/../../server/target" />
     </content>
@@ -45,7 +47,7 @@
     <orderEntry type="library" name="sbt: io.circe:circe-generic_3:0.14.9:jar" level="project" />
     <orderEntry type="library" name="sbt: io.circe:circe-parser_3:0.14.9:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scala-lang:scala3-library_sjs1_3:3.6.2:jar" level="project" />
-    <orderEntry type="library" name="sbt: org.scala-js:scalajs-library_2.13:1.16.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-js:scalajs-library_2.13:1.18.1:jar" level="project" />
     <orderEntry type="library" name="sbt: io.circe:circe-core_sjs1_3:0.14.9:jar" level="project" />
     <orderEntry type="library" name="sbt: io.circe:circe-generic_sjs1_3:0.14.9:jar" level="project" />
     <orderEntry type="library" name="sbt: io.circe:circe-parser_sjs1_3:0.14.9:jar" level="project" />
@@ -65,8 +67,8 @@
     <orderEntry type="library" name="sbt: io.circe:circe-numbers_3:0.14.9:jar" level="project" />
     <orderEntry type="library" name="sbt: org.typelevel:cats-core_3:2.12.0:jar" level="project" />
     <orderEntry type="library" name="sbt: io.circe:circe-jawn_3:0.14.9:jar" level="project" />
-    <orderEntry type="library" name="sbt: org.scala-js:scalajs-javalib:1.16.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: org.scala-js:scalajs-scalalib_2.13:2.13.13+1.16.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-js:scalajs-javalib:1.18.1:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-js:scalajs-scalalib_2.13:2.13.13+1.18.1:jar" level="project" />
     <orderEntry type="library" name="sbt: io.circe:circe-numbers_sjs1_3:0.14.9:jar" level="project" />
     <orderEntry type="library" name="sbt: org.typelevel:cats-core_sjs1_3:2.12.0:jar" level="project" />
     <orderEntry type="library" name="sbt: io.circe:circe-scalajs_sjs1_3:0.14.9:jar" level="project" />

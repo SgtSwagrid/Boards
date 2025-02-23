@@ -10,9 +10,10 @@ import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.scaladsl.*
 import slick.jdbc.JdbcProfile
 import slick.jdbc.H2Profile.api.*
-import boards.imports.circe.{*, given}
 import boards.protocol.UserProtocol.User
 import models.GameModel
+export io.circe.syntax.{EncoderOps, KeyOps}
+export io.circe.generic.auto.*
 
 import scala.concurrent.{ExecutionContext, Future}
 import javax.inject.{Inject, Singleton}

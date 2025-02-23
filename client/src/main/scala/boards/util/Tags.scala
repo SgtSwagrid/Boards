@@ -1,4 +1,4 @@
-package boards.html
+package boards.util
 
 import com.raquo.laminar.api.L.{*, given}
 import com.raquo.laminar.codecs.StringAsIsCodec

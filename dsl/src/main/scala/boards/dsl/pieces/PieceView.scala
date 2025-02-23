@@ -52,15 +52,15 @@ trait PieceView extends PieceSet, UpdateQuery, OfPlayer[PieceView], HasRegionI:
     selected.pieceBitset
   
   /** Whether some [[Piece]] exists at the given position. */
-  final def contains(position: HasVecI): Boolean =
+  final def contains (position: HasVecI): Boolean =
     at(position).isDefined
   
   /** Whether some [[Piece]] belonging to the current player exists at the given position. */
-  final def isFriendly(position: HasVecI)(using player: PlayerRef): Boolean =
+  final def isFriendly (position: HasVecI) (using player: PlayerRef): Boolean =
     at(position).exists(_.owner == player)
   
   /** Whether some [[Piece]] belonging to another player exists at the given position. */
-  final def isEnemy(position: HasVecI)(using player: PlayerRef): Boolean =
+  final def isEnemy (position: HasVecI) (using player: PlayerRef): Boolean =
     at(position).exists(_.owner != player)
   
   /** The [[RegionI]] describing the positions of all included [[Piece]]s. */
@@ -68,23 +68,23 @@ trait PieceView extends PieceSet, UpdateQuery, OfPlayer[PieceView], HasRegionI:
     Region.from(pieces.map(_.position))
   
   /** Restrict the [[PieceView]] to only those [[Piece]]s satisfying some predicate. */
-  final def filter(filter: PieceFilter): PieceView =
+  final def filter (filter: PieceFilter): PieceView =
     filter.apply(this)
   
   /** Restrict the [[PieceView]] to only those [[Piece]]s belonging to the specified player. */
-  final override def ofPlayer(players: PlayerRef*): PieceView =
+  final override def ofPlayer (players: PlayerRef*): PieceView =
     filter(PieceFilter.ofPlayer(players*))
   
   /** Restrict the [[PieceView]] to only those [[Piece]]s of a particular [[PieceType]]. */
-  final override def ofType(pieceTypes: PieceType*): PieceView =
+  final override def ofType (pieceTypes: PieceType*): PieceView =
     filter(PieceFilter.ofType(pieceTypes*))
   
   /** Restrict the [[PieceView]] to only those [[Piece]]s of a particular [[PieceType]] class. */
-  final override def ofClass(pieceTypes: Class[? <: PieceType]*): PieceView =
+  final override def ofClass (pieceTypes: Class[? <: PieceType]*): PieceView =
     filter(PieceFilter.ofClass(pieceTypes*))
   
   /** Restrict the [[PieceView]] to only those [[Piece]]s of a particular [[PieceType]] class. */
-  final override def ofClass[P <: PieceType](using C: ClassTag[P]): PieceView =
+  final override def ofClass [P <: PieceType: ClassTag as C]: PieceView =
     ofClass(C.runtimeClass.asInstanceOf[Class[? <: PieceType]])
   
   /** Restrict the [[PieceView]] to only those [[Piece]]s in a particular [[RegionI]]. */
@@ -112,20 +112,20 @@ object PieceView:
     val pieces: LazyList[Piece] =
       pieceRefs.map(_.pieceId).map(base.piecesById)
       
-    def at(position: HasVecI): Option[Piece] =
+    def at (position: HasVecI): Option[Piece] =
       base.piecesByPos.get(position.position)
         .map(base.piecesById)
         .filter(this.contains)
       
-    def get(pieceRef: PieceRef): Option[Piece] =
+    def get (pieceRef: PieceRef): Option[Piece] =
       base.piecesById.get(pieceRef.pieceId).filter(this.contains)
       
     val updates: LazyList[PieceUpdate] =
       LazyList.from(base.updates).filter(contains)
     
-    def restrictTo(pieces: PieceSet): PieceView =
+    def restrictTo (pieces: PieceSet): PieceView =
       PieceView.from(base, selected & pieces)
   
   object Pieces extends AtTime[PieceState]:
-    def atTime(time: HistoryState): PieceState = time.pieces
+    def atTime (time: HistoryState): PieceState = time.pieces
     export PieceFilter.*

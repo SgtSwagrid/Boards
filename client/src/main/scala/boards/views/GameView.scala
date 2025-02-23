@@ -2,8 +2,8 @@ package boards.views
 
 import boards.components.game.{GameBoard, GameSidebar}
 import boards.graphics.Scene
-import boards.graphics.Scene.{PieceData, Tile}
-import boards.imports.laminar.HtmlProp
+import boards.graphics.Scene.PieceData
+import boards.math.region.EmbeddedRegion.Tile
 import boards.protocol.GameProtocol.*
 import boards.protocol.UserProtocol.User
 import boards.util.Navigation.*
@@ -11,50 +11,31 @@ import com.raquo.laminar.codecs.StringAsIsCodec
 import com.raquo.laminar.modifiers.RenderableText
 import org.scalajs.dom.Audio
 
+import scala.concurrent.duration.*
 import scala.scalajs.js.annotation.JSExportTopLevel
-//import boards.imports.laminar.{*, given}
-import boards.imports.circe.{*, given}
-import boards.imports.math.{*, given}
-import boards.imports.games.{*, given}
 import com.raquo.laminar.nodes.ChildNode
 import org.scalajs.dom.{CanvasRenderingContext2D, DOMRect, HTMLImageElement, MouseEvent}
 import com.raquo.laminar.api.features.unitArrows
 
 import scala.collection.mutable
-
 import boards.util.extensions.SequenceOps.*
 
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
-
-import org.scalajs.dom.{
-  document,
-  window,
-  html,
-  KeyCode,
-}
-
+import org.scalajs.dom.{document, html, window, KeyCode}
 import org.scalajs.dom.html.Canvas
-
 import com.raquo.laminar.api.L.{*, given}
-
 import com.raquo.laminar.nodes.{ReactiveElement, ReactiveHtmlElement, ReactiveSvgElement}
 import com.raquo.laminar.tags.HtmlTag
-
 import io.laminext.syntax.core.*
-
-import io.laminext.fetch.circe.{Fetch, jsonRequestBody}
-import io.laminext.websocket.circe.{WebSocket, WebSocketEvent, WebSocketError}
+import io.laminext.fetch.circe.{jsonRequestBody, Fetch}
+import io.laminext.websocket.circe.{WebSocket, WebSocketError, WebSocketEvent}
 import io.laminext.fetch.circe.fetchEventStreamBuilderSyntaxCirce
 import io.laminext.websocket.circe.webSocketReceiveBuilderSyntax
-
-import boards.components.{
-  ExpandingButton,
-  Footer,
-  InputField,
-  Navbar,
-  SVG,
-  Tabs,
-}
+import io.circe.generic.auto.*
+import boards.util.Codecs.{*, given}
+import boards.components.{ExpandingButton, Footer, InputField, Navbar, SVG, Tabs}
+import boards.dsl.meta.TurnId
+import boards.dsl.meta.TurnId.TurnId
 
 @JSExportTopLevel("GameView")
 object GameView extends View:
@@ -66,8 +47,10 @@ object GameView extends View:
   private val autoJoin: Boolean = document.documentURI.split("/").contains("join")
   private val autoFork: Boolean = document.documentURI.split("/").contains("fork")
   
-  private lazy val socket: WebSocket[GameResponse, GameRequest] =
-    WebSocket.path(s"/game/$roomId/socket").json[GameResponse, GameRequest].build()
+  private lazy val socket: WebSocket[GameResponse, GameRequest] = WebSocket
+    .path(s"/game/$roomId/socket")
+    .json[GameResponse, GameRequest]
+    .build(autoReconnect = true, reconnectDelay = 2.seconds, reconnectRetries = 20)
     
   private val sceneBus: EventBus[Scene] = new EventBus[Scene]
   private val scene: Signal[Scene] = sceneBus.events.startWith(Scene.empty)
@@ -84,11 +67,17 @@ object GameView extends View:
   private val loseSound = Audio("/assets/audio/lose.mp3")
   private val drawSound = Audio("/assets/audio/draw.mp3")
   
-  private def playSound(sound: Audio): Unit = sound.play()
+  private val sounds: EventStream[Audio] = EventStream.merge (
+    starts.mapTo(startSound),
+    updates.mapTo(placeSound),
+    wins.mapTo(winSound),
+    losses.mapTo(loseSound),
+    draws.mapTo(drawSound),
+  )
   
   val boardPadding = 30
   
-  def content(user: Option[User]) = div (
+  def content (user: Option[User]) = div (
     socket.connect,
     socket.connected.filter(_ => autoJoin).mapTo(GameRequest.JoinRoom(1)) --> socket.send,
     socket.connected.filter(_ => autoFork).mapTo(GameRequest.ForkState(turnId)) --> socket.send,
@@ -108,11 +97,7 @@ object GameView extends View:
       left(s"${GameSidebar.sidebarWidth + boardPadding}px"),
       right(s"${boardPadding}px"),
       GameBoard(sceneBus, socket.send).apply,
-      starts --> playSound(startSound),
-      updates --> playSound(placeSound),
-      wins --> playSound(winSound),
-      losses --> playSound(loseSound),
-      draws --> playSound(drawSound),
+      sounds --> { _.play() },
     ),
     Footer(),
   )

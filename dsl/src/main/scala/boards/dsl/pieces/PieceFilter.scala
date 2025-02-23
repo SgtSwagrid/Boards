@@ -1,42 +1,34 @@
 package boards.dsl.pieces
 
-import boards.dsl.pieces.{PieceSet, PieceState, PieceView}
-import PieceFilter.*
-import boards.dsl.meta.PlayerRef
-import boards.dsl.pieces
-import boards.dsl.pieces.PieceState.empty.region
-import boards.dsl.pieces.PieceType
+import boards.dsl.meta.PlayerRef.PlayerRef
+import boards.dsl.pieces.PieceFilter.*
+import boards.dsl.pieces.PieceView.FilteredPieceView
 import boards.dsl.pieces.PieceUpdate.UpdateQuery
-import boards.dsl.rules.{Capability, Control, Effect, Rule}
+import boards.dsl.rules.{Capability, Cause, Control, Effect, Rule}
 import boards.dsl.states.HistoryState.{AtTime, PeriodQuery}
-import boards.dsl.states.{HistoryState, InstantaneousState}
+import boards.dsl.states.HistoryState
 import boards.math.region.Region.{HasRegionI, RegionI}
 import boards.math.region.Vec.HasVecI
-import boards.imports.games.{*, given}
-import boards.imports.math.{*, given}
-import boards.dsl.Shortcuts.{*, given}
-import boards.dsl.meta.PlayerRef.PlayerRef
-import boards.dsl.pieces.PieceView.FilteredPieceView
+import boards.dsl.Shortcuts.given_InstantaneousState
 
 import scala.reflect.ClassTag
 
 /** A [[Piece]] predicate, which can be used to filter [[Piece]]s and perform queries.
-  *
+ *
   * @see [[PieceSet]]
-  *
   * @author Alec Dorrington
   */
 trait PieceFilter extends AtTime[PieceView], PeriodQuery[UpdateQuery], OfPlayer[PieceFilter]:
   
   /** Restrict a [[PieceView]] to only [[Piece]]s which satisfy this predicate. */
-  final def apply(pieces: PieceView): PieceView = pieces match
+  final def apply (pieces: PieceView): PieceView = pieces match
     case pieces: PieceState => applyBase(pieces)
     case FilteredPieceView(base, selected) => applyBase(base).restrictTo(selected)
     
   /** A version of [[apply]] which only works for [[PieceView]]s which are also [[PieceState]]s.
     * This is slightly easier to do so this method should be the one overridden.
     */
-  protected def applyBase(pieces: PieceState): PieceView
+  protected def applyBase (pieces: PieceState): PieceView
   
   /** Take the logical OR of two [[PieceFilter]]s, i.e. [[Piece]]s only need to satisfy one [[PieceFilter]]. */
   final def | (that: PieceFilter): PieceFilter =
@@ -55,31 +47,31 @@ trait PieceFilter extends AtTime[PieceView], PeriodQuery[UpdateQuery], OfPlayer[
     SymmetricDifferenceFilter(this, that)
     
   /** Require additionally that [[Piece]]s belong to the given player. */
-  def ofPlayer(players: PlayerRef*): PieceFilter =
+  def ofPlayer (players: PlayerRef*): PieceFilter =
     this & PieceFilter.ofPlayer(players*)
     
   /** Require additionally that [[Piece]]s have the given [[PieceType]]. */
-  def ofType(pieceTypes: PieceType*): PieceFilter =
+  def ofType (pieceTypes: PieceType*): PieceFilter =
     this & PieceFilter.ofType(pieceTypes*)
   
   /** Require additionally that [[Piece]]s have the given [[PieceType]] class. */
-  def ofClass(pieceTypes: Class[? <: PieceType]*): PieceFilter =
+  def ofClass (pieceTypes: Class[? <: PieceType]*): PieceFilter =
     this & PieceFilter.ofClass(pieceTypes*)
   
   /** Require additionally that [[Piece]]s have the given [[PieceType]] class. */
-  def ofClass [P <: PieceType] (using C: ClassTag[P]): PieceFilter =
+  def ofClass [P <: PieceType: ClassTag]: PieceFilter =
     this & PieceFilter.ofClass[P]
   
   /** Require additionally that [[Piece]]s lie in the given [[RegionI]]. */
-  def ofRegion(region: HasRegionI): PieceFilter =
+  def ofRegion (region: HasRegionI): PieceFilter =
     this & PieceFilter.ofRegion(region)
     
   /** Get all [[Piece]]s which satisfied this predicate at the given time. */
-  def atTime(state: HistoryState): PieceView =
+  def atTime (state: HistoryState): PieceView =
     state.pieces.filter(this)
   
   /** Query the changes to the matching [[Piece]]s which occurred in the given period. */
-  def between(start: HistoryState, end: HistoryState): UpdateQuery =
+  def between (start: HistoryState, end: HistoryState): UpdateQuery =
     UpdateQuery.of:
       atTime(end).updates.view.takeWhile(_.time.toInt >= start.version.toInt)
   
@@ -88,21 +80,21 @@ trait PieceFilter extends AtTime[PieceView], PeriodQuery[UpdateQuery], OfPlayer[
     now.map(_.actions)
     
   /** Determine what these [[Piece]]s can do in the current [[HistoryState]]. */
-  final def fromNow(using HistoryState): Capability =
+  final def fromNow (using HistoryState): Capability =
     actions.fromNow
     
   /** Determine what these [[Piece]]s ''could'' do following some hypothetical [[Effect]]. */
-  final def following(effect: Effect)(using HistoryState): Capability =
+  final def following (effect: Effect) (using HistoryState): Capability =
     actions.from(effect.effect(summon[HistoryState]).get.history)
   
   /** Whether some matching [[Piece]] is currently in check, i.e. can be captured by an enemy [[Piece]]. */
-  final def inCheck(using state: HistoryState): Boolean =
+  final def inCheck (using state: HistoryState): Boolean =
     now.pieces.exists: piece =>
-      Pieces.ofOtherPlayers(piece.owner).fromNow.canCapture(piece)
+      state.pieces.ofOtherPlayers(piece.owner).fromNow.canCapture(piece)
   
   /** Passively move all matching [[Piece]]s elsewhere. */
   def relocate (
-    to: (HistoryState, Piece) ?=> HasVecI,
+    to: (state: HistoryState, piece: Piece) ?=> HasVecI,
   ): Effect =
     Effect.relocate(this, to)
   
@@ -131,7 +123,7 @@ trait PieceFilter extends AtTime[PieceView], PeriodQuery[UpdateQuery], OfPlayer[
     Cause.clickPiece(this)
   
   /** Allow the player to drag matching [[Piece]]s. */
-  def dragTo(region: HasRegionI): Cause =
+  def dragTo (region: (state: HistoryState, piece: Piece) ?=> HasRegionI): Cause =
     Cause.dragPiece(this, region)
 
 object PieceFilter extends OfPlayer[PieceFilter]:
@@ -159,20 +151,20 @@ object PieceFilter extends OfPlayer[PieceFilter]:
     ofClass(C.runtimeClass.asInstanceOf[Class[? <: PieceType]])
   
   /** A [[PieceFilter]] which accepts only [[Piece]]s in a particular [[RegionI]]. */
-  def ofRegion(region: HasRegionI): PieceFilter =
+  def ofRegion (region: HasRegionI): PieceFilter =
     RegionFilter(region.region)
   
   private object EmptyFilter extends PieceFilter:
-    def applyBase(pieces: PieceState): PieceView = PieceView.empty
+    def applyBase (pieces: PieceState): PieceView = PieceView.empty
     
   private object UniversalFilter extends PieceFilter:
-    def applyBase(pieces: PieceState): PieceView = pieces
+    def applyBase (pieces: PieceState): PieceView = pieces
   
   private class PlayerFilter (
     players: PlayerRef*,
   ) extends PieceFilter:
     
-    def applyBase(pieces: PieceState): PieceView =
+    def applyBase (pieces: PieceState): PieceView =
       pieces.restrictTo:
         players
           .map(_.playerId)
@@ -183,7 +175,7 @@ object PieceFilter extends OfPlayer[PieceFilter]:
     pieceTypes: PieceType*,
   ) extends PieceFilter:
     
-    def applyBase(pieces: PieceState): PieceView =
+    def applyBase (pieces: PieceState): PieceView =
       pieces.restrictTo:
         pieceTypes
           .flatMap(pieces.piecesByType.get)
@@ -193,7 +185,7 @@ object PieceFilter extends OfPlayer[PieceFilter]:
     pieceTypes: Class[? <: PieceType]*,
   ) extends PieceFilter:
     
-    def applyBase(pieces: PieceState): PieceView =
+    def applyBase (pieces: PieceState): PieceView =
       pieces.restrictTo:
         pieceTypes
           .flatMap(pieces.piecesByClass.get)
@@ -203,7 +195,7 @@ object PieceFilter extends OfPlayer[PieceFilter]:
     region: RegionI,
   ) extends PieceFilter:
     
-    def applyBase(pieces: PieceState): PieceView =
+    def applyBase (pieces: PieceState): PieceView =
       pieces.restrictTo:
         region.positions
           .flatMap(pieces.at)
@@ -214,7 +206,7 @@ object PieceFilter extends OfPlayer[PieceFilter]:
     right: PieceFilter,
   ) extends PieceFilter:
     
-    def applyBase(pieces: PieceState): PieceView =
+    def applyBase (pieces: PieceState): PieceView =
       pieces.restrictTo(left(pieces) | right(pieces))
   
   private class IntersectionFilter (
@@ -222,7 +214,7 @@ object PieceFilter extends OfPlayer[PieceFilter]:
     right: PieceFilter,
   ) extends PieceFilter:
     
-    def applyBase(pieces: PieceState): PieceView =
+    def applyBase (pieces: PieceState): PieceView =
       pieces.restrictTo(left(pieces) & right(pieces))
   
   private class DifferenceFilter (
@@ -230,7 +222,7 @@ object PieceFilter extends OfPlayer[PieceFilter]:
     right: PieceFilter,
   ) extends PieceFilter:
     
-    def applyBase(pieces: PieceState): PieceView =
+    def applyBase (pieces: PieceState): PieceView =
       pieces.restrictTo(left(pieces) \ right(pieces))
   
   private class SymmetricDifferenceFilter (
@@ -238,5 +230,5 @@ object PieceFilter extends OfPlayer[PieceFilter]:
     right: PieceFilter,
   ) extends PieceFilter:
     
-    def applyBase(pieces: PieceState): PieceView =
+    def applyBase (pieces: PieceState): PieceView =
       pieces.restrictTo(left(pieces) ^ right(pieces))

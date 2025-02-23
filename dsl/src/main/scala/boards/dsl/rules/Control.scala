@@ -1,13 +1,9 @@
 package boards.dsl.rules
 
-import boards.imports.games.{*, given}
-import boards.imports.math.{*, given}
-import boards.dsl.Shortcuts.{State, Piece}
+import boards.dsl.meta.PlayerRef.PlayerRef
+import boards.dsl.pieces.{Piece, PieceFilter, PieceRef, PieceType}
+import boards.dsl.states.HistoryState
 import boards.math.region.Region.HasRegionI
-import Control.*
-
-import scala.annotation.targetName
-import scala.collection.mutable
 
 /** A [[Control]] is a shorthand for the composition of a [[Cause]] with an immediately following [[Effect]].
   *
@@ -24,31 +20,31 @@ import scala.collection.mutable
 object Control:
   
   def place (
-    owner: HistoryState ?=> PlayerRef,
-    region: HistoryState ?=> HasRegionI,
+    owner: (state: HistoryState) ?=> PlayerRef,
+    region: (state: HistoryState) ?=> HasRegionI,
     pieceTypes: PieceType*,
   ): Rule = Rule.union:
     pieceTypes.map: pieceType =>
       Cause.click(region) |> Effect.create (
         owner,
-        State.latestInput.get.asInstanceOf[Input.Click].region,
+        state.latestInput.get.asInstanceOf[Input.Click].region,
         pieceType,
       )
       
-  def placeMine (
+  def placeFriendly (
     region: HistoryState ?=> HasRegionI,
     pieceTypes: PieceType*,
   ) (using owner: PlayerRef): Rule =
     place(owner, region, pieceTypes*)
     
   def fill (
-    owner: HistoryState ?=> PlayerRef,
-    region: HistoryState ?=> HasRegionI,
+    owner: (state: HistoryState) ?=> PlayerRef,
+    region: (state: HistoryState) ?=> HasRegionI,
     pieceTypes: PieceType*,
   ): Rule =
     Cause.clickRegion(region) |> Effect.create(owner, region, pieceTypes*)
     
-  def fillMine (
+  def fillFriendly (
     region: HistoryState ?=> HasRegionI,
     pieceTypes: PieceType*,
   ) (using owner: PlayerRef): Rule =
@@ -59,23 +55,23 @@ object Control:
     region: (HistoryState, Piece) ?=> HasRegionI,
   ): Rule =
     Cause.dragPiece(pieces, region) |> Effect.slide (
-      State.latestInput.get.asInstanceOf[Input.Drag].from,
-      State.latestInput.get.asInstanceOf[Input.Drag].to.asVec.get,
+      state.latestInput.get.asInstanceOf[Input.Drag].from,
+      state.latestInput.get.asInstanceOf[Input.Drag].to.asVec.get,
     )
     
   def moveThis (
-    region: (HistoryState, Piece) ?=> HasRegionI,
+    region: (state: HistoryState, piece: Piece) ?=> HasRegionI,
   ) (using piece: PieceRef): Rule = Rule.union:
     piece.now.map: piece =>
       move(piece, region)
     
   def capture (
-    pieces: HistoryState ?=> PieceFilter,
+    pieces: (state: HistoryState) ?=> PieceFilter,
   ): Rule =
-    Cause.clickPiece(pieces) |> Effect.clear(State.latestInput.get.asInstanceOf[Input.Click].region)
+    Cause.clickPiece(pieces) |> Effect.clear(state.latestInput.get.asInstanceOf[Input.Click].region)
     
   def promote (
-    pieces: HistoryState ?=> PieceFilter,
+    pieces: (state: HistoryState) ?=> PieceFilter,
     pieceTypes: PieceType*,
   ): Rule = Rule.union:
     for
@@ -84,10 +80,10 @@ object Control:
       if !(piece is PieceType)
     yield Cause.clickPiece(piece) |> Effect.create(piece.owner, piece.position, pieceType)
     
-  object PieceControl:
+  /*object PieceControl:
     
     def move (
-      region: (HistoryState, Piece) ?=> HasRegionI
+      region: (state: HistoryState, piece: Piece) ?=> HasRegionI
     ): Piece ?=> Rule = Rule.union:
-      Piece.now.map: piece =>
-        Control.move(summon[Piece], region)
+      pice.now.map: piece =>
+        Control.move(summon[Piece], region)*/

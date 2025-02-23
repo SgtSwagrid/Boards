@@ -1,16 +1,11 @@
 package boards.dsl.rules
 
-import boards.imports.games.{*, given}
-import boards.imports.math.{*, given}
-import Cause.*
-import boards.dsl.pieces.{Piece, PieceFilter, PieceSet}
-import boards.dsl.rules.Effect.SequenceEffect
-import boards.math.region.Region.HasRegionI
-import boards.math.region.Vec.HasVecI
-import boards.dsl.Shortcuts.{given_HistoryState, Piece}
-import boards.math.region.Ray
+import boards.dsl.pieces.{Piece, PieceFilter}
+import boards.dsl.rules.Cause.{FilterCause, UnionCause}
+import boards.dsl.states.{GameState, HistoryState}
+import boards.math.region.Region.{HasRegionI, RegionI}
+import boards.math.region.Vec.VecI
 
-import scala.annotation.tailrec
 import scala.collection.mutable
 
 /** A [[Rule]] for enumerating all [[Input]]s of a particular kind,
@@ -51,35 +46,35 @@ object Cause:
   val none: Cause = EmptyCause
   
   /** @see [[Rule.apply]] */
-  def apply(brancher: HistoryState ?=> Cause): Cause =
+  def apply (brancher: (state: HistoryState) ?=> Cause): Cause =
     SwitchCause(state => brancher(using state))
   
   /** @see [[Rule.union]] */
-  def union(causes: HistoryState ?=> Iterable[Cause]): Cause =
+  def union (causes: (state: HistoryState) ?=> Iterable[Cause]): Cause =
     Cause(causes.foldLeft(Cause.none)(_ | _))
   
   /** Accepts a single [[Input]] corresponding to a [[Click]] of a specific position. */
   def click (
-    region: HistoryState ?=> HasRegionI,
+    region: (state: HistoryState) ?=> HasRegionI,
   ): Cause =
     Cause(ClickAny(region.region))
   
   /** Accepts a single [[Input]] corresponding to a [[Click]] of the entire `region` as a single unit. */
   def clickRegion (
-    region: HistoryState ?=> HasRegionI,
+    region: (state: HistoryState) ?=> HasRegionI,
   ): Cause =
     Cause(ClickAll(region.region))
   
   /** Accepts any [[Input]] corresponding to a click of any of the given [[Piece]]s. */
   def clickPiece (
-    pieces: HistoryState ?=> PieceFilter,
+    pieces: (state: HistoryState) ?=> PieceFilter,
   ): Cause =
     Cause.click(pieces.now.region)
   
   /** Accepts any [[Input]] corresponding to a [[Drag]] from anywhere in `from` to anywhere in `to`. */
   def drag (
-    from: HistoryState ?=> HasRegionI,
-    to: (HistoryState, VecI) ?=> HasRegionI,
+    from: (state: HistoryState) ?=> HasRegionI,
+    to: (state: HistoryState, from: VecI) ?=> HasRegionI,
   ): Cause = Cause.union:
     from.region.positions.map: position =>
       DragAny(from.region, to(using summon[HistoryState], position).region)
@@ -88,8 +83,8 @@ object Cause:
     * Here, corresponding means at the same index in the respective `Region`.
     */
   def dragCorresponding (
-    from: HistoryState ?=> HasRegionI,
-    to: HistoryState ?=> HasRegionI,
+    from: (state: HistoryState) ?=> HasRegionI,
+    to: (state: HistoryState) ?=> HasRegionI,
   ): Cause =
     Cause(DragCorresponding(from.region, to.region))
   
@@ -97,15 +92,15 @@ object Cause:
     * from the entire region `from` to the entire region `to`.
     */
   def dragRegion (
-    from: HistoryState ?=> HasRegionI,
-    to: HistoryState ?=> HasRegionI,
+    from: (state: HistoryState) ?=> HasRegionI,
+    to: (state: HistoryState) ?=> HasRegionI,
   ): Cause =
     Cause(DragAll(from.region, to.region))
   
   /** Accepts any [[Input]] corresponding to a [[Drag]] of any [[Piece]] in `pieces` to anywhere in `region`. */
   def dragPiece (
-    pieces: HistoryState ?=> PieceFilter,
-    region: (HistoryState, Piece) ?=> HasRegionI,
+    pieces: (state: HistoryState) ?=> PieceFilter,
+    region: (state: HistoryState, piece: Piece) ?=> HasRegionI,
   ): Cause = Cause.union:
     pieces.now.map: piece =>
       Cause.drag(piece, region(using summon[HistoryState], piece))

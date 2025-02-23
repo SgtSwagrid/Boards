@@ -2,13 +2,12 @@ package boards.views
 
 import boards.components.{Footer, Navbar}
 import boards.protocol.UserProtocol.User
-import com.raquo.laminar.api.L.div
 import org.scalajs.dom.document
 import com.raquo.laminar.api.L.{*, given}
 import io.laminext.fetch.Fetch
-import boards.imports.circe.{*, given}
 import io.laminext.fetch.circe.fetchEventStreamBuilderSyntaxCirce
 import scala.concurrent.ExecutionContext.Implicits.global
+export io.circe.generic.auto.*
 
 import scala.scalajs.js.annotation.JSExportTopLevel
 
@@ -22,7 +21,7 @@ object ProfileView extends View:
     Fetch.get(s"/user/${username}/details").decode[Option[User]].map(_.data)
       .startWith(None)
   
-  def content(validatedUser: Option[User]) = div (
+  def content (validatedUser: Option[User]) = div (
     Navbar(validatedUser),
     div (
       position("absolute"),

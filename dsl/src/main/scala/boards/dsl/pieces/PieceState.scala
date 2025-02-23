@@ -61,7 +61,7 @@ case class PieceState (
     PieceView.from(this, selected & pieces)
   
   /** Place a new [[Piece]] on the board.
-    * If the position is invalid this method does nothing.
+    * If the position is out of bounds, this method does nothing.
     * If there is already a [[Piece]] at the position, that [[Piece]] is destroyed.
  *
     * @param pieceType The type of [[Piece]] to create.
@@ -72,7 +72,7 @@ case class PieceState (
     * @return A modified version of this [[PieceState]] with an extra [[Piece]] added.
     */
   @tailrec
-  private[dsl] def createPiece[P <: PieceType: ClassTag] (
+  private[dsl] final def createPiece[P <: PieceType: ClassTag] (
     pieceType: P,
     position: HasVecI,
     owner: PlayerRef,
@@ -103,7 +103,7 @@ case class PieceState (
         )
   
   /** Move a [[Piece]] to a new position.
-    * If the [[Piece]] no longer exists, or the new position is invalid, this method does nothing.
+    * If the [[Piece]] no longer exists, or the new position is out of bounds, this method does nothing.
     * If the target position has another [[Piece]], that [[Piece]] is destroyed.
  *
     * @param piece The [[Piece]] to move somewhere else.
@@ -112,7 +112,7 @@ case class PieceState (
     * @return A modified version of this [[PieceState]] with [[Piece]] moved to a new position.
     */
   @tailrec
-  private[dsl] def movePiece (
+  private[dsl] final def movePiece (
     piece: PieceRef,
     position: HasVecI,
   ): PieceState =
@@ -141,7 +141,7 @@ case class PieceState (
     * @param piece The [[Piece]] to remove.
     * @return A modified version of this [[PieceState]] with [[Piece]] removed.
     */
-  private[dsl] def destroyPiece (
+  private[dsl] final def destroyPiece (
     piece: PieceRef,
   ): PieceState =
     piecesById.get(piece.pieceId) match

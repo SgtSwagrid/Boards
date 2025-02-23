@@ -1,9 +1,11 @@
 package boards.dsl.rules
 
-import boards.imports.games.{*, given}
-import boards.imports.math.{*, given}
-
 import Rule.*
+import boards.dsl.meta.PlayerRef.PlayerRef
+import boards.dsl.states.{GameState, HistoryState}
+import boards.dsl.meta.TurnId.next
+import boards.dsl.states.GameState.{ActiveState, Outcome}
+import boards.dsl.states.GameState.Outcome.Draw
 
 import scala.annotation.targetName
 import scala.collection.mutable
@@ -50,31 +52,31 @@ trait Rule:
     *
     * Game implementations typically shouldn't have to use this method directly.
     */
-  final def next(state: HistoryState): LazyList[GameState] =
+  final def next (state: HistoryState): LazyList[GameState] =
     successors(state).filter(_.turnId == state.turnId.next)
   
   /** Returns all [[GameState]]s that can immediately follow from the given one,
     * whether that be by following an [[Input]] or applying an [[Effect]].
     */
-  private[dsl] def successors(state: HistoryState): LazyList[GameState]
+  private[dsl] def successors (state: HistoryState): LazyList[GameState]
   
   /** If this [[Rule]] can apply an immediate [[Effect]] to the given [[HistoryState]],
     * without first waiting for some [[Input]], then do so, otherwise return `None`.
     *
     * This is used in sequencing to apply [[Effect]]s immediately after each [[Input]].
     */
-  private[dsl] def effect(state: HistoryState): Option[GameState]
+  private[dsl] def effect (state: HistoryState): Option[GameState]
   
   /** Imbue this [[Rule]] with a specific [[HistoryState]] to form a [[GameState]].
     * The resulting [[GameState]] represents the possibilities that arise from applying this [[Rule]] in the given [[HistoryState]].
     */
-  final def from(state: HistoryState): GameState =
+  final def from (state: HistoryState): GameState =
     ActiveState(state, this).applyEffect
   
   /** Imbue this [[Rule]] with the current (read: most up-to-date) [[HistoryState]] to form a [[GameState]].
     * The resulting [[GameState]] represents the possibilities that arise from applying this [[Rule]] in the current [[HistoryState]].
     */
-  final def fromNow(using state: HistoryState): GameState =
+  final def fromNow (using state: HistoryState): GameState =
     from(state)
   
   /** The union combinator is the standard way to provide multiple different options to the players.
@@ -157,7 +159,7 @@ trait Rule:
     *
     * Equivalent to: {{{this.orElse(Effect.stop(outcome))}}}
     */
-  def orElseStop(outcome: HistoryState ?=> Outcome): Rule =
+  def orElseStop(outcome: (state: HistoryState) ?=> Outcome): Rule =
     orElse(Effect.stop(outcome))
     
   /** Stop the game and declare it a [[Draw]] if no legal [[Input]] is available.
@@ -181,7 +183,7 @@ trait Rule:
     *
     * Equivalent to: {{{Rule.maybe(condition)(this |> this.repeatWhile(condition))}}}
     */
-  final def repeatWhile(condition: HistoryState ?=> Boolean): Rule =
+  final def repeatWhile (condition: HistoryState ?=> Boolean): Rule =
     Rule.maybe(condition)(this |> this.repeatWhile(condition))
   
   /** Repeat this [[Rule]] indefinitely, until the [[Game]] ends.
@@ -207,7 +209,7 @@ trait Rule:
     * Applies following each and every step throughout this [[Rule]].
     * At no point may the condition be violated.
     */
-  final def require(condition: HistoryState ?=> Boolean): Rule =
+  final def require (condition: HistoryState ?=> Boolean): Rule =
     FilterRule(this, state => condition(using state))
   
 object Rule:
@@ -215,7 +217,7 @@ object Rule:
   /** A context-dependent [[Rule]] which may select which specific
     * [[Rule]] applies, given the current [[HistoryState]].
     */
-  def apply(brancher: HistoryState ?=> Rule): Rule =
+  def apply (brancher: (state: HistoryState) ?=> Rule): Rule =
     SwitchRule(state => brancher(using state))
   
   /** Apply the body [[Rule]] only if the condition is met.
@@ -233,7 +235,7 @@ object Rule:
     * @see [[Rule.maybe]] for a similar conditional [[Rule]]
     *      that will instead be skipped if the condition fails.
     */
-  def when(condition: HistoryState ?=> Boolean)(rule: HistoryState ?=> Rule): Rule =
+  def when (condition: (state: HistoryState) ?=> Boolean) (rule: (state: HistoryState) ?=> Rule): Rule =
     Rule(if condition then rule else Cause.none)
   
   /** Apply the body [[Rule]] only if the condition is met.
@@ -251,19 +253,19 @@ object Rule:
     * @see [[Rule.when]] for a similar conditional [[Rule]]
     *      that will instead block the path if the condition fails.
     */
-  def maybe(condition: HistoryState ?=> Boolean)(rule: HistoryState ?=> Rule): Rule =
+  def maybe (condition: (state: HistoryState) ?=> Boolean) (rule: (state: HistoryState) ?=> Rule): Rule =
     Rule(if condition then rule else Effect.identity)
   
   /** Equivalent to [[|]] with function notation and arbitrary arity,
     * i.e. {{{Rule.union(a, b, c, ...) == a | b | c | ...}}}
     */
-  def union(rules: HistoryState ?=> Iterable[Rule]): Rule =
+  def union (rules: (state: HistoryState) ?=> Iterable[Rule]): Rule =
     Rule(rules.foldLeft[Rule](Cause.none)(_ | _))
   
   /** Equivalent to [[|>]] with function notation and arbitrary arity,
     * i.e. {{{Rule.sequence(a, b, c, ...) == a |> b |> c |> ...}}}
     */
-  def sequence(rules: HistoryState ?=> Iterable[Rule]): Rule =
+  def sequence (rules: (state: HistoryState) ?=> Iterable[Rule]): Rule =
     Rule(rules.foldLeft[Rule](Effect.identity)(_ |> _))
   
   /** Allow the player to skip the given [[Rule]] if they so choose.
@@ -273,21 +275,21 @@ object Rule:
     *
     * Equivalent to: {{{rule | Effect.identity}}}
     */
-  def optional(rule: HistoryState ?=> Rule): Rule =
+  def optional(rule: (state: HistoryState) ?=> Rule): Rule =
     Rule(rule).optional
     
   /** Repeat the given [[Rule]] so long as the condition holds true.
     *
     * Equivalent to: {{{Rule.maybe(condition)(rule |> rule.repeatWhile(condition))}}}
     */
-  final def repeatWhile (condition: HistoryState ?=> Boolean)(rule: HistoryState ?=> Rule): Rule =
+  final def repeatWhile (condition: (state: HistoryState) ?=> Boolean) (rule: (state: HistoryState) ?=> Rule): Rule =
     Rule(rule).repeatWhile(condition)
   
   /** Repeat the given [[Rule]] indefinitely, until the [[Game]] ends.
     *
     * Equivalent to: {{{rule |> rule |> rule |> ...}}}
     */
-  def repeatForever(rule: HistoryState ?=> Rule): Rule =
+  def repeatForever (rule: (state: HistoryState) ?=> Rule): Rule =
     Rule(rule).repeatForever
   
   /** Repeat the given [[Rule]] indefinitely, until the [[Game]] ends.
@@ -297,7 +299,7 @@ object Rule:
     *
     * Equivalent to: {{{(rule |> Effect.endTurn).repeatForever}}}
     */
-  def alternatingTurns(rule: (HistoryState, PlayerRef) ?=> Rule): Rule =
+  def alternatingTurns (rule: (state: HistoryState, player: PlayerRef) ?=> Rule): Rule =
     Rule:
       given PlayerRef = summon[HistoryState].activePlayer
       rule

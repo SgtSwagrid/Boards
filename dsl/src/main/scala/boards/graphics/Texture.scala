@@ -1,8 +1,19 @@
 package boards.graphics
 
-case class Texture(file: String, size: Float = 1.0F)
+import io.circe.Codec
 
-case object Texture:
+/** A textured based on an image in a file.
+  * Used primarily to render pieces on the game board.
+ *
+  * @param file The source file of the texture.
+  * @param size The scale of the texture (<=1.0), used if the texture shouldn't occupy an entire tile.
+  */
+case class Texture (
+  file: String,
+  size: Float = 1.0F,
+) derives Codec.AsObject
+
+object Texture:
   
   val WhitePawn   = Texture("chess/white_pawn.svg")
   val WhiteRook   = Texture("chess/white_rook.svg")

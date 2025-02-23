@@ -17,18 +17,18 @@
     <orderEntry type="module" module-name="root.boards-dsl.dslJVM" />
     <orderEntry type="module" module-name="root.boards-games.games-sources" exported="" />
     <orderEntry type="library" name="sbt: org.scala-lang:scala3-library_sjs1_3:3.6.2:jar" level="project" />
-    <orderEntry type="library" name="sbt: org.scala-js:scalajs-library_2.13:1.16.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-js:scalajs-library_2.13:1.18.1:jar" level="project" />
     <orderEntry type="library" name="sbt: io.circe:circe-core_sjs1_3:0.14.9:jar" level="project" />
     <orderEntry type="library" name="sbt: io.circe:circe-generic_sjs1_3:0.14.9:jar" level="project" />
     <orderEntry type="library" name="sbt: io.circe:circe-parser_sjs1_3:0.14.9:jar" level="project" />
     <orderEntry type="library" name="sbt: org.scala-lang:scala-library:2.13.15:jar" level="project" />
-    <orderEntry type="library" name="sbt: org.scala-js:scalajs-javalib:1.16.0:jar" level="project" />
-    <orderEntry type="library" name="sbt: org.scala-js:scalajs-scalalib_2.13:2.13.13+1.16.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-js:scalajs-javalib:1.18.1:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-js:scalajs-scalalib_2.13:2.13.13+1.18.1:jar" level="project" />
     <orderEntry type="library" name="sbt: io.circe:circe-numbers_sjs1_3:0.14.9:jar" level="project" />
     <orderEntry type="library" name="sbt: org.typelevel:cats-core_sjs1_3:2.12.0:jar" level="project" />
     <orderEntry type="library" name="sbt: io.circe:circe-scalajs_sjs1_3:0.14.9:jar" level="project" />
     <orderEntry type="library" name="sbt: org.typelevel:cats-kernel_sjs1_3:2.12.0:jar" level="project" />
-    <orderEntry type="library" scope="TEST" name="sbt: org.scala-js:scalajs-test-bridge_2.13:1.16.0:jar" level="project" />
-    <orderEntry type="library" scope="TEST" name="sbt: org.scala-js:scalajs-test-interface_2.13:1.16.0:jar" level="project" />
+    <orderEntry type="library" scope="TEST" name="sbt: org.scala-js:scalajs-test-bridge_2.13:1.18.1:jar" level="project" />
+    <orderEntry type="library" scope="TEST" name="sbt: org.scala-js:scalajs-test-interface_2.13:1.18.1:jar" level="project" />
   </component>
 </module>

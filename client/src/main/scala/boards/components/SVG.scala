@@ -1,6 +1,6 @@
 package boards.components
 
-import boards.imports.laminar.{*, given}
+import com.raquo.laminar.api.L.{*, given}
 
 object SVG:
   

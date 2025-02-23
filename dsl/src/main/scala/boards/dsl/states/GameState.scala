@@ -1,9 +1,8 @@
 package boards.dsl.states
 
-import boards.dsl.rules.Capability
-import boards.imports.games.{*, given}
-import boards.imports.math.{*, given}
-import boards.math.region.Region.HasRegionI
+import boards.dsl.meta.PlayerRef.PlayerId
+import boards.dsl.rules.{Capability, Cause, Effect, Input, Rule}
+import boards.dsl.states.GameState.{ActiveState, FinalState, Outcome}
 
 /** The combination of a [[HistoryState]] (the entire history of states in a game)
   * with a [[Rule]] (the mechanism for testing input legality and deciding what happens next).

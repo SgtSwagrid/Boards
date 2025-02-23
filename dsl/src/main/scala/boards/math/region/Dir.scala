@@ -1,8 +1,8 @@
 package boards.math.region
 
-import boards.imports.math.{*, given}
 import boards.math.Number.*
-import Vec.HasVecI
+import boards.math.region.Region.RegionI
+import boards.math.region.Vec.{HasVecI, VecI}
 
 import scala.annotation.targetName
 
@@ -69,13 +69,16 @@ object Dir:
   val diagonallyDown: RegionI = Dir.bottomLeft | Dir.bottomRight
   /** The 2 up-diagonal directions (topLeft, topRight) in 2D. */
   val diagonallyUp: RegionI = Dir.topLeft | Dir.topRight
-  
+  /** The 2 positively-oriented diagonal directions (bottomLeft, topRight) in 2D. */
   val positiveDiagonal: RegionI = Dir.topRight | Dir.bottomLeft
-  
+  /** The 2 negatively-oriented diagonal directions (topLeft, bottomRight) in 2D. */
   val negativeDiagonal: RegionI = Dir.topLeft | Dir.bottomRight
   
+  /** A collection of regions, each corresponding to an orthogonal reflected direction pair. */
   val orthogonalPairs: Seq[RegionI] = Seq(horizontal, vertical)
+  /** A collection of regions, each corresponding to a diagonal reflected direction pair. */
   val diagonalPairs: Seq[RegionI] = Seq(positiveDiagonal, negativeDiagonal)
+  /** A collection of regions, each corresponding to an octagonal reflected direction pair. */
   val octagonalPairs: Seq[RegionI] = orthogonalPairs ++ diagonalPairs
   
   /**

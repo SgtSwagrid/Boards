@@ -1,16 +1,25 @@
 package boards.views
 
-import boards.imports.laminar.{*, given}
+import boards.components.{Footer, InputField, Navbar, SVG, Tabs}
+import boards.components.Tabs.Tab
 import com.raquo.laminar.api.L.*
-import boards.imports.circe.{*, given}
 import boards.protocol.UserProtocol.{LoginError, LoginForm, LoginResponse, RegistrationError, RegistrationForm, RegistrationResponse, User}
 import boards.protocol.UserProtocol.LoginError.*
 import boards.protocol.UserProtocol.RegistrationError.*
+import boards.util.Navigation
+import io.laminext.fetch.circe.Fetch
+import org.scalajs.dom.KeyCode
+import io.laminext.fetch.circe.jsonRequestBody
+import io.circe.parser.{decode, parse}
+import io.laminext.fetch.circe.fetchEventStreamBuilderSyntaxCirce
+import scala.concurrent.ExecutionContext.Implicits.global
+
+import scala.scalajs.js.annotation.JSExportTopLevel
 
 @JSExportTopLevel("LoginView")
 object LoginView extends View:
   
-  def content(user: Option[User]) =
+  def content (user: Option[User]) =
     val loginError = Var[Option[LoginError]](None)
     val registerError = Var[Option[RegistrationError]](None)
     div (

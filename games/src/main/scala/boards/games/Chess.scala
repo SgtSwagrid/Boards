@@ -1,4 +1,18 @@
-package boards.games; import boards.imports.all.{*, given}
+package boards.games
+
+import boards.dsl.meta.Game
+import boards.dsl.meta.PlayerRef.Player
+import boards.dsl.pieces.Piece
+import boards.dsl.pieces.PieceType.{MoveablePiece, TexturedPiece}
+import boards.dsl.rules.{Control, Rule}
+import boards.dsl.states.HistoryState
+import boards.graphics.{Colour, Pattern, Texture}
+import boards.math.region.{Box, Dir}
+import boards.math.Algebra.{*, given}
+import boards.math.region.EmbeddedRegion.embed
+import boards.dsl.Shortcuts.{*, given}
+import boards.dsl.pieces.PieceView.Pieces
+import boards.dsl.states.GameState.Outcome.Draw
 
 object Chess extends Game:
   
@@ -8,8 +22,8 @@ object Chess extends Game:
   val black = Player(1, "Black", Colour.British.MattPurple)
   override val players = Seq(white, black)
   
-  override val board = Box(8, 8)
-    .withLabels(Pattern.Checkered(Colour.Chess.Dark, Colour.Chess.Light))
+  override def board = Box(8, 8).embed
+    .paint(Pattern.Checkered(Colour.Chess.Dark, Colour.Chess.Light))
   
   override def setup =
     board.row(7).create(black, Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook) |>
@@ -18,8 +32,8 @@ object Chess extends Game:
     board.row(0).create(white, Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook)
   
   override def loop = Rule.alternatingTurns:
-    Pieces.ofActivePlayer.actions.require(!inCheck)
-      .orElseStop(if inCheck then State.nextPlayer.wins else Draw)
+    Pieces.ofActivePlayer.now.actions.require(!inCheck)
+      .orElseStop(if inCheck then state.nextPlayer.wins else Draw)
   
   def inCheck(using state: HistoryState) = King.ofActivePlayer.inCheck
   
@@ -51,9 +65,9 @@ object Chess extends Game:
           .filter: rook =>
             val path = king.rayTo(rook)
             !rook.hasMoved &&
-            rook.y == Piece.y &&
+            rook.y == king.y &&
             path.interior.pieces.isEmpty &&
-            !Pieces.ofInactivePlayers.following(King.createMine(path)).canMoveTo(path)
+            !Pieces.ofInactivePlayers.following(King.createFriendly(path)).canMoveTo(path)
           .map: rook =>
             king.move(king + (king.directionTo(rook) * 2)) |>
             rook.relocate(king + king.directionTo(rook))
@@ -61,11 +75,11 @@ object Chess extends Game:
   object Pawn extends TexturedPiece(Texture.WhitePawn, Texture.BlackPawn):
     def rule = (r_move | r_capture | r_enpassant) |> r_promote
     
-    def forward (using Piece) = Piece.byOwner(Dir.up, Dir.down)
-    def diagonal(using Piece) = Piece.byOwner(Dir.diagonallyUp, Dir.diagonallyDown)
-    def home    (using Piece) = Piece.byOwner(1, 6)
-    def goal    (using Piece) = Piece.byOwner(7, 0)
-    def distance(using Piece) = if Piece.y == home then 2 else 1
+    def forward (using piece: Piece) = piece.byOwner(Dir.up, Dir.down)
+    def diagonal(using piece: Piece) = piece.byOwner(Dir.diagonallyUp, Dir.diagonallyDown)
+    def home    (using piece: Piece) = piece.byOwner(1, 6)
+    def goal    (using piece: Piece) = piece.byOwner(7, 0)
+    def distance(using piece: Piece) = if piece.y == home then 2 else 1
     
     def r_move(using Piece) = Control.moveThis:
       forward.rayFromHere.take(distance).untilPiece
@@ -73,11 +87,11 @@ object Chess extends Game:
     def r_capture(using Piece) = Control.moveThis:
       diagonal.fromHere.ontoEnemy
       
-    def r_enpassant(using Piece) = Rule.union:
-      Pieces.ofType(Pawn).duringPreviousTurn.moves
+    def r_enpassant(using piece: Piece) = Rule.union:
+      state.pieces.ofType(Pawn).duringPreviousTurn.moves
         .filter(_.step.abs.y == 2)
-        .filter(_.midpoint in (Piece + diagonal))
-        .map(m => Piece.move(m.midpoint) |> m.destroy)
+        .filter(_.midpoint in (piece + diagonal))
+        .map(m => piece.move(m.midpoint) |> m.destroy)
       
-    def r_promote(using Piece) = Rule.maybe(Piece.y == goal):
-      Piece.promote(Rook, Knight, Bishop, Queen)
+    def r_promote(using piece: Piece) = Rule.maybe(piece.y == goal):
+      piece.promote(Rook, Knight, Bishop, Queen)

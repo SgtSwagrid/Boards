@@ -1,7 +1,6 @@
 package boards.dsl.pieces
 
 import boards.dsl.rules.{Cause, Control, Effect, Rule}
-import boards.dsl.Shortcuts.Piece
 import boards.dsl.meta.PlayerRef.PlayerRef
 import boards.dsl.states.{GameState, HistoryState}
 import boards.graphics.Texture
@@ -45,42 +44,42 @@ trait PieceType extends PieceFilter:
   
   /** Passively create some [[Piece]]s of this [[PieceType]]. */
   def create (
-    owner: HistoryState ?=> PlayerRef,
-    region: HistoryState ?=> HasRegionI,
+    owner: (state: HistoryState) ?=> PlayerRef,
+    region: (state: HistoryState) ?=> HasRegionI,
   ): Effect =
     Effect.create(owner, region, this)
   
   /** Passively create some [[Piece]]s of this [[PieceType]], belonging to the active player. */
-  def createMine (
-    region: HistoryState ?=> HasRegionI,
+  def createFriendly (
+    region: (state: HistoryState) ?=> HasRegionI,
   ) (using PlayerRef): Effect =
-    Effect.createMine(region, this)
+    Effect.createFriendly(region, this)
   
   /** Allow the user to place a [[Piece]] of this [[PieceType]] by clicking. */
   def place (
-    owner: HistoryState ?=> PlayerRef,
-    region: HistoryState ?=> HasRegionI,
+    owner: (state: HistoryState) ?=> PlayerRef,
+    region: (state: HistoryState) ?=> HasRegionI,
   ): Rule =
     Control.place(owner, region, this)
   
   /** Allow the user to place a [[Piece]] of this [[PieceType]], belonging to the active player. */
-  def placeMine (
-    region: HistoryState ?=> HasRegionI,
+  def placeFriendly (
+    region: (state: HistoryState) ?=> HasRegionI,
   ) (using PlayerRef): Rule =
-    Control.placeMine(region, this)
+    Control.placeFriendly(region, this)
   
   /** Fill a [[RegionI]] with [[Piece]]s of this [[PieceType]]. */
   def fill (
-    owner: HistoryState ?=> PlayerRef,
-    region: HistoryState ?=> HasRegionI,
+    owner: (state: HistoryState) ?=> PlayerRef,
+    region: (state: HistoryState) ?=> HasRegionI,
   ): Rule =
     Control.fill(owner, region, this)
   
   /** Fill a [[RegionI]] with [[Piece]]s of this [[PieceType]], belonging to the active player. */
-  def fillMine (
-    region: HistoryState ?=> HasRegionI,
+  def fillFriendly (
+    region: (state: HistoryState) ?=> HasRegionI,
   ) (using PlayerRef): Rule =
-    Control.fillMine(region, this)
+    Control.fillFriendly(region, this)
     
   override def toString = getClass.getSimpleName.dropRight(1)
 

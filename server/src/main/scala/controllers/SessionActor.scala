@@ -3,13 +3,15 @@ package controllers
 import boards.graphics.Scene
 import boards.protocol.GameProtocol.*
 import boards.protocol.GameProtocol.GameRequest.*
-import boards.imports.circe.{*, given}
 import boards.protocol.UserProtocol.User
 import models.GameModel
 import org.apache.pekko.actor.{*, given}
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.util.Timeout
 import schema.UserTable.UserRow
+import boards.util.Codecs.given
+
+import io.circe.parser.{decode, parse}
 
 import scala.compiletime.ops.boolean.!
 import scala.concurrent.ExecutionContext
@@ -35,5 +37,5 @@ class SessionActor (
         roomActor.map[Unit](_ ! RoomActor.Protocol.Act(user.map(_.userId), out, request))
 
 object SessionActor:
-  def props(out: ActorRef, system: ActorRef, roomId: String, user: Option[User])(using Database) =
+  def props (out: ActorRef, system: ActorRef, roomId: String, user: Option[User]) (using Database) =
     Props(SessionActor(out, system, roomId, user))

@@ -2,7 +2,8 @@ package controllers
 
 import RoomActor.Subscriber
 import RoomActor.Protocol.*
-import boards.dsl.meta.TurnId.TurnId
+import boards.dsl.meta.TurnId
+import boards.dsl.meta.TurnId.{TurnId, next}
 import boards.dsl.rules.Cause
 import boards.dsl.states.GameState
 import boards.dsl.states.InstantaneousState.given
@@ -12,6 +13,7 @@ import boards.protocol.GameProtocol.GameRequest.*
 import boards.protocol.Room
 import boards.protocol.Room.{Player, RichRoom, Status}
 import boards.protocol.UserProtocol.User
+import boards.dsl.meta.TurnId.next
 import models.GameModel
 import org.apache.pekko.actor.{Status as _, *}
 import schema.RoomTable.rooms
@@ -39,21 +41,23 @@ extends Actor:
   self ! ReloadState
   
   /** Provide all active clients with the latest information so that the scene may be updated. */
-  def render(): Unit =
+  def render (): Unit =
     subscribers.values.foreach(render)
       
   /** Provide a given client with the latest information so that the scene may be updated. */
-  def render(sub: Subscriber): Unit =
+  def render (sub: Subscriber): Unit =
+    
+    println(s"Rendering room $roomId to ${sub.user}")
   
     // If the client is currently viewing an old state, we need to provide them with this instead.
     val stateAtTime = sub.turnId match
-      case Some(turnId) => state.atTime((turnId + (state.turnId + 1)) % (state.turnId + 1)).inert
+      case Some(turnId) => state.atTime((turnId + state.turnId.next) % (state.turnId.next)).inert
       case None => state
       
     // Construct a scene summarising all relevant information and send it to the client.
     sub.session ! GameResponse.Render(Scene(room, sub.user.map(_.userId), stateAtTime, state))
   
-  private def canTakeAction(userId: Int): Boolean =
+  private def canTakeAction (userId: Int): Boolean =
     room.isActive &&
     room.playersOf(userId).map(_.position).contains(state.activePlayer) &&
     !room.player(state.activePlayer).hasResigned
@@ -61,14 +65,12 @@ extends Actor:
   def receive =
     
     case ReloadRoom =>
-      for room <- GameModel().getRichRoom(roomId)
-      do
+      for room <- GameModel().getRichRoom(roomId) do
         this.room = room
         render()
     
     case ReloadState =>
-      for state <- GameModel().getGameState(roomId)
-      do
+      for state <- GameModel().getGameState(roomId) do
         this.state = state
         render()
     

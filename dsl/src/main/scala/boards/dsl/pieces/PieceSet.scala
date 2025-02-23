@@ -9,14 +9,13 @@ import boards.math.region.Vec.HasVecI
 
 import scala.collection.immutable.BitSet
 
-/** A set of [[PieceId]]s without any time-varying information.
+/** A set of [[PieceId]]s without any time-dependent information.
   * Can identity some subset of existing [[Piece]]s, but contains no
   * information about their current state.
   *
-  * Call [[this.now]] to query the current state of the included [[Piece]]s.
+  * Call [[now]] to query the current state of the included [[Piece]]s.
   *
   * @see [[PieceFilter]], [[PieceView]]
-  *
   * @author Alec Dorrington
   */
 trait PieceSet extends PieceFilter:

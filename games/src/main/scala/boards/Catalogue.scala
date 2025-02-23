@@ -1,7 +1,6 @@
 package boards
 
 import boards.dsl.meta.Game
-import boards.imports.games.{*, given}
 import boards.games.*
 
 object Catalogue:

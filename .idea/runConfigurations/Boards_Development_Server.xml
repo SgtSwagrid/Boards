@@ -7,7 +7,7 @@
     </option>
     <option name="tasks" value="&quot;project server&quot; &quot;run&quot;" />
     <option name="useSbtShell" value="false" />
-    <option name="vmparams" value="-Xms512M -Xmx1024M -Xss1M" />
+    <option name="vmparams" value="-Xms512M -Xmx8192M -Xss1M" />
     <option name="workingDir" value="$PROJECT_DIR$" />
     <option name="envFilePaths" />
     <envs>

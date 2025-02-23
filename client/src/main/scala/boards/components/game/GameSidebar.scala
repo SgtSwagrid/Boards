@@ -6,7 +6,7 @@ import boards.dsl.meta.TurnId
 import boards.graphics.{Colour, Scene}
 import boards.protocol.GameProtocol.GameRequest
 import boards.protocol.Room.{RichPlayer, Status}
-import boards.html.Tags.*
+import boards.util.Tags.*
 import boards.util.Navigation.goto
 import boards.util.extensions.SequenceOps.interweave
 import boards.util.extensions.ColourOps.textColour
@@ -24,7 +24,7 @@ object GameSidebar:
  * @param scene The current scene to display as provided by the server.
  * @param respond An observer for providing responses to the server.
  */
-class GameSidebar(scene: Signal[Scene], respond: Observer[GameRequest]):
+class GameSidebar (scene: Signal[Scene], respond: Observer[GameRequest]):
   
   def apply: HtmlElement =
     

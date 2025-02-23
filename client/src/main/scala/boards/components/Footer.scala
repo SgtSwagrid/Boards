@@ -1,7 +1,7 @@
 package boards.components
 
-import boards.imports.laminar.{*, given}
 import com.raquo.laminar.api.L.*
+import com.raquo.laminar.tags.HtmlTag
 
 object Footer:
   

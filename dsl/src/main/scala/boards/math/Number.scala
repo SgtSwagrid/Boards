@@ -1,7 +1,7 @@
 package boards.math
 
 import boards.math.Interval.{UInterval, UIntervalI}
-import boards.math.WithInfinity.Finite
+import boards.math.Unbounded.Finite
 import boards.math.region.BoundingBox
 import boards.math.region.BoundingBox.{BoundingBoxI, UBoundingBoxI}
 import boards.math.region.Vec.VecI

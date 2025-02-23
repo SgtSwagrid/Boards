@@ -1,19 +1,19 @@
 package boards.dsl.states
 
-import boards.dsl.meta.TurnId.HasTurnId
-import boards.dsl.states.HistoryState.*
-import boards.imports.games.{*, given}
-import boards.imports.math.{*, given}
-import boards.dsl.rules.Input
-import io.circe.Decoder.state
+import boards.dsl.meta.TurnId.{next, HasTurnId, TurnId, given}
+import boards.dsl.meta.TurnId
 import boards.dsl.pieces.PieceState
-import com.sun.org.apache.xalan.internal.lib.ExsltDatetime.time
-
-import scala.annotation.tailrec
+import boards.dsl.pieces.PieceState.Version
+import boards.dsl.rules.{Cause, Input, Rule}
+import boards.dsl.states.GameState.{FinalState, Outcome}
+import boards.dsl.states.HistoryState.{InitialState, SuccessorState}
+import scala.math.Ordered.orderingToOrdered
 
 /**
  * The entire history of states in a game.
- * Contains all `InstantaneousState`s, `Input`s and `Action`s to have occurred up to this point.
+ * Contains all [[InstantaneousState]]s and [[Input]]s to have occurred up to this point.
+  *
+  * @author Alec Dorrington
  */
 sealed trait HistoryState extends HasTurnId:
   
@@ -32,7 +32,7 @@ sealed trait HistoryState extends HasTurnId:
     inBounds,
   }
   
-  val initial: HistoryState = this match
+  lazy val initial: HistoryState = this match
     case SuccessorState(_, previous, _) => previous.initial
     case InitialState(_) => this
   

@@ -1,17 +1,15 @@
 package boards.dsl.rules
 
-import boards.imports.games.{*, given}
-import boards.imports.math.{*, given}
-import boards.math.region.Region.HasRegionI
-import Effect.*
-import boards.math.region.Vec.HasVecI
-import boards.dsl.Shortcuts.State
-import boards.dsl.pieces.{Piece, PieceFilter, PieceType}
+import boards.dsl.meta.Game.Board
+import boards.dsl.meta.PlayerRef.PlayerRef
+import boards.dsl.pieces.{Piece, PieceFilter, PieceRef, PieceSet, PieceState, PieceType}
+import boards.dsl.states.GameState.Outcome
+import boards.dsl.states.{GameState, HistoryState}
+import boards.math.region.Region.{HasRegionI, RegionI}
+import boards.math.region.Vec.{HasVecI, VecI}
+import boards.dsl.rules.Effect.*
 
 import scala.collection.mutable
-import boards.dsl.Shortcuts.{State, given_HistoryState, Piece}
-import boards.dsl.meta.PlayerRef
-import boards.dsl.meta.PlayerRef.PlayerRef
 
 /** A [[Rule]] for modifying the [[InstantaneousState]] in some regular manner.
   * All state updates must occur via an [[Effect]].
@@ -37,67 +35,70 @@ object Effect:
     */
   val identity: Effect = IdentityEffect
   
-  def apply(brancher: HistoryState ?=> Effect): Effect =
+  def apply (brancher: (state: HistoryState) ?=> Effect): Effect =
     SwitchEffect(state => brancher(using state))
   
-  def sequence(effects: HistoryState ?=> Iterable[Effect]): Effect =
+  def sequence (effects: (state: HistoryState) ?=> Iterable[Effect]): Effect =
     Effect(effects.foldLeft(Effect.identity)(_ |> _))
   
   def endTurn: Effect = EndTurnEffect
   
-  def stop(outcome: HistoryState ?=> Outcome): Effect =
+  def stop (outcome: HistoryState ?=> Outcome): Effect =
     TerminalEffect(state => outcome(using state))
   
-  def stopWhen(condition: HistoryState ?=> Boolean)(outcome: HistoryState ?=> Outcome): Rule =
+  def stopWhen
+    (condition: (state: HistoryState) ?=> Boolean)
+    (outcome: (state: HistoryState) ?=> Outcome)
+  : Rule =
     Effect(if condition then Effect.stop(outcome) else Effect.identity)
   
   def create (
-    owner: HistoryState ?=> PlayerRef,
-    region: HistoryState ?=> HasRegionI,
+    owner: (state: HistoryState) ?=> PlayerRef,
+    region: (state: HistoryState) ?=> HasRegionI,
     pieceTypes: PieceType*,
   ): Effect =
     Effect(CreateEffect(owner, region.region, pieceTypes.toIndexedSeq))
   
-  def createMine (
-    region: HistoryState ?=> HasRegionI,
+  def createFriendly (
+    region: (state: HistoryState) ?=> HasRegionI,
     pieceTypes: PieceType*,
   ) (using owner: PlayerRef): Effect =
     Effect.create(owner, region, pieceTypes*)
   
   def relocate (
-    pieces: HistoryState ?=> PieceFilter,
-    position: (HistoryState, Piece) ?=> HasVecI,
+    pieces: (state: HistoryState) ?=> PieceFilter,
+    position: (state: HistoryState, piece: Piece) ?=> HasVecI,
   ): Effect = Effect.sequence:
     pieces.now.map: piece =>
       Effect(MoveEffect(piece, position(using summon[HistoryState], piece).position))
       
   def slide (
-    from: HistoryState ?=> HasRegionI,
-    to: (HistoryState, VecI) ?=> HasVecI,
+    from: (state: HistoryState) ?=> HasRegionI,
+    to: (state: HistoryState, from: VecI) ?=> HasVecI,
   ): Effect =
     relocate (
-      State.pieces.ofRegion(from),
+      state.pieces.ofRegion(from),
       to(using summon[HistoryState], summon[Piece].position),
     )
     
   def destroy (
-    pieces: HistoryState ?=> PieceFilter,
+    pieces: (state: HistoryState) ?=> PieceFilter,
   ): Effect =
-    Effect(DestroyEffect(pieces.now))
+    Effect(DestroyEffect(state.pieces))
     
   def clear (
-    region: HistoryState ?=> HasRegionI,
+    region: (state: HistoryState) ?=> HasRegionI,
   ): Effect =
-    Effect.destroy(Pieces.now.ofRegion(region))
+    Effect.destroy(state.pieces.ofRegion(region))
     
   def setBoard (
-    board: HistoryState ?=> Board,
+    board: (state: HistoryState) ?=> Board,
   ): Effect =
     Effect(BoardEffect(board))
   
   private[rules] case object IdentityEffect extends Effect:
     
-    def effect(state: HistoryState) = Some:
+    def effect (state: HistoryState) = Some:
       state.withRule(Effect.identity)
     
   private[rules] case class SequenceEffect (
@@ -105,24 +106,24 @@ object Effect:
     right: Effect,
   ) extends Effect:
     
-    def effect(state: HistoryState) =
+    def effect (state: HistoryState) =
       right.effect(left.effect(state).value.history)
   
   private[rules] case class BoardEffect (
     board: Board,
   ) extends Effect:
     
-    final def effect(state: HistoryState) = Some:
+    final def effect (state: HistoryState) = Some:
       state.replace(state.now.withBoard(board))
         .withRule(Effect.identity)
   
   private[rules] sealed trait PieceEffect extends Effect:
     
-    final def effect(state: HistoryState) = Some:
+    final def effect (state: HistoryState) = Some:
       state.replace(state.now.withPieces(effect(state.now.pieces)))
         .withRule(Effect.identity)
     
-    def effect(pieces: PieceState): PieceState
+    def effect (pieces: PieceState): PieceState
   
   private[rules] case class CreateEffect (
     owner: PlayerRef,
@@ -130,7 +131,7 @@ object Effect:
     pieceTypes: IndexedSeq[PieceType],
   ) extends PieceEffect:
     
-    def effect(pieceSet: PieceState) =
+    def effect (pieceSet: PieceState) =
       if pieceTypes.isEmpty then pieceSet else
         (region & pieceSet.board).positions.zipWithIndex.foldLeft(pieceSet):
           case (pieceSet, (pos, i)) =>
@@ -143,19 +144,19 @@ object Effect:
     position: VecI,
   ) extends PieceEffect:
     
-    def effect(pieceSet: PieceState) =
+    def effect (pieceSet: PieceState) =
       pieceSet.movePiece(piece, position)
   
   private[rules] case class DestroyEffect (
-    pieces: PieceSet,
+    pieces: PieceFilter,
   ) extends PieceEffect:
     
-    def effect(pieceSet: PieceState) =
-      pieces.pieceRefs.foldLeft(pieceSet)(_.destroyPiece(_))
+    def effect (pieceSet: PieceState) =
+      pieceSet.filter(pieces).pieces.foldLeft(pieceSet)(_.destroyPiece(_))
   
   private[rules] case object EndTurnEffect extends Effect:
     
-    def effect(state: HistoryState) =
+    def effect (state: HistoryState) =
       Some(state.replace(state.now.endTurn).withRule(Effect.identity))
   
   /** A rule which immediately triggers the end of the game.
@@ -165,7 +166,7 @@ object Effect:
     outcome: HistoryState => Outcome,
   ) extends Effect:
       
-    def effect(state: HistoryState) = Some:
+    def effect (state: HistoryState) = Some:
       state.withOutcome(outcome(state))
       
   private[rules] case class SwitchEffect (
@@ -173,8 +174,8 @@ object Effect:
   ) extends Effect:
     
     private val memo: mutable.Map[HistoryState, Effect] = mutable.Map.empty
-    private def branch(state: HistoryState): Effect =
+    private def branch (state: HistoryState): Effect =
       memo.getOrElseUpdate(state, brancher(state))
     
-    def effect(state: HistoryState) =
+    def effect (state: HistoryState) =
       branch(state).effect(state)

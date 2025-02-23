@@ -9,7 +9,7 @@ import scala.scalajs.js.annotation.JSExportTopLevel
 @JSExportTopLevel("BrowseView")
 object BrowseView extends View:
   
-  def content(user: Option[User]) = div (
+  def content (user: Option[User]) = div (
     Navbar(user),
     div (
       position("absolute"),

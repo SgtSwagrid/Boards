@@ -13,7 +13,6 @@ import boards.protocol.UserProtocol.User
 import org.mindrot.jbcrypt.BCrypt
 import slick.dbio.{DBIO, DBIOAction}
 import slick.jdbc.H2Profile.api.*
-import boards.imports.circe.{*, given}
 import schema.{InputTable, PlayerTable, RoomTable}
 import schema.RoomTable.given
 import schema.InputTable.InputRow

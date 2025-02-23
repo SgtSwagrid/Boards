@@ -1,9 +1,15 @@
 package boards.components
 
 import boards.protocol.UserProtocol.{LoginResponse, User}
-import boards.imports.circe.{*, given}
-import boards.imports.laminar.{*, given}
+import boards.util.Navigation
 import com.raquo.laminar.api.L.*
+import com.raquo.laminar.api.features.unitArrows
+import com.raquo.laminar.codecs.StringAsIsCodec
+import io.laminext.fetch.circe.Fetch
+import org.scalajs.dom.window
+import com.raquo.laminar.keys.HtmlProp
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object Navbar:
   

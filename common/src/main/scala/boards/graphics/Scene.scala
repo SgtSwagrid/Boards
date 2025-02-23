@@ -1,39 +1,49 @@
 package boards.graphics
 
-import boards.imports.games.{*, given}
-import boards.imports.math.{*, given}
-import boards.imports.circe.{*, given}
 import boards.protocol.GameProtocol.*
 import boards.protocol.UserProtocol.*
 import boards.protocol.Room
 import boards.protocol.Room.*
 import Scene.*
+import boards.dsl.meta.PlayerRef.PlayerId
+import boards.dsl.meta.TurnId
+import boards.dsl.meta.TurnId.TurnId
+import boards.dsl.pieces.PieceRef.PieceId
 import boards.dsl.pieces.PieceState.empty.region
 import boards.dsl.rules
-import boards.dsl.states.GameState
+import boards.dsl.rules.Input
+import boards.dsl.states.{GameState, HistoryState}
+import boards.dsl.states.GameState.Outcome
+import boards.dsl.states.GameState.Outcome.Winner
 import boards.math.region.RegionMap.RegionMapI
-import boards.math.region.{Region, RegionMap}
+import boards.math.region.{EmbeddedRegion, Region, RegionMap}
+import boards.math.region.Region.RegionI
+import boards.math.region.Vec.VecI
+import io.circe.Codec
 import io.circe.Decoder.state
+import boards.util.Codecs.{*, given}
+import io.circe.Encoder.encodeSeq
+import io.circe.Decoder.decodeSeq
+export io.circe.generic.auto.*
 
-/**
- * A representation of the current game state.
- * This is only a shallow image and cannot be used to reconstruct the actual state.
- * This is for use primarily as a data exchange format, so that the server may
- * provide the client with precisely that information necessary to render the current state
- * and accept appropriate input from the user;
- * in a manner that is automatically serialisable into JSON
- * and without revealing hidden information that should remain secret.
- *
- * @param room The game room currently being viewed.
- * @param userId The ID of the user who is currently logged in on this device.
- * @param activePlayerId The ID of the player whose turn it currently is.
- * @param board The set of empty tiles that forms the game board.
- * @param pieces The pieces which currently exist on the board.
- * @param choices The set of legally permissible inputs for this user in the current state.
- * @param diff The tiles which were modified during the previous turn.
- * @param logicalOutcome The result of the game, if it has ended.
- * @param time The number of actions which have already been taken.
- */
+/** A representation of the current game state.
+  * This is only a shallow image and cannot be used to reconstruct the actual state.
+  * This is for use primarily as a data exchange format, so that the server may
+  * provide the client with precisely that information necessary to render the current state
+  * and accept appropriate input from the user;
+  * in a manner that is automatically serialisable into JSON
+  * and without revealing hidden information that should remain secret.
+  *
+  * @param room The game room currently being viewed.
+  * @param userId The ID of the user who is currently logged in on this device.
+  * @param activePlayerId The ID of the player whose turn it currently is.
+  * @param board The set of empty tiles that forms the game board.
+  * @param pieces The pieces which currently exist on the board.
+  * @param choices The set of legally permissible inputs for this user in the current state.
+  * @param diff The tiles which were modified during the previous turn.
+  * @param logicalOutcome The result of the game, if it has ended.
+  * @param time The number of actions which have already been taken.
+  */
 case class Scene (
   
   room: RichRoom = Room.empty,
@@ -41,10 +51,11 @@ case class Scene (
   userId: Option[Int] = None,
   activePlayerId: PlayerId = PlayerId(0),
   
-  board: RegionMapI[Tile] = RegionMap.empty,
+  board: EmbeddedRegion = EmbeddedRegion.empty,
   pieces: Seq[PieceData] = Seq.empty,
-  choices: Seq[Choice[Input]] = Seq.empty,
+  choices: Seq[Choice[?]] = Seq.empty,
   diff: RegionI = Region.empty,
+  
   logicalOutcome: Option[Outcome] = None,
   currentTurnId: TurnId = TurnId.initial,
   latestTurnId: TurnId = TurnId.initial,
@@ -96,7 +107,7 @@ case class Scene (
   def iAmPlayingExclusivelyHotseat: Boolean = isExclusivelyHotseat && iAmPlaying
   
   /** Whether the given player is controlled on this device. */
-  def isMe(playerId: PlayerId): Boolean = myPlayers.exists(_.position == playerId)
+  def isMe (playerId: PlayerId): Boolean = myPlayers.exists(_.position == playerId)
   
   /** Whether it is the turn of a player on this device. */
   def isMyTurn: Boolean = userId.contains(activePlayer.userId)
@@ -166,57 +177,39 @@ case class Scene (
 
 object Scene:
   
-  /**
-   * A single tile of the game board.
-   *
-   * @param position The logical position of this tile on the game board.
-   * @param shape The shape of this tile (i.e. square/triangle/hexagon).
-   * @param colour The colour of this tile.
-   * @param piece The texture of the piece which lies on this tile, if there is one.
-   */
-  case class Tile (
-    position: VecI,
-    shape: Shape = Shape.Rectangle(1, 1),
-    colour: Colour = Colour.White,
-    piece: Option[Texture] = None,
-  ) derives Codec.AsObject
-  
-  /**
-   * An input action that the user may choose to perform in the current state.
-   *
-   * @param from The position the user may drag from.
-   * @param to The position the user may drag to (same as from for non-drag actions).
-   * @param actionHash A unique code used to identify this action.
-   * @param result The state that results from this action, so it can be displayed in realtime.
-   */
-  case class Choice[I <: Input] (
+  /** An input action that the user may choose to perform in the current state.
+    *
+    * @param from The position the user may drag from.
+    * @param to The position the user may drag to (same as from for non-drag actions).
+    * @param actionHash A unique code used to identify this action.
+    * @param result The state that results from this action, so it can be displayed in realtime.
+    */
+  case class Choice [+I <: Input] (
     input: I,
     result: Scene,
     choiceId: Int,
   ) derives Codec.AsObject:
     override def toString = input.toString
   
-  /**
-   * A visual representation of a piece on the game board.
-   *
-   * @param pieceId A unique code used to identify this piece.
-   * @param position The logical position of this piece on the game board.
-   * @param texture The current texture of this piece.
-   */
+  /** A visual representation of a piece on the game board.
+    *
+    * @param pieceId A unique code used to identify this piece.
+    * @param position The logical position of this piece on the game board.
+    * @param texture The current texture of this piece.
+    */
   case class PieceData (
     pieceId: PieceId,
     position: VecI,
     texture: Texture,
   ) derives Codec.AsObject
   
-  /**
-   * Constructs a new scene from an actual state.
-   * (This is used by the server to produce a scene before sending it to the client.)
-   *
-   * @param room The room in which the game is being played.
-   * @param user The ID of the user for whom the scene is to be rendered.
-   * @param state The actual game state.
-   */
+  /** Constructs a new scene from an actual state.
+    * (This is used by the server to produce a scene before sending it to the client.)
+    *
+    * @param room The room in which the game is being played.
+    * @param user The ID of the user for whom the scene is to be rendered.
+    * @param state The actual game state.
+    */
   def apply (
     room: RichRoom,
     userId: Option[Int],
@@ -224,13 +217,7 @@ object Scene:
     latestState: GameState,
   ): Scene =
     
-    val board = currentState.now.board.zipWithPosition.mapLabels: (pos, colour) =>
-      Tile (
-        pos,
-        Shape.Rectangle(1, 1),
-        currentState.board.label(pos).get,
-        currentState.pieces.at(pos).map(_.texture),
-      )
+    val board = currentState.now.board
       
     val pieces = currentState.now.pieces.pieces.map: piece =>
       PieceData(piece.pieceId, piece.position, piece.texture)

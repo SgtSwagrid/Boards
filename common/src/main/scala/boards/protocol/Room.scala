@@ -1,12 +1,18 @@
 package boards.protocol
 
-import boards.imports.games.{Player => _, *, given}
 import boards.protocol.UserProtocol.User
 import boards.util.extensions.IntOps.*
 import Room.*
 import boards.Catalogue
 import boards.dsl.meta.Game
-import boards.imports.circe.{*, given}
+import boards.dsl.meta.PlayerRef.PlayerId
+import boards.dsl.meta.TurnId.TurnId
+import boards.dsl.states.GameState.Outcome
+import boards.dsl.states.GameState.Outcome.{Draw, Winner}
+import boards.graphics.Colour
+import io.circe.Codec
+export io.circe.generic.auto.*
+import boards.util.Codecs.{*, given}
 
 /**
  * A game room, representing a specific instance of a game being played.
@@ -25,7 +31,7 @@ case class Room (
   forkedTurn: Option[TurnId] = None,
   rematchOf: Option[String] = None,
   rematch: Option[String] = None,
-):
+) derives Codec.AsObject:
   /** The game which is being played in this room. */
   lazy val game: Game = Catalogue.byName.getOrElse(gameId, Game.none)
   
@@ -53,7 +59,7 @@ object Room:
     
     /** The players who are participating in this room, in turn order. */
     lazy val players: Seq[RichPlayer] = simplePlayers.map: player =>
-      RichPlayer(
+      RichPlayer (
         player = player,
         name = game.players(player.position.toInt).name,
         colour = game.players(player.position.toInt).colour,
@@ -62,7 +68,7 @@ object Room:
           .count(_.position.toInt < player.position.toInt),
       )
     
-    def player(playerId: PlayerId): RichPlayer = players(playerId.toInt)
+    def player (playerId: PlayerId): RichPlayer = players(playerId.toInt)
     
     /** The players who are participating in this room, grouped by the device they are playing on. */
     lazy val playersByUser: Map[Int, Seq[RichPlayer]] =
@@ -143,24 +149,30 @@ object Room:
     def withStatus(status: Status): RichRoom =
       copy(baseRoom = baseRoom.copy(baseRoom = baseRoom.baseRoom.copy(status = status)))
   
-  /**
-   * The status of a room (i.e. pending/active/complete).
-   *
-   * @param isPending True if the game hasn't yet started.
-   * @param isActive True if the game has started and hasn't yet finished.
-   * @param isComplete True if the game is already finished.
-   */
-  enum Status (
-    val isPending: Boolean,
-    val isActive: Boolean,
-    val isComplete: Boolean,
-  ):
+  /** The status of a room (i.e. pending/active/complete). */
+  enum Status derives Codec.AsObject:
+    
     /** The game hasn't yet started. */
-    case Pending extends Status(true, false, false)
+    case Pending extends Status
     /** The game has started and hasn't yet finished. */
-    case Active extends Status(false, true, false)
+    case Active extends Status
     /** The game is already finished. */
-    case Complete extends Status(false, false, true)
+    case Complete extends Status
+    
+    /** True if the game hasn't yet started. */
+    def isPending: Boolean = this match
+      case Pending => true
+      case _ => false
+    
+    /** True if the game has started and hasn't yet finished. */
+    def isActive: Boolean = this match
+      case Active => true
+      case _ => false
+      
+    /** True if the game is already finished. */
+    def isComplete: Boolean = this match
+      case Complete => true
+      case _ => false
   
   /**
    * A human player who is participating in a game room.

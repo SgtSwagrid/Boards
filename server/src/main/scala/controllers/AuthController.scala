@@ -1,7 +1,9 @@
 package controllers
 
 import boards.protocol.UserProtocol.{LoginForm, RegistrationForm, User}
-import boards.imports.circe.{*, given}
+import io.circe.Decoder
+import io.circe.parser.{decode, parse}
+import io.circe.syntax.{EncoderOps, KeyOps}
 import models.UserModel
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import play.api.mvc.*
@@ -87,7 +89,7 @@ object AuthController:
       result <- toFuture(result)
     yield result
     
-  def withForm[X]
+  def withForm [X]
     (request: Request[AnyContent])
     (f: X => Future[Result])
     (using Decoder[X])
