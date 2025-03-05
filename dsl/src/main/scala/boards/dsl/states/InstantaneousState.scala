@@ -1,10 +1,10 @@
 package boards.dsl.states
 
 import boards.dsl.meta.Game.{Board, GameConfig}
-import boards.dsl.meta.PlayerRef.{PlayerId, PlayerRef, +}
+import boards.dsl.meta.PlayerRef.{+, PlayerId, PlayerRef}
 import boards.dsl.pieces.PieceState
-import boards.math.region.EmbeddedRegion
-import boards.math.region.Vec.HasVecI
+import boards.math.vector.Embedding
+import boards.math.vector.Vec.{HasVecI, VecI}
 
 /**
   * The state of a game at a specific moment in time, without any history.
@@ -18,7 +18,7 @@ import boards.math.region.Vec.HasVecI
   * @author Alec Dorrington
   */
 case class InstantaneousState (
-  board: EmbeddedRegion = EmbeddedRegion.empty,
+  board: Embedding = Embedding.empty,
   pieces: PieceState = PieceState.empty,
   config: GameConfig = GameConfig(0, Map.empty),
   activePlayer: PlayerId = PlayerId.initial,
@@ -27,7 +27,7 @@ case class InstantaneousState (
   given InstantaneousState = this
   given GameConfig = config
   
-  def inBounds (v: HasVecI): Boolean = board.contains(v)
+  def inBounds (v: VecI): Boolean = board.containsLogical(v)
   
   def endTurn (skip: Int = 1): InstantaneousState =
     copy(activePlayer = activePlayer + skip)

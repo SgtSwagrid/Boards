@@ -2,13 +2,16 @@ package boards.dsl
 
 import boards.dsl.meta.Game.{Board, GameConfig, Property}
 import boards.dsl.meta.PlayerRef.PlayerRef
-import boards.dsl.pieces.{Piece, PieceRef, PieceState, PieceType, PieceView}
+import boards.dsl.pieces.{Piece, PieceRef, PieceSet, PieceState, PieceType, PieceView}
 import boards.dsl.rules.{Cause, Control, Effect, Rule}
 import boards.dsl.states.{GameState, HistoryState, InstantaneousState}
-import boards.math.region.Ray
-import boards.math.region.Region.RegionI
-import boards.math.region.Vec.VecI
+import boards.math.algebra.Unbounded
+import boards.math.algebra.Unbounded.Finite
+import boards.math.vector.Ray
+import boards.math.vector.Region.RegionI
+import boards.math.vector.Vec.VecI
 import boards.util.extensions.FunctionOps.unary_!
+import boards.math.algebra.Algebra.Numeric
 
 object Shortcuts:
   
@@ -136,3 +139,9 @@ object Shortcuts:
   given (using state: InstantaneousState): GameConfig = state.config
   
   given (using GameConfig): Conversion[Property, Int] = _.get
+  
+  given Conversion[Piece, VecI] = _.position
+  given Conversion[PieceView, RegionI] = _.region
+  given (using piece: Piece): VecI = piece.position
+  
+  given [X: Numeric]: Conversion[X, Unbounded[X]] = x => Finite(x)

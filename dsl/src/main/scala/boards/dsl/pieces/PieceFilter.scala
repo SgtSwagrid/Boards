@@ -7,8 +7,8 @@ import boards.dsl.pieces.PieceUpdate.UpdateQuery
 import boards.dsl.rules.{Capability, Cause, Control, Effect, Rule}
 import boards.dsl.states.HistoryState.{AtTime, PeriodQuery}
 import boards.dsl.states.HistoryState
-import boards.math.region.Region.{HasRegionI, RegionI}
-import boards.math.region.Vec.HasVecI
+import boards.math.vector.Vec.VecI
+import boards.math.vector.Region.RegionI
 import boards.dsl.Shortcuts.given_InstantaneousState
 
 import scala.reflect.ClassTag
@@ -63,7 +63,7 @@ trait PieceFilter extends AtTime[PieceView], PeriodQuery[UpdateQuery], OfPlayer[
     this & PieceFilter.ofClass[P]
   
   /** Require additionally that [[Piece]]s lie in the given [[RegionI]]. */
-  def ofRegion (region: HasRegionI): PieceFilter =
+  def ofRegion (region: RegionI): PieceFilter =
     this & PieceFilter.ofRegion(region)
     
   /** Get all [[Piece]]s which satisfied this predicate at the given time. */
@@ -94,13 +94,13 @@ trait PieceFilter extends AtTime[PieceView], PeriodQuery[UpdateQuery], OfPlayer[
   
   /** Passively move all matching [[Piece]]s elsewhere. */
   def relocate (
-    to: (state: HistoryState, piece: Piece) ?=> HasVecI,
+    to: (state: HistoryState, piece: Piece) ?=> VecI,
   ): Effect =
     Effect.relocate(this, to)
   
   /** Allow the player to move some matching [[Piece]] elsewhere. */
   def move (
-    to: (HistoryState, Piece) ?=> HasRegionI,
+    to: (HistoryState, Piece) ?=> RegionI,
   ): Rule =
     Control.move(this, to)
   
@@ -123,7 +123,7 @@ trait PieceFilter extends AtTime[PieceView], PeriodQuery[UpdateQuery], OfPlayer[
     Cause.clickPiece(this)
   
   /** Allow the player to drag matching [[Piece]]s. */
-  def dragTo (region: (state: HistoryState, piece: Piece) ?=> HasRegionI): Cause =
+  def dragTo (region: (state: HistoryState, piece: Piece) ?=> RegionI): Cause =
     Cause.dragPiece(this, region)
 
 object PieceFilter extends OfPlayer[PieceFilter]:
@@ -151,8 +151,8 @@ object PieceFilter extends OfPlayer[PieceFilter]:
     ofClass(C.runtimeClass.asInstanceOf[Class[? <: PieceType]])
   
   /** A [[PieceFilter]] which accepts only [[Piece]]s in a particular [[RegionI]]. */
-  def ofRegion (region: HasRegionI): PieceFilter =
-    RegionFilter(region.region)
+  def ofRegion (region: RegionI): PieceFilter =
+    RegionFilter(region)
   
   private object EmptyFilter extends PieceFilter:
     def applyBase (pieces: PieceState): PieceView = PieceView.empty

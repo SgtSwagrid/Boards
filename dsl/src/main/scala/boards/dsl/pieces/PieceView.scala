@@ -10,9 +10,9 @@ import boards.dsl.pieces.{PieceFilter, PieceSet}
 import boards.dsl.rules.Rule
 import boards.dsl.states.{HistoryState, InstantaneousState}
 import boards.dsl.states.HistoryState.AtTime
-import boards.math.region.Region.{HasRegionI, RegionI}
-import boards.math.region.Vec.HasVecI
-import boards.math.region.Region
+import boards.math.vector.Region.{HasRegion, RegionI}
+import boards.math.vector.Vec.VecI
+import boards.math.vector.Region
 
 import scala.reflect.ClassTag
 
@@ -26,7 +26,7 @@ import scala.reflect.ClassTag
   *
   * @see [[PieceSet]], [[PieceState]]
   */
-trait PieceView extends PieceSet, UpdateQuery, OfPlayer[PieceView], HasRegionI:
+trait PieceView extends PieceSet, UpdateQuery, OfPlayer[PieceView], HasRegion[Int]:
   
   /** The version of the [[PieceSet]] from which this [[PieceView]] is derived. */
   val version: Version
@@ -38,7 +38,7 @@ trait PieceView extends PieceSet, UpdateQuery, OfPlayer[PieceView], HasRegionI:
   val pieces: LazyList[Piece]
   
   /** The [[Piece]] at the specified position, if there is one. */
-  def at(position: HasVecI): Option[Piece]
+  def at(position: VecI): Option[Piece]
   
   /** Get the latest version of the [[Piece]] corresponding to the given [[PieceRef]], if it still exists. */
   def get(id: PieceRef): Option[Piece]
@@ -52,15 +52,15 @@ trait PieceView extends PieceSet, UpdateQuery, OfPlayer[PieceView], HasRegionI:
     selected.pieceBitset
   
   /** Whether some [[Piece]] exists at the given position. */
-  final def contains (position: HasVecI): Boolean =
+  final def contains (position: VecI): Boolean =
     at(position).isDefined
   
   /** Whether some [[Piece]] belonging to the current player exists at the given position. */
-  final def isFriendly (position: HasVecI) (using player: PlayerRef): Boolean =
+  final def isFriendly (position: VecI) (using player: PlayerRef): Boolean =
     at(position).exists(_.owner == player)
   
   /** Whether some [[Piece]] belonging to another player exists at the given position. */
-  final def isEnemy (position: HasVecI) (using player: PlayerRef): Boolean =
+  final def isEnemy (position: VecI) (using player: PlayerRef): Boolean =
     at(position).exists(_.owner != player)
   
   /** The [[RegionI]] describing the positions of all included [[Piece]]s. */
@@ -88,7 +88,7 @@ trait PieceView extends PieceSet, UpdateQuery, OfPlayer[PieceView], HasRegionI:
     ofClass(C.runtimeClass.asInstanceOf[Class[? <: PieceType]])
   
   /** Restrict the [[PieceView]] to only those [[Piece]]s in a particular [[RegionI]]. */
-  final override def ofRegion(region: HasRegionI): PieceView =
+  final override def ofRegion(region: RegionI): PieceView =
     filter(PieceFilter.ofRegion(region))
   
   override def toString = pieces.size match
@@ -112,7 +112,7 @@ object PieceView:
     val pieces: LazyList[Piece] =
       pieceRefs.map(_.pieceId).map(base.piecesById)
       
-    def at (position: HasVecI): Option[Piece] =
+    def at (position: VecI): Option[Piece] =
       base.piecesByPos.get(position.position)
         .map(base.piecesById)
         .filter(this.contains)

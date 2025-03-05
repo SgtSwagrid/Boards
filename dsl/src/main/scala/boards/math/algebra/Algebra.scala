@@ -1,6 +1,6 @@
-package boards.math
+package boards.math.algebra
 
-import boards.math.region.{Region, Vec}
+import boards.math.vector.{Region, Vec}
 
 import scala.annotation.targetName
 
@@ -53,6 +53,7 @@ object Algebra:
     def product (x: X, y: X): X
     def multiplicativeIdentity: X
     def one: X = multiplicativeIdentity
+    def two: X = sum(one, one)
     
   extension [X: Ring as R] (x: X)
     def * (y: X): X = R.product(x, y)
@@ -64,21 +65,24 @@ object Algebra:
   extension [X: Dividable as D] (x: X)
     def / (y: X): X = D.divide(x, y)
     
-  trait Field [X] extends Ring[X], Dividable[X]:
+  trait DividableRing [X] extends Ring[X], Dividable[X]
+    
+  trait Field [X] extends DividableRing[X]:
     def multiplicativeInverse (x: X): X
     def divide (x: X, y: X): X = product(x, multiplicativeInverse(y))
     
   extension [X: Field as F] (x: X)
     def inverse: X = F.multiplicativeInverse(x)
     
-  extension [X: OrderedField as F] (x: X)
-    def * (region: Region[X]): Region[X] = region * x
+  extension [X: OrderedField] (x: X)
+    def * (region: Region[X]): Region[X] = region.scale(x)
   
   trait OrderedSemigroup[X] extends Semigroup[X], Ordering[X]
   trait OrderedMonoid[X] extends Monoid[X], Ordering[X], OrderedSemigroup[X]
   trait OrderedGroup[X] extends Group[X], Ordering[X], OrderedMonoid[X]
   trait OrderedRing[X] extends Ring[X], Ordering[X], OrderedGroup[X]
-  trait OrderedField[X] extends Field[X], Ordering[X], OrderedRing[X]
+  trait Numeric[X] extends Dividable[X], Ordering[X], OrderedRing[X]
+  trait OrderedField[X] extends Field[X], Ordering[X], Numeric[X]
     
   extension [X: Ordering as O] (x: X)
     def < (y: X): Boolean = O.lt(x, y)
@@ -98,29 +102,25 @@ object Algebra:
   given [X, Y] (using x: Identity[X], y: Identity[Y]): Identity[(X, Y)] with
     inline def identity: (X, Y) = (x.identity, y.identity)
     
-  given OrderedRing[Int] with
+  given Numeric[Int] with
     inline def sum (x: Int, y: Int): Int = x + y
     inline def product (x: Int, y: Int): Int = x * y
     inline def additiveIdentity: Int = 0
     inline def multiplicativeIdentity: Int = 1
     inline def additiveInverse (x: Int): Int = -x
     inline def compare (x: Int, y: Int): Int = x - y
-    
-  given Dividable[Int] with
     inline def divide(x: Int, y: Int): Int = x / y
     
-  given OrderedRing[Long] with
+  given Numeric[Long] with
     inline def sum (x: Long, y: Long): Long = x + y
     inline def product (x: Long, y: Long): Long = x * y
     inline def additiveIdentity: Long = 0
     inline def multiplicativeIdentity: Long = 1
     inline def additiveInverse (x: Long): Long = -x
-    inline def compare (x: Long, y: Long): Int = (x - y).sign.toInt
-  
-  given Dividable[Long] with
+    inline def compare (x: Long, y: Long): Int = java.lang.Long.compare(x, y)
     inline def divide (x: Long, y: Long): Long = x / y
   
-  given OrderedRing[Boolean] with
+  given Numeric[Boolean] with
     inline def sum (x: Boolean, y: Boolean): Boolean = x | y
     inline def product (x: Boolean, y: Boolean): Boolean = x & y
     inline def additiveIdentity: Boolean = false
@@ -130,6 +130,7 @@ object Algebra:
       case (true, true) | (false, false) => 0
       case (false, true) => -1
       case (true, false) => 1
+    inline def divide (x: Boolean, y: Boolean) = x & y
     
   given OrderedField[Float] with
     inline def sum (x: Float, y: Float): Float = x + y
@@ -138,7 +139,7 @@ object Algebra:
     inline def multiplicativeIdentity: Float = 1
     inline def additiveInverse (x: Float): Float = -x
     inline def multiplicativeInverse(x: Float): Float = 1.0F / x
-    inline def compare(x: Float, y: Float): Int = (x - y).sign.toInt
+    inline def compare(x: Float, y: Float): Int = java.lang.Float.compare(x, y)
   
   given OrderedField[Double] with
     inline def sum (x: Double, y: Double): Double = x + y
@@ -147,7 +148,7 @@ object Algebra:
     inline def multiplicativeIdentity: Double = 1
     inline def additiveInverse (x: Double): Double = -x
     inline def multiplicativeInverse (x: Double): Double = 1.0D / x
-    inline def compare (x: Double, y: Double): Int = (x - y).sign.toInt
+    inline def compare (x: Double, y: Double): Int = java.lang.Double.compare(x, y)
     
   given OrderedField[Nothing] with
     inline def sum (x: Nothing, y: Nothing): Nothing = throw new IllegalArgumentException

@@ -1,13 +1,14 @@
-package boards.math.region
+package boards.math.vector
 
-import boards.math.region.Region.{HasRegionI, RegionI}
-import boards.math.region.Vec.{HasVecI, VecI}
-import boards.math.{Bijection, Interval}
-import boards.math.Algebra.{*, given}
+import boards.math.vector.Region.RegionI
+import boards.math.vector.Vec.VecI
+import boards.math.Interval
+import boards.math.algebra.Bijection
+import boards.math.algebra.Algebra.{*, given}
 import boards.math.Conversions.{*, given}
-import boards.math.Interval.{UInterval, UIntervalI}
-import boards.math.Unbounded.{Finite, PositiveInfinity}
-import boards.math.region.BoundingBox.UBoundingBoxI
+import boards.math.Interval.IntervalI
+import boards.math.algebra.Unbounded.{Finite, PositiveInfinity}
+import boards.math.vector.Bounds.BoundsI
 import boards.util.extensions.FunctionOps.unary_!
 
 import scala.annotation.tailrec
@@ -48,14 +49,14 @@ object Ray:
    * @param inclusive Whether `source` itself is included (default=false).
    */
   def from (
-    source: HasRegionI,
-    direction: HasRegionI,
+    source: RegionI,
+    direction: RegionI,
     inclusive: Boolean = false,
   ): Ray =
     CompositeRay:
       for
-        source <- source.region.positions.toSeq
-        direction <- direction.region.positions.toSeq
+        source <- source.positions.toSeq
+        direction <- direction.positions.toSeq
         ray = SegmentRay(source, direction)()
       yield if inclusive then ray else ray.drop(1)
   
@@ -65,21 +66,21 @@ object Ray:
    * @param to The ending point(s) of the ray.
    */
   def between (
-    from: HasRegionI,
-    to: HasRegionI,
+    from: RegionI,
+    to: RegionI,
   ): Ray =
     CompositeRay:
       for
-        from <- from.region.positions.toSeq
-        to <- to.region.positions.toSeq
+        from <- from.positions.toSeq
+        to <- to.positions.toSeq
         ray = SegmentRay(from, from.directionTo(to))()
       yield ray.take(from.stepsTo(to) + 1)
       
   private class SegmentRay (
     val source: VecI,
     val direction: VecI,
-    val bounds: UIntervalI = UInterval.from(0),
-    val length: UIntervalI = Interval(PositiveInfinity, PositiveInfinity),
+    val lengthBounds: IntervalI = Interval.positive,
+    val length: IntervalI = Interval.all,
   ) (
     pos: => LazyList[VecI] =
       if direction.isZero
@@ -89,69 +90,68 @@ object Ray:
     
     lazy val positions = pos
     
-    def contains (v: HasVecI) =
+    def contains (v: VecI) =
       (v.position - source).asMultipleOf(direction).exists: a =>
-        bounds.contains(a) && positions.headOption.exists: next =>
+        lengthBounds.contains(a) && positions.headOption.exists: next =>
           (next - source).asMultipleOf(direction).exists: b =>
             b <= a && positions.lengthIs > (a - b)
       
-    val boundingBox = bounds match
-      case Interval.NonEmpty(start, end) => BoundingBox.bounding (
-        source.toUnbounded + (direction.toUnbounded * start),
-        source.toUnbounded + (direction.toUnbounded * end),
-      )
-      case Interval.Empty() => UBoundingBoxI.empty
+    val bounds =
+      if lengthBounds.isEmpty then Bounds.empty else
+        Bounds.ubounding (
+          source.toUnbounded + (direction.toUnbounded * lengthBounds.ustart),
+          source.toUnbounded + (direction.toUnbounded * lengthBounds.uend),
+        )
       
-    private def refine (bounds: UIntervalI, length: UIntervalI, positions: => LazyList[VecI]): SegmentRay =
+    private def refine (bounds: IntervalI, length: IntervalI, positions: => LazyList[VecI]): SegmentRay =
       SegmentRay(source, direction, bounds, length)(positions)
     
     def drop (n: Int) =
-      refine(bounds.shiftStart(n), length.shift(-n).after(0).orElse(0), positions.drop(n))
+      refine(lengthBounds.shiftStart(n), length.shift(-n).limitAbove(0).orElse(0), positions.drop(n))
       
     def dropWhile (f: VecI => Boolean) =
-      refine(bounds, length, positions.dropWhile(f))
+      refine(lengthBounds, length, positions.dropWhile(f))
       
     def take (n: Int) =
-      refine(bounds, length.before(n).orElse(n), positions.take(n))
+      refine(lengthBounds, length.limitBelow(n).orElse(n), positions.take(n))
     
     def takeWhile (f: VecI => Boolean) =
-      refine(bounds, length, positions.takeWhile(f))
+      refine(lengthBounds, length, positions.takeWhile(f))
       
     def takeTo (f: VecI => Boolean) =
       val (prefix, suffix) = positions.span(!f)
-      refine(bounds, length, prefix.lazyAppendedAll(suffix.headOption))
+      refine(lengthBounds, length, prefix.lazyAppendedAll(suffix.headOption))
       
     def retract (n: Int) =
-      refine(bounds.shiftEnd(-n), length.shift(-n).after(0).orElse(0), positions.dropRight(n))
+      refine(lengthBounds.shiftEnd(-n), length.shift(-n).limitAbove(0).orElse(0), positions.dropRight(n))
     
     /** Determine the number of multiples of step that are required to fall inside the given interval. */
     @tailrec
-    private def multiples (step: Int, interval: UIntervalI): UIntervalI =
+    private def multiples (step: Int, interval: IntervalI): IntervalI =
       if step < 0 then multiples(-step, -interval)
-      else if step == 0 then (if interval.contains(0) then UInterval.from(0) else Interval.none)
-      else interval.after(0) match
-        case Interval.NonEmpty(Finite(start), Finite(end)) =>
-          UInterval((start + (step - 1)) / step, end / step)
-        case Interval.NonEmpty(Finite(start), PositiveInfinity) =>
-          Interval(Finite((start + (step - 1)) / step), PositiveInfinity)
-        case _ => Interval.none
+      else if step == 0 then (if interval.contains(0) then Interval.from(0) else Interval.empty)
+      else interval.limitAbove(0) match
+        case Interval.Between(start, end) =>
+          Interval.between((start + (step - 1)) / step, end / step)
+        case Interval.Point(point) =>
+          Interval.between((point + (step - 1)) / step, point / step)
+        case Interval.From(start) =>
+          Interval.from((start + (step - 1)) / step)
+        case _ => Interval.empty
     
     /** Determine the number of steps in the current direction one would have to take to be inside the given bounding box. */
-    private def steps (target: UBoundingBoxI): UIntervalI =
-      target.bimap(Bijection.Translate(-source).infinite) match
-        case boundingBox @ BoundingBox.NonEmpty(_, _) =>
-          direction.components.zip(boundingBox.intervals)
-            .map(multiples)
-            .foldLeft(UInterval.from(0))(_ & _)
-        case BoundingBox.Empty() => Interval.none
-      
-    override def window (window: UBoundingBoxI): Ray =
-      val bounds = this.bounds & steps(window)
-      lazy val positions = bounds match
-        case Interval.NonEmpty(_, _) =>
-          this.positions.dropWhile(v => !window.inBounds(v)).takeWhile(window.inBounds)
-        case Interval.Empty() => LazyList.empty
-      refine(bounds, length.before(bounds.length).orElse(bounds.length), positions)
+    private def steps (target: BoundsI): IntervalI =
+      val bounds = target - source
+      if bounds.isEmpty then Interval.empty else
+        direction.components.zip(bounds.intervals)
+          .map(multiples)
+          .foldLeft(Interval.from(0))(_ & _)
+       
+    override def window (window: BoundsI): Ray =
+      val bounds = lengthBounds & steps(window)
+      lazy val positions = if bounds.isEmpty then LazyList.empty else
+        this.positions.dropWhile(v => !window.contains(v)).takeWhile(window.contains)
+      refine(bounds, length.limitBelow(bounds.ulength).orElse(0), positions)
   
   /**
    * A multiple-source, multiple-direction collection of rays.
@@ -162,10 +162,10 @@ object Ray:
   ) extends Ray:
     
     override lazy val positions: LazyList[VecI] = LazyList.from(parts).flatMap(_.positions).distinct
-    override def contains (v: HasVecI): Boolean = parts.exists(_.contains(v))
+    override def contains (v: VecI): Boolean = parts.exists(_.contains(v))
     
-    lazy val boundingBox =
-      parts.map(_.boundingBox).reduceOption(_ | _).getOrElse(UBoundingBoxI.empty)
+    lazy val bounds =
+      parts.map(_.bounds).reduceOption(_ | _).getOrElse(Bounds.empty)
     
     def drop (n: Int): Ray = CompositeRay(parts.map(_.drop(n)))
     def dropWhile (f: VecI => Boolean): Ray = CompositeRay(parts.map(_.dropWhile(f)))
@@ -176,5 +176,5 @@ object Ray:
     
     def retract (n: Int): Ray = CompositeRay(parts.map(_.retract(n)))
     
-    override def window (window: UBoundingBoxI): RegionI =
+    override def window (window: BoundsI): RegionI =
       parts.map(_.window(window)).reduceOption(_ | _).getOrElse(Region.empty)

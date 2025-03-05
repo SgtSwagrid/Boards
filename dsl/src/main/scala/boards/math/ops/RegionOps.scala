@@ -1,22 +1,28 @@
-package boards.math.region
+package boards.math.ops
 
-import RegionOps.*
-import boards.math.Algebra.{*, given}
+import boards.math.ops.RegionOps.*
+import boards.math.ops.TransformOps.AffineFunctor
+import boards.math.ops.AffineOps.Affine
+import boards.math.algebra.Algebra.{*, given}
+import boards.math.algebra.Bijection
+import boards.math.algebra.Bijection.AffineBijection
 import boards.math.Conversions.{*, given}
-import boards.math.region.BoundingBox.UBoundingBox
-import boards.math.region.Region.HasRegion
-import boards.math.region.Vec.HasVec
-import boards.math.Bijection
-import boards.math.Bijection.AffineBijection
-import boards.math.region.Metric.EnumerableMetric
+import boards.math.vector.{Bounds, Vec}
+import boards.math.vector.Bounds.HasBounds
+import boards.math.vector.Metric.EnumerableMetric
+import boards.math.vector.Region
+import boards.math.vector.Vec
+
+
 import boards.util.extensions.CollectionOps.cartesianProduct
+import RegionOps.*
 
 /** Some operations which can be performed on regions, separated for F-bounded polymorphism.
   *
   * @tparam X The type of the discrete field over which the region is defined.
   * @tparam This The type of region which is produced by each operation.
   */
-private[math] trait RegionOps [X: OrderedRing, +This[Y] <: RegionOps[Y, This]] extends
+private[math] trait RegionOps [X: Numeric, +This[Y] <: RegionOps[Y, This]] extends
   WindowOps[X, This],
   IntersectionOps[X, This],
   FilterOps[X, This],
@@ -28,19 +34,19 @@ private[math] object RegionOps:
     * @tparam X The type of the discrete field over which the region is defined.
     * @tparam This The type of region which is produced by each operation.
     */
-  trait WindowOps [X: OrderedRing as R, +This[Y] <: WindowOps[Y, This]]
-    extends boards.math.region.BoundingBox.HasUBoundingBox[X]:
+  trait WindowOps [X: Numeric as R, +This[Y] <: WindowOps[Y, This]]
+    extends HasBounds[X]:
     
     /** A view of this region which is restricted only to a given bounding box. */
-    def window (boundingBox: UBoundingBox[X]): This[X]
+    def window (boundingBox: Bounds[X]): This[X]
     
     /** A view of this region which is restricted only to a given bounding box.
       *
       * @param start The smallest corner of the bounding box.
       * @param end The largest corner of the bounding box.
       */
-    def window (start: HasVec[X], end: HasVec[X]): This[X] =
-      window(BoundingBox(start.position.toUnbounded, end.position.toUnbounded))
+    def window (start: Vec[X], end: Vec[X]): This[X] =
+      window(Bounds.between(start, end))
     
     /** A view of this region which is restricted to a given segment along some axis.
       *
@@ -49,21 +55,15 @@ private[math] object RegionOps:
       * @param max The upper threshold for the value on this axis.
       */
     def slice (axis: Int, min: X, max: X): This[X] =
-      boundingBox.toBounded match
-        case BoundingBox.NonEmpty(start, end) =>
-          window(start.update(axis, min), end.update(axis, max))
-        case _ => window(BoundingBox.empty)
-        
+      window(bounds.ustart.toFinite.update(axis, min), bounds.uend.toFinite.update(axis, max))
+
     /** The subset of the region corresponding to a facet of the bounding box.
       * @param axis The axis along which the desired facet is extremal.
       * @param end Whether to take the starting or ending facet.
       */
     def facet (axis: Int, end: Boolean = false): This[X] =
-      boundingBox.toBounded match
-        case BoundingBox.NonEmpty(s, e) =>
-          val coord = if end then e(axis) else s(axis)
-          slice(axis, coord, coord)
-        case _ => window(BoundingBox.empty)
+      val x = if end then bounds.uend(axis).toFinite else bounds.ustart(axis).toFinite
+      slice(axis, x, x)
         
     /** The subset of the 2D region corresponding to the left edge of the bounding box. */
     def leftEdge: This[X] = facet(0, false)
@@ -79,13 +79,10 @@ private[math] object RegionOps:
       *
       * @param size The dimensions of each window.
       */
-    def windows (size: HasVec[X]): List[This[X]] =
-      boundingBox.toBounded match
-        case BoundingBox.NonEmpty(start, end) =>
-          size.position.components.zipWithIndex.map: (size, dim) =>
-            Iterator.iterate(start(dim))(_ + size).takeWhile(_ <= end(dim)).toSeq
-          .cartesianProduct.toList.map(Vec.apply).map(start => window(start, start + size))
-        case BoundingBox.Empty() => List.empty
+    def windows (size: Vec[X]): List[This[X]] =
+      size.position.components.zipWithIndex.map: (size, dim) =>
+        Iterator.iterate(bounds.ustart(dim).toFinite)(_ + size).takeWhile(_ <= bounds.uend(dim).toFinite).toSeq
+      .cartesianProduct.toList.map(Vec.apply).map(start => window(start, start + size))
     
     /** The set of all non-overlapping windows of a given size which fit within this region.
       * The grid of windows is aligned to the smallest corner of the bounding box.
@@ -97,7 +94,7 @@ private[math] object RegionOps:
     
     /** The set of all non-overlapping slices of a given thickness along the given axis. */
     def slices (axis: Int, width: X): List[This[X]] =
-      windows(boundingBox.size.toBounded.update(axis, width))
+      windows(bounds.usize.toFinite.update(axis, width))
     
     /** A view of this 2D-region which is restricted to a single row. */
     def row (i: X): This[X] = slice(1, i, i)
@@ -106,20 +103,20 @@ private[math] object RegionOps:
     def col (j: X): This[X] = slice(0, j, j)
     
     /** The set of all rows of this 2D-region. */
-    def rows: List[This[X]] = slices(1, R.multiplicativeIdentity)
+    def rows: List[This[X]] = slices(1, R.one)
     
     /** The set of all columns of this 2D-region. */
-    def cols: List[This[X]] = slices(0, R.multiplicativeIdentity)
+    def cols: List[This[X]] = slices(0, R.one)
   
   /** Operations based on taking the set intersection of two regions.
     *
     * @tparam X    The type of the discrete field over which the region is defined.
     * @tparam This The type of region which is produced by each operation.
     */
-  trait IntersectionOps[X: OrderedRing, +This[Y] <: IntersectionOps[Y, This]]:
+  trait IntersectionOps[X: Numeric, +This[Y] <: IntersectionOps[Y, This]]:
     
     /** Take the intersection between two regions. */
-    def & (region: HasRegion[X]): This[X]
+    def & (region: Region[X]): This[X]
     
     /** Get all neighbours of the given position within this region.
       * @param M The metric used to determine the neighbours.
@@ -131,12 +128,12 @@ private[math] object RegionOps:
     def ball (v: Vec[X], rmax: Int, rmin: Int = 0) (using M: EnumerableMetric[X]): This[X] =
       this & M.ball(v, rmax, rmin)
   
-  /**Operations based on transforming a region by filtering positions.
+  /** Operations based on transforming a region by filtering positions.
     *
     * @tparam X    The type of the discrete field over which the region is defined.
     * @tparam This The type of region which is produced by each operation.
     */
-  trait FilterOps [X: OrderedRing, +This[Y] <: FilterOps[Y, This]]:
+  trait FilterOps [X: Numeric, +This[Y] <: FilterOps[Y, This]]:
     
     /** Keep only those positions which satisfy some predicate. */
     def filter (f: Vec[X] => Boolean): This[X]
@@ -145,7 +142,7 @@ private[math] object RegionOps:
     def filterNot (f: Vec[X] => Boolean): This[X] = filter(v => !f(v))
     
     /** Take the set difference between two regions. */
-    def \ (region: HasRegion[X]): This[X] = filterNot(region.region.contains)
+    def \ (region: Region[X]): This[X] = filterNot(region.contains)
   
   /**
     * Operations based on transforming a region by affine bijection.
@@ -153,27 +150,16 @@ private[math] object RegionOps:
     * @tparam X The type of the discrete field over which the region is defined.
     * @tparam This The type of region which is produced by each operation.
     */
-  trait TransformOps [X: OrderedRing, +This[Y] <: TransformOps[Y, This]]:
+  trait TransformOps [X: Numeric, +This[Y] <: TransformOps[Y, This]]
+  extends AffineFunctor[X, This], Affine[X, This[X]]:
     
-    /** Reversibly and affinely transform the region. */
-    def map [Y: OrderedRing] (f: AffineBijection[X, Y]): This[Y]
+    /** Translate the region with the given offset. */
+    def translate (offset: Vec[X]): This[X] = mapAffine(Bijection.Translate(offset.position))
     
     /** Flip the region over the given axis. */
-    def flip (axis: Int): This[X] = {
-      
-      map(Bijection.Flip(axis))
-    }
+    def flip (axis: Int): This[X] = mapAffine(Bijection.Flip(axis))
+    
     /** Rotate the region from one axis to another. */
-    def rotate (from: Int, to: Int): This[X] = map(Bijection.Rotate(from, to))
+    def rotate (from: Int, to: Int): This[X] = mapAffine(Bijection.Rotate(from, to))
     
-    /** Translate the region with the given offset. */
-    def translate (offset: HasVec[X]): This[X] = map(Bijection.Translate(offset.position))
-    /** Translate the region with the given offset. */
-    def translate (offset: X*): This[X] = translate(Vec(offset))
-    /** Translate the region with an implicit offset. */
-    def fromHere (using offset: HasVec[X]): This[X] = translate(offset)
-    
-    /** Multiply all positions by a scalar. */
-    def scale (factor: X) (using OrderedField[X]): This[X] = map(Bijection.Scale(factor))
-    /** Multiply all positions by a scalar. */
-    def * (x: X) (using OrderedField[X]): This[X] = scale(x)
+    def scale (factors: Vec[X]): This[X] = mapAffine(Bijection.Scale(factors))

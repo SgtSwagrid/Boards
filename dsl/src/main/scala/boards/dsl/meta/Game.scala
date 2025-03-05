@@ -5,7 +5,7 @@ import boards.dsl.meta.PlayerRef.Player
 import boards.dsl.rules.{Effect, Rule}
 import boards.dsl.states.{GameState, HistoryState, InstantaneousState}
 import boards.graphics.Colour
-import boards.math.region.EmbeddedRegion
+import boards.math.vector.Embedding
 
 /** The base class for implementations of turn-based board games written in BoardLang.
   *
@@ -18,12 +18,14 @@ abstract class Game:
   val name: String = ""
   
   /** The allowable numbers of players who can play together.
+    * Will assume by default that the game requires exactly [[players.size]] many players.
     *
     * Note: at least one of [[numPlayers]] or [[players]] must be overridden.
     */
   def numPlayers: Seq[Int] = Seq(players.size)
   
   /** The properties of each player.
+    * Will assign boring names by default: Player 1, Player 2, ...
     *
     * Note: at least one of [[numPlayers]] or [[players]] must be overridden.
     */
@@ -34,7 +36,7 @@ abstract class Game:
   /** The properties of this game which may be configured by the players before starting. */
   val properties: Seq[Property] = Seq.empty
   
-  protected def board: GameConfig ?=> Board = EmbeddedRegion.empty
+  protected def board: GameConfig ?=> Board = Embedding.empty
   
   /** Get the initial state of this game, given some configuration. */
   final def initial (config: GameConfig): GameState =
@@ -65,7 +67,7 @@ abstract class Game:
   
 object Game:
   
-  type Board = EmbeddedRegion
+  type Board = Embedding
   
   /** An empty game with no players, board or behaviour. */
   def none: Game = new Game { override val numPlayers = Seq(0) }

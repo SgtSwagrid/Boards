@@ -3,8 +3,8 @@ package boards.dsl.rules
 import boards.dsl.pieces.{Piece, PieceFilter}
 import boards.dsl.rules.Cause.{FilterCause, UnionCause}
 import boards.dsl.states.{GameState, HistoryState}
-import boards.math.region.Region.{HasRegionI, RegionI}
-import boards.math.region.Vec.VecI
+import boards.math.vector.Region.RegionI
+import boards.math.vector.Vec.VecI
 
 import scala.collection.mutable
 
@@ -55,15 +55,15 @@ object Cause:
   
   /** Accepts a single [[Input]] corresponding to a [[Click]] of a specific position. */
   def click (
-    region: (state: HistoryState) ?=> HasRegionI,
+    region: (state: HistoryState) ?=> RegionI,
   ): Cause =
-    Cause(ClickAny(region.region))
+    Cause(ClickAny(region))
   
   /** Accepts a single [[Input]] corresponding to a [[Click]] of the entire `region` as a single unit. */
   def clickRegion (
-    region: (state: HistoryState) ?=> HasRegionI,
+    region: (state: HistoryState) ?=> RegionI,
   ): Cause =
-    Cause(ClickAll(region.region))
+    Cause(ClickAll(region))
   
   /** Accepts any [[Input]] corresponding to a click of any of the given [[Piece]]s. */
   def clickPiece (
@@ -73,37 +73,37 @@ object Cause:
   
   /** Accepts any [[Input]] corresponding to a [[Drag]] from anywhere in `from` to anywhere in `to`. */
   def drag (
-    from: (state: HistoryState) ?=> HasRegionI,
-    to: (state: HistoryState, from: VecI) ?=> HasRegionI,
+    from: (state: HistoryState) ?=> RegionI,
+    to: (state: HistoryState, from: VecI) ?=> RegionI,
   ): Cause = Cause.union:
-    from.region.positions.map: position =>
-      DragAny(from.region, to(using summon[HistoryState], position).region)
+    from.positions.map: position =>
+      DragAny(from, to(using summon[HistoryState], position))
   
   /** Accepts all [[Input]]s corresponding to a [[Drag]] from anywhere in `from` to the corresponding place in `to`.
     * Here, corresponding means at the same index in the respective `Region`.
     */
   def dragCorresponding (
-    from: (state: HistoryState) ?=> HasRegionI,
-    to: (state: HistoryState) ?=> HasRegionI,
+    from: (state: HistoryState) ?=> RegionI,
+    to: (state: HistoryState) ?=> RegionI,
   ): Cause =
-    Cause(DragCorresponding(from.region, to.region))
+    Cause(DragCorresponding(from, to))
   
   /** Accepts a single [[Input]] corresponding to a [[Drag]]
     * from the entire region `from` to the entire region `to`.
     */
   def dragRegion (
-    from: (state: HistoryState) ?=> HasRegionI,
-    to: (state: HistoryState) ?=> HasRegionI,
+    from: (state: HistoryState) ?=> RegionI,
+    to: (state: HistoryState) ?=> RegionI,
   ): Cause =
-    Cause(DragAll(from.region, to.region))
+    Cause(DragAll(from, to))
   
   /** Accepts any [[Input]] corresponding to a [[Drag]] of any [[Piece]] in `pieces` to anywhere in `region`. */
   def dragPiece (
     pieces: (state: HistoryState) ?=> PieceFilter,
-    region: (state: HistoryState, piece: Piece) ?=> HasRegionI,
+    region: (state: HistoryState, piece: Piece) ?=> RegionI,
   ): Cause = Cause.union:
     pieces.now.map: piece =>
-      Cause.drag(piece, region(using summon[HistoryState], piece))
+      Cause.drag(piece.region, region(using summon[HistoryState], piece))
   
   /** Any [[Cause]] related to a [[Click]] of the [[Board]]. */
   sealed trait ClickCause extends Cause
@@ -112,7 +112,7 @@ object Cause:
     region: RegionI,
   ) extends ClickCause:
     
-    def inputs(state: HistoryState): LazyList[Input.Click] =
+    def inputs (state: HistoryState): LazyList[Input.Click] =
       val region = this.region & state.board
       if region.positions.nonEmpty then LazyList(Input.click(region)) else LazyList.empty
   
@@ -120,7 +120,7 @@ object Cause:
     region: RegionI,
   ) extends ClickCause:
     
-    def inputs(state: HistoryState): LazyList[Input.Click] =
+    def inputs (state: HistoryState): LazyList[Input.Click] =
       (region & state.board).positions.map(Input.click)
   
   /** Any [[Cause]] related to a [[Drag]] over the [[Board]]. */
@@ -131,7 +131,7 @@ object Cause:
     to: RegionI,
   ) extends DragCause:
     
-    def inputs(state: HistoryState): LazyList[Input.Drag] =
+    def inputs (state: HistoryState): LazyList[Input.Drag] =
       val from = this.from & state.board
       val to = this.to & state.board
       if from.positions.nonEmpty && to.positions.nonEmpty
@@ -142,7 +142,7 @@ object Cause:
     to: RegionI,
   ) extends DragCause:
     
-    def inputs(state: HistoryState): LazyList[Input.Drag] = for
+    def inputs (state: HistoryState): LazyList[Input.Drag] = for
       from <- (from & state.board).positions
       to <- (to & state.board).positions
     yield Input.drag(from, to)
@@ -152,14 +152,13 @@ object Cause:
     to: RegionI,
   ) extends DragCause:
     
-    def inputs(state: HistoryState): LazyList[Input.Drag] =
-      (from & state.board).positions
-        .zip((to & state.board).positions)
+    def inputs (state: HistoryState): LazyList[Input.Drag] =
+      ((from & state.board).positions zip (to & state.board).positions)
         .map(Input.drag)
   
   private[rules] case object EmptyCause extends Cause:
     
-    def inputs(state: HistoryState): LazyList[Nothing] =
+    def inputs (state: HistoryState): LazyList[Nothing] =
       LazyList.empty
   
   private[rules] case class UnionCause (
@@ -167,7 +166,7 @@ object Cause:
     right: Cause,
   ) extends Cause:
     
-    def inputs(state: HistoryState): LazyList[Input] =
+    def inputs (state: HistoryState): LazyList[Input] =
       (left.inputs(state) ++ right.inputs(state)).distinct
       
   private[rules] case class SwitchCause (
@@ -175,10 +174,10 @@ object Cause:
   ) extends Cause:
     
     private val memo: mutable.Map[HistoryState, Cause] = mutable.Map.empty
-    private def branch(state: HistoryState): Cause =
+    private def branch (state: HistoryState): Cause =
       memo.getOrElseUpdate(state, brancher(state))
     
-    def inputs(state: HistoryState): LazyList[Input] =
+    def inputs (state: HistoryState): LazyList[Input] =
       branch(state).inputs(state)
       
   private[rules] case class FilterCause (
@@ -186,5 +185,5 @@ object Cause:
     condition: Input => Boolean,
   ) extends Cause:
     
-    def inputs(state: HistoryState): LazyList[Input] =
+    def inputs (state: HistoryState): LazyList[Input] =
       base.inputs(state).filter(condition)

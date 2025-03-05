@@ -4,7 +4,7 @@ import boards.dsl.rules.{Cause, Control, Effect, Rule}
 import boards.dsl.meta.PlayerRef.PlayerRef
 import boards.dsl.states.{GameState, HistoryState}
 import boards.graphics.Texture
-import boards.math.region.Region.HasRegionI
+import boards.math.vector.Region.RegionI
 
 /** Comprises the part of the state of a [[Piece]] over which the [[Game]] implementer has direct control.
   * Acts as a flag to differentiate different kinds of [[Piece]], and can store whatever additional information is needed.
@@ -45,39 +45,39 @@ trait PieceType extends PieceFilter:
   /** Passively create some [[Piece]]s of this [[PieceType]]. */
   def create (
     owner: (state: HistoryState) ?=> PlayerRef,
-    region: (state: HistoryState) ?=> HasRegionI,
+    region: (state: HistoryState) ?=> RegionI,
   ): Effect =
     Effect.create(owner, region, this)
   
   /** Passively create some [[Piece]]s of this [[PieceType]], belonging to the active player. */
   def createFriendly (
-    region: (state: HistoryState) ?=> HasRegionI,
+    region: (state: HistoryState) ?=> RegionI,
   ) (using PlayerRef): Effect =
     Effect.createFriendly(region, this)
   
   /** Allow the user to place a [[Piece]] of this [[PieceType]] by clicking. */
   def place (
     owner: (state: HistoryState) ?=> PlayerRef,
-    region: (state: HistoryState) ?=> HasRegionI,
+    region: (state: HistoryState) ?=> RegionI,
   ): Rule =
     Control.place(owner, region, this)
   
   /** Allow the user to place a [[Piece]] of this [[PieceType]], belonging to the active player. */
   def placeFriendly (
-    region: (state: HistoryState) ?=> HasRegionI,
+    region: (state: HistoryState) ?=> RegionI,
   ) (using PlayerRef): Rule =
     Control.placeFriendly(region, this)
   
   /** Fill a [[RegionI]] with [[Piece]]s of this [[PieceType]]. */
   def fill (
     owner: (state: HistoryState) ?=> PlayerRef,
-    region: (state: HistoryState) ?=> HasRegionI,
+    region: (state: HistoryState) ?=> RegionI,
   ): Rule =
     Control.fill(owner, region, this)
   
   /** Fill a [[RegionI]] with [[Piece]]s of this [[PieceType]], belonging to the active player. */
   def fillFriendly (
-    region: (state: HistoryState) ?=> HasRegionI,
+    region: (state: HistoryState) ?=> RegionI,
   ) (using PlayerRef): Rule =
     Control.fillFriendly(region, this)
     
@@ -97,5 +97,5 @@ object PieceType:
     def rule: (HistoryState, Piece) ?=> Rule = Cause.none
     
   /** A [[PieceType]] which acts only by simple movement. */
-  trait MoveablePiece(val region: (HistoryState, Piece) ?=> HasRegionI):
+  trait MoveablePiece(val region: (HistoryState, Piece) ?=> RegionI):
     def rule: (HistoryState, Piece) ?=> Rule = Control.moveThis(region)

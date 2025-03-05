@@ -7,7 +7,7 @@ import boards.dsl.pieces.PieceUpdate.UpdateQuery
 import boards.dsl.rules.Rule
 import boards.dsl.states.HistoryState
 import boards.graphics.Texture
-import boards.math.region.Vec.{HasVecI, VecI}
+import boards.math.vector.Vec.{HasVecI, VecI}
 
 import scala.reflect.ClassTag
 

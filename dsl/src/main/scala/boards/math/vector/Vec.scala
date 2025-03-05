@@ -1,12 +1,16 @@
-package boards.math.region
+package boards.math.vector
 
-import boards.math.Algebra.{*, given}
+import boards.math.algebra.Algebra.{*, given}
 import boards.math.Number.gcd
-import boards.math.Unbounded.{Finite, UDouble, UFloat, UInt, ULong, URational, USurd}
-import boards.math.region.Metric.EnumerableMetric
-import boards.math.region.Region.{HasRegion, HasRegionI}
-import boards.math.region.Vec.{HasVec, HasVecI, UVec, UVecI, VecF, VecI}
+import boards.math.algebra.Unbounded.{Finite, UDouble, UFloat, UInt, ULong, URational, given}
+import boards.math.vector.Metric.EnumerableMetric
+import boards.math.vector.Region.{HasRegion, RegionI}
+import boards.math.vector.Vec.{HasVec, UVec, VecF, VecI}
 import boards.math.{*, given}
+import boards.math.algebra.Unbounded
+import boards.math.ops.AffineOps.*
+import boards.math.ops.MinkowskiOps.Difference
+import io.circe.*
 
 import scala.annotation.targetName
 import scala.compiletime.erasedValue
@@ -18,19 +22,13 @@ import scala.util.Random
  * A dense geometric vector.
  * @tparam X The ring over which the components of this vector are defined.
  */
-trait Vec [@specialized X: OrderedRing as R] extends HasVec[X]:
+trait Vec [@specialized X: Numeric as R]
+extends Region[X], Affine[X, Vec[X]]:
   
   val position: Vec[X] = this
-  
-  // temporary: operators for region
-  def | (region: HasRegion[X]): Region[X] = region.region | this
-  def & (region: HasRegion[X]): Region[X] = region.region & this
-  def \ (region: HasRegion[X]): Region[X] = this.region \ region.region
-  def ^ (region: HasRegion[X]): Region[X] = this.region ^ region.region
-  def rayFrom (source: HasRegionI, inclusive: Boolean = false)(using X =:= Int): Ray =
-    region.rayFrom(source, inclusive)
-  def rayFromHere (using source: HasVecI)(using X =:= Int): Ray =
-    Ray.from(source, asVecI.region)
+  def contains (v: Vec[X]): Boolean = this == v
+  lazy val positions: LazyList[Vec[X]] = LazyList(this)
+  def bounds: Bounds[X] = Bounds.point(this)
   
   // BASIC OPERATIONS
   
@@ -43,44 +41,45 @@ trait Vec [@specialized X: OrderedRing as R] extends HasVec[X]:
   /** All components of this vector in the standard basis. */
   def components: IndexedSeq[X]
   
+  def default: X
+  def withDefault (x: X): Vec[X]
+  
   /** An iterator over all components of this vector in the standard basis. */
   def iterator: Iterator[X] = components.iterator
   
   /** Transform each of the components of this vector independently. */
-  def map [Y: OrderedRing] (f: X => Y): Vec[Y] = Vec(components.map(f))
+  def map [Y: Numeric] (f: X => Y): Vec[Y] =
+    Vec(components.map(f)).withDefault(f(default))
   
   /** Merge two vectors component-wise. */
-  def zip [Y: OrderedRing, Z: OrderedRing] (v: Vec[Y]) (f: (X, Y) => Z): Vec[Z] =
-    Vec(components.zip(v.components).map(f.tupled))
+  def zip [Y: Numeric, Z: Numeric] (v: Vec[Y]) (f: (X, Y) => Z): Vec[Z] =
+    Vec(components.zipAll(v.components, default, v.default).map(f.tupled))
   
   /** Whether this vector is 0-dimensional. */
-  def isEmpty: Boolean = dim == 0
+  override def isEmpty: Boolean = dim == 0
   /** Whether this vector is not 0-dimensional. */
-  def nonEmpty: Boolean = dim > 0
+  override def nonEmpty: Boolean = dim > 0
   /** Whether all components of this vector are zero. */
   def isZero: Boolean = forall(_ == R.zero)
   
   // INFIX OPERATORS
   
   /** Add two vectors component-wise. */
-  def + (that: HasVec[X]): Vec[X] = zip(that.position)(_ + _)
-  def + (region: HasRegion[X]): Region[X] = region.region + this
+  override def translate (offset: Vec[X]): Vec[X] = zip(offset)(_ + _)
   
-  /** Subtract two vectors component-wise. */
-  def - (that: HasVec[X]): Vec[X] = this + (-that.position)
-  def - (region: HasRegion[X]): Region[X] = (-region.region) + this
-  
-  /** Multiply each component of this vector by a constant. */
-  def * (x: X): Vec[X] = map(_ * x)
-  def / (x: X) (using D: Dividable[X]): Vec[X] = map(D.divide(_, x))
+  override infix def + (that: Vec[X]): Vec[X] = translate(that)
+  override infix def + (that: Region[X]): Region[X] = that.translate(this)
+  override infix def - (that: Vec[X]): Vec[X] = this + (-that)
+  override infix def - (that: Region[X]): Region[X] = this + (-that)
+  override def negate: Vec[X] = map(-_)
+  override def unary_- : Vec[X] = map(-_)
   
   /** Multiply two vectors component-wise. */
-  def * (v: HasVec[X]): Vec[X] = zip(v.position)(_ * _)
-  /** Divide two vectors component-wise. */
-  def / (v: HasVec[X]) (using D: Dividable[X]): Vec[X] = zip(v.position)(D.divide)
+  override def scale (v: Vec[X]): Vec[X] = zip(v)(_ * _)
   
-  /** Negate each component of this vector. */
-  def unary_- : Vec[X] = map(-_)
+  def / (x: X): Vec[X] = map(_ / x)
+  /** Divide two vectors component-wise. */
+  def / (v: Vec[X]): Vec[X] = zip(v)(_ / _)
   
   // ALIASES
   
@@ -101,19 +100,19 @@ trait Vec [@specialized X: OrderedRing as R] extends HasVec[X]:
   // INEQUALITIES
   
   /** Whether each component of the first vector is always strictly less than that of the second. */
-  def < (v: HasVec[X]): Boolean = zip(v.position)(_ < _).foldLeft(true)(_ & _)
+  def < (v: Vec[X]): Boolean = zip(v)(_ < _).foldLeft(true)(_ & _)
   /** Whether all components of the vector are strictly less than some constant. */
   def < (x: X): Boolean = forall(_ < x)
   /** Whether each component of the first vector is always less than or equal to that of the second. */
-  def <= (v: HasVec[X]): Boolean = zip(v.position)(_ <= _).foldLeft(true)(_ & _)
+  def <= (v: Vec[X]): Boolean = zip(v)(_ <= _).foldLeft(true)(_ & _)
   /** Whether all components of the vector are less than or equal to some constant. */
   def <= (x: X): Boolean = forall(_ <= x)
   /** Whether each component of the first vector is always strictly greater than that of the second. */
-  def > (v: HasVec[X]): Boolean = zip(v.position)(_ > _).foldLeft(true)(_ & _)
+  def > (v: Vec[X]): Boolean = zip(v)(_ > _).foldLeft(true)(_ & _)
   /** Whether all components of the vector are strictly greater than some constant. */
   def > (x: X): Boolean = forall(_ > x)
   /** Whether each component of the first vector is always greater than or equal to that of the second. */
-  def >= (v: HasVec[X]): Boolean = zip(v.position)(_ >= _).foldLeft(true)(_ & _)
+  def >= (v: Vec[X]): Boolean = zip(v)(_ >= _).foldLeft(true)(_ & _)
   /** Whether all components of the vector are greater than or equal to some constant. */
   def >= (x: X): Boolean = forall(_ >= x)
   
@@ -123,42 +122,24 @@ trait Vec [@specialized X: OrderedRing as R] extends HasVec[X]:
   // GEOMETRIC OPERATIONS
   
   /** The dot product (sum of pair-wise products) between two vectors. */
-  infix def dot (v: HasVec[X]): X = zip(v.position)(_ * _).sum
+  infix def dot (v: Vec[X]): X = zip(v)(_ * _).sum
   
   /** The cross product between two 3D vectors. */
-  infix def cross (v: HasVec[X]): Vec[X] = Vec (
-    y * v.position.z - z * v.position.y,
-    z * v.position.x - x * v.position.z,
-    x * v.position.y - y * v.position.x,
+  infix def cross (v: Vec[X]): Vec[X] = Vec (
+    y * v.z - z * v.y,
+    z * v.x - x * v.z,
+    x * v.y - y * v.x,
   )
   
   /** A transformed version of this vector flipped over the given axis. */
-  def flip (axis: Int): Vec[X] = update(axis, -apply(axis))
-  /** A transformed version of this vector flipped over the X-axis. */
-  def flipX: Vec[X] = flip(0)
-  /** A transformed version of this vector flipped over the Y-axis. */
-  def flipY: Vec[X] = flip(1)
-  /** A transformed version of this vector flipped over the Z-axis. */
-  def flipZ: Vec[X] = flip(2)
+  override def flip (axis: Int): Vec[X] = update(axis, -apply(axis))
   
   /** A transformed version of this vector rotated 90 degrees from the `from`-axis to the `to`-axis. */
-  def rotate (from: Int, to: Int): Vec[X] = update(to, apply(from)).update(from, -apply(to))
-  /** A transformed version of this vector rotated 90 degrees in the XY-plane from i to j. */
-  def rotateXY: Vec[X] = rotate(0, 1)
-  /** A transformed version of this vector rotated 90 degrees in the XY-plane from j to i. */
-  def rotateYX: Vec[X] = rotate(1, 0)
-  /** A transformed version of this vector rotated 90 degrees in the XZ-plane from i to k. */
-  def rotateXZ: Vec[X] = rotate(0, 2)
-  /** A transformed version of this vector rotated 90 degrees in the XZ-plane from k to i. */
-  def rotateZX: Vec[X] = rotate(2, 0)
-  /** A transformed version of this vector rotated 90 degrees in the YZ-plane from j to k. */
-  def rotateYZ: Vec[X] = rotate(1, 2)
-  /** A transformed version of this vector rotated 90 degrees in the YZ-plane from k to j. */
-  def rotateZY: Vec[X] = rotate(2, 1)
+  override def rotate (from: Int, to: Int): Vec[X] = update(to, apply(from)).update(from, -apply(to))
   
   /** Project this vector onto another. */
-  def proj (axis: HasVec[X]) (using Metric[X], Dividable[X]): Vec[X] =
-    (this dot axis.position.normalise) * axis.position.normalise
+  def proj (axis: Vec[X]) (using Metric[X], Dividable[X]): Vec[X] =
+    (this dot axis.normalise) * axis.normalise
     
   /** Project this vector onto the given axis, i.e. replace all other components with 0. */
   def proj (axis: Int): Vec[X] = Vec.zero(dim).update(axis, apply(axis))
@@ -179,8 +160,8 @@ trait Vec [@specialized X: OrderedRing as R] extends HasVec[X]:
   def swizzle (axes: Int*): Vec[X] = Vec(axes.map(apply))
   
   /** Linearly transform this vector so that the basis vectors are mapped to the given `dirs`. */
-  def transform (dirs: HasVec[X]*): Vec[X] =
-    iterator.zip(dirs).map(_ * _.position).foldLeft(Vec.empty)(_ + _)
+  def transform (dirs: Vec[X]*): Vec[X] =
+    iterator.zip(dirs).map(_ * _).foldLeft(Vec.empty)(_ + _)
   
   /** Restrict all components of this vector to be non-negative. */
   def clamp: Vec[X] = clamp(R.zero)
@@ -196,7 +177,7 @@ trait Vec [@specialized X: OrderedRing as R] extends HasVec[X]:
   /** Retain only the components from the `from`-axis (inclusive) to the `to`-axis (exclusive). */
   def slice (from: Int, until: Int): Vec[X] = Vec(components.slice(from, until))
   /** Append the components of 2 vectors end-to-end. */
-  def ++ (v: HasVec[X]): Vec[X] = Vec(components ++ v.position.components)
+  def ++ (v: Vec[X]): Vec[X] = Vec(components ++ v.components)
   /** Append an element to the start of this vector. */
   def +: (x: X): Vec[X] = Vec(x +: components)
   /** Append an element to the end of this vector. */
@@ -227,13 +208,23 @@ trait Vec [@specialized X: OrderedRing as R] extends HasVec[X]:
   def exists (f: X => Boolean): Boolean = map(f).foldLeft(false)(_ | _)
   
   /** Whether this vector is inside the given region. */
-  infix def in (region: HasRegion[X]): Boolean =
-    region.region.contains(this)
+  infix def in (region: Region[X]): Boolean =
+    region.contains(this)
   
   /** Whether all components of this vector have finite values. */
-  def isFinite (using X =:= Unbounded[?]): Boolean = forall(_.isFinite)
+  def isFinite [Y] (using X =:= Unbounded[Y]): Boolean = forall(_.isFinite)
+  
   /** Whether some component of this vector has an infinite value. */
-  def isInfinite (using X =:= Unbounded[?]): Boolean = exists(_.isInfinite)
+  def isInfinite [Y] (using X =:= Unbounded[Y]): Boolean = exists(_.isInfinite)
+  
+  def toFinite [Y: Numeric] (using X =:= Unbounded[Y]): Vec[Y] =
+    map(_.toFinite)
+    
+  def toUnbounded: UVec[X] =
+    map(Finite.apply)
+    
+  def toFiniteOption [Y: Numeric] (using X =:= Unbounded[Y]): Option[Vec[Y]] =
+    Option.when(isFinite)(toFinite)
   
   override def toString: String = iterator.mkString("[", ", ", "]")
   
@@ -251,19 +242,19 @@ trait Vec [@specialized X: OrderedRing as R] extends HasVec[X]:
     asVecI.map(_ / divisor)
   
   /** The relative direction between two `Vec`s, divided by the GCD of its components. */
-  def directionTo (u: HasVecI) (using X =:= Int): VecI =
-    (u.position - asVecI).direction
+  def directionTo (u: VecI) (using X =:= Int): VecI =
+    (u - asVecI).direction
   
   /** The number of steps it takes to get from `v` to `u` if using `v.directionTo(u)` on each step. */
-  def stepsTo (u: HasVecI) (using X =:= Int): Int =
-    (u.position - asVecI).asMultipleOf(asVecI.directionTo(u)).get
+  def stepsTo (u: VecI) (using X =:= Int): Int =
+    (u - asVecI).asMultipleOf(asVecI.directionTo(u)).get
   
   /** @return If `v` is an integer multiple of `u`, `Some(a)` s.t. `v=au`, otherwise `None`. */
-  def asMultipleOf (u: HasVecI) (using X =:= Int): Option[Int] =
+  def asMultipleOf (u: VecI) (using X =:= Int): Option[Int] =
     if isZero then Some(0)
-    else if components.zip(u.position.components).exists(_ == 0 ^ _ == 0) then None
+    else if components.zip(u.components).exists(_ == 0 ^ _ == 0) then None
     else
-      val pairs = asVecI.components.filter(_ != 0).zip(u.position.components.filter(_ != 0))
+      val pairs = asVecI.components.filter(_ != 0).zip(u.components.filter(_ != 0))
       if pairs.exists(_ % _ != 0) then None else
         pairs.headOption match
           case None => Some(0)
@@ -275,14 +266,14 @@ trait Vec [@specialized X: OrderedRing as R] extends HasVec[X]:
    * Create a new ray consisting of all points on the line between two `Vec`s, including the end.
    * Each step is determined using `VecI.directionTo`.
    */
-  def rayTo (to: HasVecI) (using X =:= Int): Ray =
+  def rayTo (to: VecI) (using X =:= Int): Ray =
     Ray.between(asVecI, to)
   
   /**
    * Create a new ray consisting of all points on the line between two `Vec`s, excluding the end.
    * Each step is determined using `VecI.directionTo`.
    */
-  def rayUntil (until: HasVecI) (using X =:= Int): Ray =
+  def rayUntil (until: VecI) (using X =:= Int): Ray =
     rayTo(until).retract(1)
   
   /**
@@ -291,20 +282,14 @@ trait Vec [@specialized X: OrderedRing as R] extends HasVec[X]:
    * @param dir The direction(s) in which the ray extends.
    * @param inclusive Whether this vertex is included (default=false).
    */
-  def ray (dir: HasRegionI, inclusive: Boolean = false) (using X =:= Int): Ray =
+  def ray (dir: RegionI, inclusive: Boolean = false) (using X =:= Int): Ray =
     Ray.from(asVecI, dir, inclusive)
   
   /** The arithmetic mean of two `VecI`s. May produce rounding artifacts. */
-  def midpoint (u: HasVecI) (using X =:= Int): VecI = VecI.midpoint(asVecI, u)
+  def midpoint (u: VecI) (using X =:= Int): VecI = VecI.midpoint(asVecI, u)
   
   private[math] def asVecI (using X =:= Int): VecI =
     this.asInstanceOf[VecI]
-    
-  private[math] def asUVec [Y: OrderedRing] (using X =:= Unbounded[Y]): UVec[Y] =
-    this.asInstanceOf[UVec[Y]]
-  
-  private[math] def asUVecI (using X =:= UInt): UVecI =
-    this.asInstanceOf[UVecI]
   
 object Vec:
   
@@ -313,59 +298,55 @@ object Vec:
   type VecF = Vec[Float]
   type VecD = Vec[Double]
   type VecR = Vec[Rational]
-  type VecS = Vec[Surd]
   
-  type UVec[X] = Vec[Unbounded[X]]
+  type UVec [X] = Vec[Unbounded[X]]
   type UVecI = Vec[UInt]
   type UVecL = Vec[ULong]
   type UVecF = Vec[UFloat]
   type UVecD = Vec[UDouble]
   type UVecR = Vec[URational]
-  type UVecS = Vec[USurd]
   
   /** The canonical `Vec` implementation, backed by an `IndexedSeq`. */
-  private class SeqVec [@specialized X: OrderedRing as R] (
+  private class SeqVec [@specialized X: Numeric as R] (
     val components: IndexedSeq[X],
+    val default: X,
   ) extends Vec[X]:
-    def apply(n: Int): X = if components.isDefinedAt(n) then components(n) else R.additiveIdentity
+    def apply (n: Int): X = if components.isDefinedAt(n) then components(n) else R.additiveIdentity
     override val dim: Int = components.size
+    def withDefault (default: X): SeqVec[X] = SeqVec(components, default)
     
   /** Construct a new `Vec` with the given components in the standard basis. */
-  def apply [X: OrderedRing] (x: X*): Vec[X] = SeqVec(x.toIndexedSeq)
+  def apply [X: Numeric as N] (x: X*): Vec[X] = SeqVec(x.toIndexedSeq, N.zero)
   /** Construct a new `Vec` with the given components in the standard basis. */
-  def apply [X: OrderedRing] (x: Iterable[X]): Vec[X] = SeqVec(x.toIndexedSeq)
+  def apply [X: Numeric as N] (x: Iterable[X]): Vec[X] = SeqVec(x.toIndexedSeq, N.zero)
   
   /** Construct a `d`-dimensional `Vec` of all 0's, where 0 is the additive identity. */
-  def zero [X: OrderedRing as R] (d: Int = 0): Vec[X] =
+  def zero [X: Numeric as R] (d: Int = 0): Vec[X] =
     Vec(Seq.fill(d)(R.additiveIdentity))
   /** The unique 0-dimensional `Vec` over the ring `X`. */
-  def empty [X: OrderedRing]: Vec[X] = zero(0)
+  def empty [X: Numeric]: Vec[X] = zero(0)
   
   /** Construct a `d`-dimensional `Vec` of all 1's, where 1 is the multiplicative identity. */
-  def one [X: OrderedRing as R] (d: Int = 0): Vec[X] =
-    Vec(Seq.fill(d)(R.multiplicativeIdentity))
+  def one [X: Numeric as R] (d: Int = 0): Vec[X] =
+    Vec(Seq.fill(d)(R.one))
   
   /**
    * Construct a `d`-dimensional `Vec` of all 0's except in the `n`-th component, where there is a 1.
    * If `d` < `n`, then the value of `d` given is ignored and taken to be `n` instead.
    */
-  def axis [X: OrderedRing as R] (n: Int, d: Int = 0): Vec[X] =
+  def axis [X: Numeric as R] (n: Int, d: Int = 0): Vec[X] =
     Vec:
-      Seq.fill(n)(R.additiveIdentity) :+
-      R.multiplicativeIdentity :++
-      Seq.fill(d - n - 1)(R.additiveIdentity)
+      Seq.fill(n)(R.zero) :+
+      R.one :++
+      Seq.fill(d - n - 1)(R.zero)
   
   /** Construct a `d`-dimensional `Vec` where all components have the same, given value. */
-  def fill [X: OrderedRing] (d: Int) (x: X): Vec[X] = Vec(Seq.fill(d)(x))
+  def fill [X: Numeric] (d: Int) (x: X): Vec[X] = Vec(Seq.fill(d)(x))
   
-  extension (v: VecI)
-    def toVecF: VecF = v.map(_.toFloat)
-    
-  extension (v: VecF)
-    def toVecI: VecI = v.map(_.toInt)
+  def fillForever [X: Numeric] (x: X): Vec[X] = Vec.empty.withDefault(x)
     
   // If a metric is defined for this vector space:
-  extension [X: {OrderedRing, Metric as M}] (v: Vec[X])
+  extension [X: {Numeric, Metric as M}] (v: Vec[X])
     
     /** The length of this vector according to the current `Metric`. */
     def norm: X = M.norm(v)
@@ -377,7 +358,7 @@ object Vec:
     def dist (u: Vec[X]): X = M.dist(v, u)
     
   // If this vector space has some notion of adjacency:
-  extension [X: {OrderedRing, EnumerableMetric as M}] (v: Vec[X])
+  extension [X: {Numeric, EnumerableMetric as M}] (v: Vec[X])
     
     /** Whether these vectors are adjacent. */
     def adjacent (u: Vec[X]): Boolean = M.adjacent(v, u)
@@ -411,10 +392,10 @@ object Vec:
     def fill (d: Int) (x: Int): VecI = Vec.fill(d)(x)
     
     /** The arithmetic mean of the given `VecI`s. May produce rounding artifacts. */
-    def midpoint (v: HasVecI*): VecI = v.map(_.position).reduce(_ + _) / v.size
+    def midpoint (v: VecI*): VecI = v.reduce(_ + _) / v.size
       
   // `Vec[X]` forms a `Group` for any `Ring` `X`.
-  given [X: OrderedRing]: OrderedGroup[Vec[X]] with
+  given [X: Numeric]: OrderedGroup[Vec[X]] with
     
     def sum (x: Vec[X], y: Vec[X]): Vec[X] = x + y
     def additiveIdentity: Vec[X] = Vec.empty[X]
@@ -430,7 +411,7 @@ object Vec:
   // By default, `VecF` should use the Euclidean metric.
   given Metric[Float] = Metric.Euclidean
   
-  trait HasVec [X: OrderedRing] extends HasRegion[X]:
+  trait HasVec [X: Numeric] extends HasRegion[X]:
     val position: Vec[X]
     def region: Region[X] = Region.point(position)
     
@@ -438,3 +419,9 @@ object Vec:
   
   type HasUVec[X] = HasVec[Unbounded[X]]
   type HasUVecI = HasUVec[Int]
+  
+  given [X: Encoder]: Encoder[Vec[X]] =
+    Encoder.encodeSeq[X].contramap(v => v.default +: v.components)
+  
+  given [X: {Decoder, Numeric}]: Decoder[Vec[X]] =
+    Decoder.decodeSeq[X].map(s => Vec(s.tail).withDefault(s.head))

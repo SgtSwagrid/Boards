@@ -15,10 +15,10 @@ import boards.dsl.rules.Input
 import boards.dsl.states.{GameState, HistoryState}
 import boards.dsl.states.GameState.Outcome
 import boards.dsl.states.GameState.Outcome.Winner
-import boards.math.region.RegionMap.RegionMapI
-import boards.math.region.{EmbeddedRegion, Region, RegionMap}
-import boards.math.region.Region.RegionI
-import boards.math.region.Vec.VecI
+import boards.math.vector.RegionMap.RegionMapI
+import boards.math.vector.{Embedding, Region, RegionMap}
+import boards.math.vector.Region.RegionI
+import boards.math.vector.Vec.VecI
 import io.circe.Codec
 import io.circe.Decoder.state
 import boards.util.Codecs.{*, given}
@@ -51,7 +51,7 @@ case class Scene (
   userId: Option[Int] = None,
   activePlayerId: PlayerId = PlayerId(0),
   
-  board: EmbeddedRegion = EmbeddedRegion.empty,
+  board: Embedding = Embedding.empty,
   pieces: Seq[PieceData] = Seq.empty,
   choices: Seq[Choice[?]] = Seq.empty,
   diff: RegionI = Region.empty,

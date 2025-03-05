@@ -1,6 +1,6 @@
 package boards.graphics
 
-import boards.math.region.Vec
+import boards.math.vector.Vec
 
 /** Colour patterns for positionally selecting a background colour. */
 object Pattern:

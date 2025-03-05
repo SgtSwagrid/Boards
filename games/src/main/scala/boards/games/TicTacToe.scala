@@ -8,10 +8,10 @@ import boards.dsl.pieces.PieceType.{StaticPiece, TexturedPiece}
 import boards.dsl.rules.{Effect, Rule}
 import boards.dsl.states.HistoryState
 import boards.graphics.{Colour, Texture}
-import boards.math.region.EmbeddedRegion.embed
+import boards.math.vector.Embedding.embed
 import boards.dsl.Shortcuts.{*, given}
-import boards.math.Algebra.{*, given}
-import boards.math.region.{Box, Dir}
+import boards.math.algebra.Algebra.{*, given}
+import boards.math.vector.{Box, Dir}
 
 object TicTacToe extends Game:
   
@@ -25,7 +25,7 @@ object TicTacToe extends Game:
   val target = Property("Target", 3 to 9,  default = 4)
   override val properties = Seq(size, target)
   
-  override def board = Box(size, size).embed.fill(Colour.White)
+  override def board = Box(size, size).embed.paintSolid(Colour.White)
   
   override def loop = Rule.alternatingTurns:
     state.board.ontoEmpty.placeFriendly(Stone) |>
@@ -33,6 +33,6 @@ object TicTacToe extends Game:
     .orElseDraw
   
   def streak (using HistoryState, PlayerRef) (piece: Piece): Int =
-    Dir.octagonalPairs.map(_.rayFrom(piece, true).whileFriendly.area.toBounded).max
+    Dir.octagonalPairs.map(_.rayFrom(piece, true).whileFriendly.area).max.toFinite
   
   object Stone extends StaticPiece, TexturedPiece(Texture.X, Texture.O)

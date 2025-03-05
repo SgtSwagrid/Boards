@@ -5,9 +5,9 @@ import boards.dsl.meta.PlayerRef.Player
 import boards.dsl.pieces.PieceType.{StaticPiece, TexturedPiece}
 import boards.dsl.rules.{Control, Rule}
 import boards.graphics.{Colour, Pattern, Texture}
-import boards.math.region.{Box, Dir}
-import boards.math.region.EmbeddedRegion.embed
-import boards.math.region.Vec.VecI
+import boards.math.vector.{Box, Dir}
+import boards.math.vector.Embedding.embed
+import boards.math.vector.Vec.VecI
 import boards.dsl.Shortcuts.{*, given}
 import boards.dsl.meta.Game.Property
 

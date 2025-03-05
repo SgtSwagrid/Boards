@@ -1,11 +1,12 @@
 package boards.math
 
-import boards.math.Interval.{IntervalD, IntervalF, IntervalI, IntervalL, IntervalR, IntervalS, UInterval, UIntervalD, UIntervalF, UIntervalI, UIntervalL, UIntervalR, UIntervalS}
-import boards.math.region.BoundingBox.{BoundingBoxD, BoundingBoxF, BoundingBoxI, BoundingBoxL, BoundingBoxR, BoundingBoxS, UBoundingBox, UBoundingBoxD, UBoundingBoxF, UBoundingBoxI, UBoundingBoxL, UBoundingBoxR, UBoundingBoxS}
-import boards.math.region.Vec.{UVec, UVecD, UVecF, UVecI, UVecL, UVecR, UVecS, VecD, VecF, VecI, VecL, VecR, VecS}
-import boards.math.region.{BoundingBox, Vec}
-import boards.math.Unbounded.{UDouble, UFloat, UInt, ULong, URational, USurd}
-import boards.math.Algebra.{*, given}
+import boards.math.Interval.{IntervalD, IntervalF, IntervalI, IntervalL, IntervalR}
+import boards.math.vector.Bounds.{BoundsD, BoundsF, BoundsI, BoundsL, BoundsR}
+import boards.math.vector.Vec.{VecD, VecF, VecI, VecL, VecR}
+import boards.math.vector.{Bounds, Vec}
+import boards.math.algebra.Unbounded.{UDouble, UFloat, UInt, ULong, URational}
+import boards.math.algebra.Algebra.{*, given}
+import boards.math.Rational.given
 
 object Conversions:
     
@@ -26,27 +27,16 @@ object Conversions:
     def convertToRational (x: X): Rational
     extension (x: X) def toRational: Rational = convertToRational(x)
   
-  @FunctionalInterface
-  trait ToSurd [X]:
-    def convertToSurd (x: X): Surd
-    extension (x: X) def toSurd: Surd = convertToSurd(x)
-  
   given ToInt[Int] = identity
   given ToInt[Float] = _.toInt
   given ToInt[Rational] = _.previousInt
-  given ToInt[Surd] = _.approximate.toInt
   
   given ToFloat[Int] = _.toFloat
   given ToFloat[Float] = identity
   given ToFloat[Rational] = _.approximate
-  given ToFloat[Surd] = _.approximate
   
   given ToRational[Int] = Rational.integer
   given ToRational[Rational] = identity
-  
-  given ToSurd[Int] = Surd.integer
-  given ToSurd[Rational] = Surd.rational
-  given ToSurd[Surd] = identity
   
   extension [X: ToInt] (v: Vec[X])
     def toVecI: VecI = v.map(_.toInt)
@@ -59,38 +49,38 @@ object Conversions:
   extension [X: ToRational] (v: Vec[X])
     def toVecR: VecR = v.map(_.toRational)
     
-  extension [X: ToSurd] (v: Vec[X])
-    def toVecS: VecS = v.map(_.toSurd)
+  //extension [X: ToSurd] (v: Vec[X])
+    //def toVecS: VecS = v.map(_.toSurd)
     
   extension [X: ToInt] (i: Interval[X])
-    def toIntervalI: IntervalI = i.map(_.toInt)
-    def toIntervalL: IntervalL = i.map(_.toLong)
+    def toIntervalI: IntervalI = i.mapFinite(_.toInt)
+    def toIntervalL: IntervalL = i.mapFinite(_.toLong)
     
   extension [X: ToFloat] (i: Interval[X])
-    def toIntervalF: IntervalF = i.map(_.toFloat)
-    def toIntervalD: IntervalD = i.map(_.toDouble)
+    def toIntervalF: IntervalF = i.mapFinite(_.toFloat)
+    def toIntervalD: IntervalD = i.mapFinite(_.toDouble)
     
   extension [X: ToRational] (i: Interval[X])
-    def toIntervalR: IntervalR = i.map(_.toRational)
+    def toIntervalR: IntervalR = i.mapFinite(_.toRational)
     
-  extension [X: ToSurd] (i: Interval[X])
-    def toIntervalS: IntervalS = i.map(_.toSurd)
+  //extension [X: ToSurd] (i: Interval[X])
+    //def toIntervalS: IntervalS = i.mapFinite(_.toSurd)
     
-  extension [X: ToInt] (bb: BoundingBox[X])
-    def toBoundingBoxI: BoundingBoxI = bb.map(_.toVecI)
-    def toBoundingBoxL: BoundingBoxL = bb.map(_.toVecL)
+  extension [X: ToInt] (bb: Bounds[X])
+    def toBoundsI: BoundsI = bb.mapFinite(_.toInt)
+    def toBoundsL: BoundsL = bb.mapFinite(_.toLong)
     
-  extension [X: ToFloat] (bb: BoundingBox[X])
-    def toBoundingBoxF: BoundingBoxF = bb.map(_.toVecF)
-    def toBoundingBoxD: BoundingBoxD = bb.map(_.toVecD)
+  extension [X: ToFloat] (bb: Bounds[X])
+    def toBoundsF: BoundsF = bb.mapFinite(_.toFloat)
+    def toBoundsD: BoundsD = bb.mapFinite(_.toDouble)
     
-  extension [X: ToRational] (bb: BoundingBox[X])
-    def toBoundingBoxR: BoundingBoxR = bb.map(_.toVecR)
+  extension [X: ToRational] (bb: Bounds[X])
+    def toBoundsR: BoundsR = bb.mapFinite(_.toRational)
   
-  extension [X: ToSurd] (bb: BoundingBox[X])
-    def toBoundingBoxS: BoundingBoxS = bb.map(_.toVecS)
+  //extension [X: ToSurd] (bb: BoundingBox[X])
+    //def toBoundingBoxS: BoundingBoxS = bb.mapFinite(_.toSurd)
     
-  extension [X: ToInt] (x: Unbounded[X])
+  /*extension [X: ToInt] (x: Unbounded[X])
     def toUInt: UInt = x.map(_.toInt)
     def toULong: ULong = x.map(_.toLong)
     
@@ -165,7 +155,7 @@ object Conversions:
     def toUnbounded: UBoundingBox[X] = bb.map(_.toUnbounded)
     
   extension [X: OrderedRing] (bb: UBoundingBox[X])
-    def toBounded: BoundingBox[X] = bb.map(_.toBounded)
+    def toBounded: BoundingBox[X] = bb.map(_.toBounded)*/
     
   /*given Conversion[Int, Rational] = _.toRational
   given Conversion[Int, Surd] = _.toSurd

@@ -2,7 +2,7 @@ package boards.dsl.rules
 
 import boards.dsl.pieces.PieceFilter
 import boards.dsl.states.{GameState, HistoryState}
-import boards.math.region.Region.{HasRegionI, RegionI}
+import boards.math.vector.Region.RegionI
 
 /** A means for determining what kinds of [[Input]] are currently possible.
   * The key subtype of [[Capability]] is the [[GameState]].
@@ -41,16 +41,16 @@ trait Capability:
     state.pieces.now.sincePrevious.hasMoved
     
   /** Whether it is currently possible to move any [[Piece]] to a particular `region`. */
-  def canMoveTo (region: HasRegionI): Boolean = can:
+  def canMoveTo (region: RegionI): Boolean = can:
     state.pieces.sincePrevious.hasMovedTo(region)
   
   /** Whether it is currently possible to move any [[Piece]] out of a particular `region`. */
-  def canMoveFrom (region: HasRegionI): Boolean = can:
+  def canMoveFrom (region: RegionI): Boolean = can:
     state.pieces.sincePrevious.hasMovedFrom(region)
     
   /** Whether it is currently possible to capture any of the given [[Piece]]s by moving on top of them. */
   def canCapture (pieces: PieceFilter): Boolean = can:
-    state.pieces.sincePrevious.hasMovedTo(pieces.atPrevious)
+    state.pieces.sincePrevious.hasMovedTo(pieces.atPrevious.region)
     
   /** Whether it is currently possible to click any position on the [[Board]]. */
   def canClick: Boolean = can:
@@ -67,7 +67,7 @@ trait Capability:
   /** Whether it is currently possible to click any of the given [[Piece]]s. */
   def canClick (pieces: PieceFilter): Boolean = can:
     state.latestInput.exists:
-      case Input.Click(clicked) => (clicked & pieces.atPrevious).nonEmpty
+      case Input.Click(clicked) => (clicked & pieces.atPrevious.region).nonEmpty
       case _ => false
       
   /** Whether it is currently possible to perform a [[Drag]]. */

@@ -1,23 +1,26 @@
-package boards.math.region
+package boards.math.vector
 
-import boards.math.Algebra.{*, given}
+import boards.math.algebra.Algebra.{*, given}
+import boards.math.algebra.Bijection.AffineBijection
+import boards.math.algebra.Unbounded.given
 import boards.math.Conversions.{*, given}
 import Region.*
-import boards.math.Bijection.AffineBijection
-import boards.math.region.BoundingBox.UBoundingBox
-import boards.math.region.Vec.{HasVec, HasVecI, UVec}
-import boards.math.Unbounded.{Finite, UInt}
+import boards.math.vector.Vec
+import boards.math.vector.Vec.{VecI, UVec}
+import boards.math.algebra.Unbounded.{Finite, UInt}
+import boards.math.ops.RegionOps
+import boards.math.ops.TransformOps.AffineFunctor
+import boards.math.ops.AffineOps.Affine
+import boards.math.ops.MinkowskiOps.Difference
 
 import scala.annotation.{tailrec, targetName}
 
 /** A collection of vectors combined to describe a region in arbitrary-dimensional Euclidean space.
   * @tparam X The discrete field over which the vectors contained herein are defined (usually [[Int]]).
   */
-trait Region[@specialized X: OrderedRing] extends
-  HasRegion[X],
+trait Region[@specialized X: Numeric] extends
+  Difference[Region[X]],
   RegionOps[X, Region]:
-  
-  val region: Region[X] = this
   
   /** An iterator over all positions in this region.
     *
@@ -28,7 +31,7 @@ trait Region[@specialized X: OrderedRing] extends
   /** Whether the given position is contained in this region.
     * @see [[inBounds]].
     */
-  def contains (v: HasVec[X]): Boolean
+  def contains (v: Vec[X]): Boolean
   
   /** Whether the given position is contained in this region.
     * @see [[inBounds]].
@@ -55,49 +58,41 @@ trait Region[@specialized X: OrderedRing] extends
   /** A vector containing only the additive identity. */
   protected final def one: Vec[X] = Vec.one(dim)
   
-  def window (window: UBoundingBox[X]): Region[X] =
+  def window (window: Bounds[X]): Region[X] =
     WindowRegion(this, window)
   
-  def map [Y: OrderedRing] (f: AffineBijection[X, Y]): Region[Y] =
+  def mapAffine [Y: Numeric] (f: AffineBijection[X, Y]): Region[Y] =
     TransformRegion(this, f)
   
   /**
    * Take the cartesian product of two regions, where every possible position sum is included in the result.
    * When one of the regions is just a vector, this corresponds to a translation of the other region.
    */
-  def + (v: HasRegion[X]): Region[X] =
-    ProductRegion(this, v.region)
-  
-  /**
-   * Take the cartesian product one region and the negation of the other.
-   * This yields a new region describing the set of all differences between
-   * positions in the first and second region.
-   */
-  def - (v: HasRegion[X]): Region[X] =
-    ProductRegion(this, -v.region)
+  def minkowskiSum (v: Region[X]): Region[X] =
+    MinkowskiRegion(this, v)
   
   /** Negate all points in this region. */
-  def unary_- : Region[X] =
+  def negate: Region[X] =
     (0 until dim).foldLeft(this)(_.flip(_))
   
   /** Take the union of two regions, where a position is included in the result if it is present in either operand. */
-  final def | (that: HasRegion[X]): Region[X] =
-    UnionRegion(this, that.region)
+  final def | (that: Region[X]): Region[X] =
+    UnionRegion(this, that)
   
-  def & (that: HasRegion[X]): Region[X] =
-    IntersectionRegion(this, that.region)
+  def & (that: Region[X]): Region[X] =
+    IntersectionRegion(this, that)
   
-  def ^ (that: HasRegion[X]): Region[X] =
-    (this \ that.region) | (that.region \ this)
+  def ^ (that: Region[X]): Region[X] =
+    (this \ that) | (that \ this)
   
   def filter (f: Vec[X] => Boolean): Region[X] = FilteredRegion(this, f)
   
-  def join (using X =:= Int) (that: HasRegionI, align: Align): RegionI =
+  def join (using X =:= Int) (that: RegionI, align: Align): RegionI =
     val offset = align.relativeOffset (
-      asRegionI.boundingBox.toBounded.toBoundingBoxS,
-      that.region.boundingBox.toBounded.toBoundingBoxS
+      asRegionI.bounds.toBoundsF,
+      that.bounds.toBoundsF
     ).toVecI
-    asRegionI | (that.region + offset)
+    asRegionI | (that + offset)
   
   /**
    * Create a ray in this direction starting from the given source.
@@ -105,7 +100,7 @@ trait Region[@specialized X: OrderedRing] extends
    * @param source The starting point(s) of the ray.
    * @param inclusive Whether the source itself is included (default=false).
    */
-  def rayFrom (using X =:= Int) (source: HasRegionI, inclusive: Boolean = false): Ray =
+  def rayFrom (using X =:= Int) (source: RegionI, inclusive: Boolean = false): Ray =
     Ray.from(source, asRegionI, inclusive)
   
   /**
@@ -114,7 +109,7 @@ trait Region[@specialized X: OrderedRing] extends
    *
    * @param source The starting point(s) of the ray.
    */
-  def rayFromHere (using source: HasVecI) (using X =:= Int): Ray =
+  def rayFromHere (using source: VecI) (using X =:= Int): Ray =
     Ray.from(source, asRegionI)
   
   /** Convert this [[Region]] to a [[RegionMap]] with [[Unit]] labels. */
@@ -143,7 +138,7 @@ trait Region[@specialized X: OrderedRing] extends
       positions.toSet.equals(that.positions.toSet)
     case _ => false
     
-  override def toString = positions.size match
+  override def toString: String = positions.size match
     case 0 => "∅"
     case 1 => positions.head.toString
     case _ => positions.mkString("{", " | ", "}")
@@ -153,18 +148,20 @@ object Region:
   type RegionI = Region[Int]
   type RegionL = Region[Long]
   
-  type HasRegionI = HasRegion[Int]
-  type HasRegionL = HasRegion[Long]
+  trait HasRegion [X: Numeric]:
+    def region: Region[X]
   
-  def apply [X: OrderedRing] (v: HasVec[X]*): Region[X] = SetRegion(v.map(_.position))
-  def from [X: OrderedRing] (v: Iterable[HasVec[X]]): Region[X] = SetRegion(v.map(_.position))
-  def point [X: OrderedRing] (v: HasVec[X]): Region[X] = PointRegion(v.position)
+  given [X]: Conversion[HasRegion[X], Region[X]] = _.region
+  
+  def apply [X: Numeric] (v: Vec[X]*): Region[X] = SetRegion(v.map(_.position))
+  def from [X: Numeric] (v: Iterable[Vec[X]]): Region[X] = SetRegion(v.map(_.position))
+  def point [X: Numeric] (v: Vec[X]): Region[X] = PointRegion(v.position)
   
   /** An empty 2D-region of a given width, used for creating spaces in stacked regions. */
-  def hspace [X: OrderedRing as R] (width: X): Region[X] =
+  def hspace [X: Numeric as R] (width: X): Region[X] =
     Region.empty(width, R.additiveIdentity)
   /** An empty 2D-region of a given height, used for creating spaces in stacked regions. */
-  def vspace [X: OrderedRing as R] (height: X): Region[X] =
+  def vspace [X: Numeric as R] (height: X): Region[X] =
     Region.empty(R.additiveIdentity, height)
   
   /** A region built from aligning sub-regions with each other.
@@ -172,9 +169,9 @@ object Region:
     * @param align The rule for aligning the sub-regions.
     * @param regions The sub-regions to combine.
     */
-  def join (align: Align) (regions: HasRegionI*): RegionI =
+  def join (align: Align) (regions: RegionI*): RegionI =
     regions.foldLeft(Region.empty[Int]): (region, appendant) =>
-      region.join(appendant.region, align)
+      region.join(appendant, align)
     
   /** A region built from stacking sub-regions end-to-end.
     *
@@ -187,56 +184,56 @@ object Region:
     dim: Int,
     spacing: Int = 0,
     reverse: Boolean = false
-  ) (regions: HasRegionI*): RegionI =
-    join(Align.stack(dim, spacing=spacing.toSurd, reverse=reverse))(regions*)
+  ) (regions: RegionI*): RegionI =
+    join(Align.stack(dim, spacing=spacing, reverse=reverse))(regions*)
     
   /** A region built from stacking 2D-sub-regions horizontally. */
-  def hstack (regions: HasRegionI*): RegionI = stack(0)(regions*)
+  def hstack (regions: RegionI*): RegionI = stack(0)(regions*)
   
   /** A region built from stacking 2D-sub-regions vertically. */
-  def vstack (regions: HasRegionI*): RegionI = stack(1)(regions.reverse*)
+  def vstack (regions: RegionI*): RegionI = stack(1)(regions.reverse*)
   
-  def empty[X: OrderedRing](size: HasVec[X]): Region[X] = EmptyRegion(size.position.toUnbounded)
-  def empty[X: OrderedRing](size: X*): Region[X] = empty(Vec(size*))
-  def empty[X: OrderedRing]: Region[X] = EmptyRegion(Vec.empty)
+  def empty[X: Numeric](size: Vec[X]): Region[X] = EmptyRegion(size.position.toUnbounded)
+  def empty[X: Numeric](size: X*): Region[X] = empty(Vec(size*))
+  def empty[X: Numeric]: Region[X] = EmptyRegion(Vec.empty)
   
   /**
    * A region containing an empty region.
-   * @param size The dimensions of the bounding box of this region,
+   * @param usize The dimensions of the bounding box of this region,
    * used to create spacing when stacking regions side-by-side.
    */
-  private case class EmptyRegion [X: OrderedRing] (
-    override val size: UVec[X],
+  private case class EmptyRegion [X: Numeric] (
+    override val usize: UVec[X],
   ) extends Region[X]:
     
     lazy val positions: LazyList[Nothing] = LazyList.empty
-    override def contains (v: HasVec[X]): false = false
-    val boundingBox = BoundingBox.empty
+    override def contains (v: Vec[X]): false = false
+    val bounds = Bounds.empty
     override def toString = "∅"
     
-    override def window (window: UBoundingBox[X]): Region[X] = this
+    override def window (window: Bounds[X]): Region[X] = this
     
-  private case class WindowRegion [X: OrderedRing] (
+  private case class WindowRegion [X: Numeric] (
     base: Region[X],
-    window: UBoundingBox[X],
+    window: Bounds[X],
   ) extends Region[X]:
   
-    lazy val positions = base.positions.filter(window.inBounds)
-    def contains (v: HasVec[X]): Boolean = window.inBounds(v) && base.contains(v)
-    val boundingBox = base.boundingBox & window
+    lazy val positions = base.positions.filter(window.contains)
+    def contains (v: Vec[X]): Boolean = window.contains(v) && base.contains(v)
+    val bounds = base.bounds & window
   
-  private case class TransformRegion [X: OrderedRing, Y: OrderedRing] (
+  private case class TransformRegion [X: Numeric, Y: Numeric] (
     base: Region[X],
     f: AffineBijection[X, Y],
   ) extends Region[Y]:
     
-    lazy val positions = base.positions.map(f.finite.apply)
-    def contains (v: HasVec[Y]) = base.contains(f.finite.inverse(v.position))
-    val boundingBox = base.boundingBox.bimap(f.infinite)
+    lazy val positions = base.positions.map(_.toUnbounded).map(f).map(_.toFinite[Y])
+    def contains (v: Vec[Y]) = base.contains(f.inverse(v.toUnbounded).toFinite[X])
+    val bounds = base.bounds.map(f)
     override def area = base.area
     
-    override def window (window: UBoundingBox[Y]): Region[Y] =
-      base.window(window.bimap(f.infinite.invert)).map(f)
+    override def window (window: Bounds[Y]): Region[Y] =
+      base.window(window.map(f.inverse)).mapAffine(f)
   
   /**
    *
@@ -247,7 +244,7 @@ object Region:
    * @tparam L The type of the label assigned to each position, if there is one.
    * @tparam R
    */
-  private case class ProductRegion [X: OrderedRing] (
+  private case class MinkowskiRegion [X: Numeric] (
     left: Region[X],
     right: Region[X],
   ) extends Region[X]:
@@ -259,81 +256,78 @@ object Region:
       yield pos1 + pos2
       ).distinct
     
-    def contains (v: HasVec[X]) =
-      inBounds(v.position.toUnbounded) && left.positions.exists(u => right.contains(v.position - u))
+    def contains (v: Vec[X]) =
+      inBounds(v) && left.positions.exists(u => right.contains(v - u))
       
-    val boundingBox = left.boundingBox + right.boundingBox
+    val bounds = left.bounds + right.bounds
     
     override def toString = s"$left + $right"
   
   /** The union of two base regions, contains all positions from either. */
-  private case class UnionRegion [X: OrderedRing] (
+  private case class UnionRegion [X: Numeric] (
     left: Region[X],
     right: Region[X],
   ) extends Region[X]:
   
     lazy val positions = (left.positions ++ right.positions).distinct
-    def contains (v: HasVec[X]) = left.contains(v) || right.contains(v)
-    val boundingBox = left.boundingBox | right.boundingBox
+    def contains (v: Vec[X]) = left.contains(v) || right.contains(v)
+    val bounds = left.bounds | right.bounds
     
     override lazy val area =
       left.area + right.area - (left & right).area
     
-    override def window (window: UBoundingBox[X]): Region[X] =
+    override def window (window: Bounds[X]): Region[X] =
       left.window(window) | right.window(window)
       
     override def toString = s"$left | $right"
   
   /** The intersection of two base regions, contains only positions that are in both. */
-  private case class IntersectionRegion [X: OrderedRing] (
+  private case class IntersectionRegion [X: Numeric] (
     left: Region[X],
     right: Region[X],
   ) extends Region[X]:
     
     lazy val positions =
-      left.window(right.boundingBox).positions.filter(right.contains)
-        .zip(right.window(left.boundingBox).positions.filter(left.contains))
+      left.window(right.bounds).positions.filter(right.contains)
+        .zip(right.window(left.bounds).positions.filter(left.contains))
         .map((v, _) => v)
     
-    def contains (v: HasVec[X]) =
+    def contains (v: Vec[X]) =
       left.contains(v) && right.contains(v)
     
-    val boundingBox = left.boundingBox & right.boundingBox
+    val bounds = left.bounds & right.bounds
     
-    override def window (window: UBoundingBox[X]): Region[X] =
+    override def window (window: Bounds[X]): Region[X] =
       left.window(window) & right.window(window)
     
     override def toString = s"$left & $right"
   
-  private case class FilteredRegion [X: OrderedRing] (
+  private case class FilteredRegion [X: Numeric] (
     base: Region[X],
     f: Vec[X] => Boolean
   ) extends Region[X]:
     
     lazy val positions = base.positions.filter(f)
-    def contains (v: HasVec[X]) = f(v.position) && base.contains(v.position)
-    val boundingBox = base.boundingBox
+    def contains (v: Vec[X]) = f(v.position) && base.contains(v.position)
+    val bounds = base.bounds
     
-    override def window (window: UBoundingBox[X]): Region[X] =
+    override def window (window: Bounds[X]): Region[X] =
       base.window(window).filter(f)
     
-  private case class SetRegion [X: OrderedRing] (
+  private case class SetRegion [X: Numeric] (
     private val pos: Iterable[Vec[X]],
   ) extends Region[X]:
     
     lazy val positions: LazyList[Vec[X]] = LazyList.from(pos)
     private lazy val posSet = pos.toSet
-    def contains (v: HasVec[X]) = posSet.contains(v.position)
-    lazy val boundingBox = BoundingBox.bounding(pos.toSeq*).toUnbounded
+    def contains (v: Vec[X]) = posSet.contains(v.position)
+    lazy val bounds = Bounds.bounding(pos.toSeq*)
     
-  private case class PointRegion [X: OrderedRing] (
+  private case class PointRegion [X: Numeric] (
     private val position: Vec[X],
   ) extends Region[X]:
     
     lazy val positions = LazyList(position)
-    def contains (v: HasVec[X]) = position == v.position
-    val boundingBox = BoundingBox.point(position).toUnbounded
+    def contains (v: Vec[X]) = position == v.position
+    val bounds = Bounds.point(position)
     override val dim = position.dim
-  
-  trait HasRegion [X: OrderedRing]:
-    def region: Region[X]

@@ -7,9 +7,9 @@ import boards.dsl.pieces.PieceType.{MoveablePiece, TexturedPiece}
 import boards.dsl.rules.{Control, Rule}
 import boards.dsl.states.HistoryState
 import boards.graphics.{Colour, Pattern, Texture}
-import boards.math.region.{Box, Dir}
-import boards.math.Algebra.{*, given}
-import boards.math.region.EmbeddedRegion.embed
+import boards.math.vector.{Box, Dir}
+import boards.math.algebra.Algebra.{*, given}
+import boards.math.vector.Embedding.embed
 import boards.dsl.Shortcuts.{*, given}
 import boards.dsl.pieces.PieceView.Pieces
 import boards.dsl.states.GameState.Outcome.Draw

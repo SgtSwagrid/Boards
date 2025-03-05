@@ -1,13 +1,5 @@
 package boards.math
 
-import boards.math.Interval.{UInterval, UIntervalI}
-import boards.math.Unbounded.Finite
-import boards.math.region.BoundingBox
-import boards.math.region.BoundingBox.{BoundingBoxI, UBoundingBoxI}
-import boards.math.region.Vec.VecI
-import boards.math.Algebra.{*, given}
-import boards.math.Bijection.Translate
-
 import scala.annotation.tailrec
 
 object Number:

@@ -3,7 +3,7 @@ package boards.views
 import boards.components.game.{GameBoard, GameSidebar}
 import boards.graphics.Scene
 import boards.graphics.Scene.PieceData
-import boards.math.region.EmbeddedRegion.Tile
+import boards.math.vector.Embedding.Tile
 import boards.protocol.GameProtocol.*
 import boards.protocol.UserProtocol.User
 import boards.util.Navigation.*

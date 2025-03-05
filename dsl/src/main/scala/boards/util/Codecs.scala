@@ -1,7 +1,7 @@
 package boards.util
 
-import boards.math.Algebra.{*, given}
-import boards.math.region.{BoundingBox, Region, RegionMap, Vec}
+import boards.math.algebra.Algebra.{*, given}
+import boards.math.vector.{Bounds, Region, RegionMap, Vec}
 import boards.dsl.pieces.PieceRef.PieceId
 import boards.dsl.meta.PlayerRef.PlayerId
 import boards.dsl.meta.TurnId
@@ -15,17 +15,11 @@ import io.circe.Decoder.{decodeEither, decodeOption, decodeSeq, decodeSet}
 
 object Codecs:
   
-  given [X: Encoder]: Encoder[Vec[X]] =
-    Encoder.encodeSeq[X].contramap(_.components)
-    
-  given [X: {Decoder, OrderedRing}]: Decoder[Vec[X]] =
-    Decoder.decodeSeq[X].map(Vec.apply)
-  
   given [X: Encoder]: Encoder[Region[X]] =
     summon[Encoder[List[Vec[X]]]].contramap[Region[X]]: region =>
       region.positions.toList
   
-  given [X: {Decoder, OrderedRing}]: Decoder[Region[X]] =
+  given [X: {Decoder, Numeric}]: Decoder[Region[X]] =
     summon[Decoder[List[Vec[X]]]].map[Region[X]]: entries =>
       Region.from(entries)
       
@@ -39,19 +33,19 @@ object Codecs:
     summon[Encoder[List[(Vec[X], A)]]].contramap[RegionMap[X, A]]: region =>
       region.entries.toList
   
-  given [X: {Decoder, OrderedRing}, A: Decoder]: Decoder[RegionMap[X, A]] =
+  given [X: {Decoder, Numeric}, A: Decoder]: Decoder[RegionMap[X, A]] =
     summon[Decoder[List[(Vec[X], A)]]].map[RegionMap[X, A]]: entries =>
       RegionMap.from(entries)*/
   
-  given [X: Encoder]: Encoder[BoundingBox[X]] =
+  /*given [X: Encoder]: Encoder[BoundingBox[X]] =
     summon[Encoder[Option[(Vec[X], Vec[X])]]].contramap:
       case BoundingBox.NonEmpty(start, end) => Some((start, end))
       case BoundingBox.Empty() => None
   
-  given [X: {Decoder, OrderedRing}]: Decoder[BoundingBox[X]] =
+  given [X: {Decoder, Numeric}]: Decoder[BoundingBox[X]] =
     summon[Decoder[Option[(Vec[X], Vec[X])]]].map:
       case Some((start, end)) => BoundingBox.NonEmpty(start, end)
-      case None => BoundingBox.Empty()
+      case None => BoundingBox.Empty()*/
       
   /*given Encoder[Rational] =
     summon[Encoder[(Int, Int)]].contramap:

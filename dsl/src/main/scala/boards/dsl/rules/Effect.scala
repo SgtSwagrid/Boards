@@ -5,8 +5,8 @@ import boards.dsl.meta.PlayerRef.PlayerRef
 import boards.dsl.pieces.{Piece, PieceFilter, PieceRef, PieceSet, PieceState, PieceType}
 import boards.dsl.states.GameState.Outcome
 import boards.dsl.states.{GameState, HistoryState}
-import boards.math.region.Region.{HasRegionI, RegionI}
-import boards.math.region.Vec.{HasVecI, VecI}
+import boards.math.vector.Region.RegionI
+import boards.math.vector.Vec.VecI
 import boards.dsl.rules.Effect.*
 
 import scala.collection.mutable
@@ -54,27 +54,27 @@ object Effect:
   
   def create (
     owner: (state: HistoryState) ?=> PlayerRef,
-    region: (state: HistoryState) ?=> HasRegionI,
+    region: (state: HistoryState) ?=> RegionI,
     pieceTypes: PieceType*,
   ): Effect =
-    Effect(CreateEffect(owner, region.region, pieceTypes.toIndexedSeq))
+    Effect(CreateEffect(owner, region, pieceTypes.toIndexedSeq))
   
   def createFriendly (
-    region: (state: HistoryState) ?=> HasRegionI,
+    region: (state: HistoryState) ?=> RegionI,
     pieceTypes: PieceType*,
   ) (using owner: PlayerRef): Effect =
     Effect.create(owner, region, pieceTypes*)
   
   def relocate (
     pieces: (state: HistoryState) ?=> PieceFilter,
-    position: (state: HistoryState, piece: Piece) ?=> HasVecI,
+    position: (state: HistoryState, piece: Piece) ?=> VecI,
   ): Effect = Effect.sequence:
     pieces.now.map: piece =>
       Effect(MoveEffect(piece, position(using summon[HistoryState], piece).position))
       
   def slide (
-    from: (state: HistoryState) ?=> HasRegionI,
-    to: (state: HistoryState, from: VecI) ?=> HasVecI,
+    from: (state: HistoryState) ?=> RegionI,
+    to: (state: HistoryState, from: VecI) ?=> VecI,
   ): Effect =
     relocate (
       state.pieces.ofRegion(from),
@@ -87,7 +87,7 @@ object Effect:
     Effect(DestroyEffect(state.pieces))
     
   def clear (
-    region: (state: HistoryState) ?=> HasRegionI,
+    region: (state: HistoryState) ?=> RegionI,
   ): Effect =
     Effect.destroy(state.pieces.ofRegion(region))
     

@@ -4,9 +4,9 @@ import boards.dsl.meta.PlayerRef.{PlayerId, PlayerRef}
 import boards.dsl.pieces.PieceState.Version
 import boards.dsl.pieces.{Piece, PieceRef, PieceType}
 import boards.dsl.pieces.PieceRef.PieceId
-import boards.math.region.Region.{HasRegionI, RegionI}
-import boards.math.region.Vec.{HasVecI, VecI}
-import boards.math.region.Region
+import boards.math.vector.Region.RegionI
+import boards.math.vector.Vec.{HasVecI, VecI}
+import boards.math.vector.Region
 import boards.util.extensions.CollectionOps.contramap
 
 import scala.annotation.tailrec
@@ -51,7 +51,7 @@ case class PieceState (
   val pieces: LazyList[Piece] =
     pieceRefs.map(_.pieceId).map(piecesById.apply)
   
-  def at(position: HasVecI): Option[Piece] =
+  def at(position: VecI): Option[Piece] =
     piecesByPos.get(position.position).map(piecesById)
   
   def get(pieceRef: PieceRef): Option[Piece] =
@@ -72,9 +72,9 @@ case class PieceState (
     * @return A modified version of this [[PieceState]] with an extra [[Piece]] added.
     */
   @tailrec
-  private[dsl] final def createPiece[P <: PieceType: ClassTag] (
+  private[dsl] final def createPiece [P <: PieceType: ClassTag] (
     pieceType: P,
-    position: HasVecI,
+    position: VecI,
     owner: PlayerRef,
   ): PieceState =
     if !board.contains(position) then this
@@ -114,7 +114,7 @@ case class PieceState (
   @tailrec
   private[dsl] final def movePiece (
     piece: PieceRef,
-    position: HasVecI,
+    position: VecI,
   ): PieceState =
     piecesById.get(piece.pieceId) match
       case None => this
@@ -165,8 +165,8 @@ object PieceState:
   /** Create an empty [[PieceSet]] for the given [[Board]].
     * Each [[PieceSet]] stores the [[Board]] so that bounds checks can be applied.
     */
-  def forBoard(board: HasRegionI): PieceState =
-    PieceState(board = board.region)
+  def forBoard (board: RegionI): PieceState =
+    PieceState(board = board)
   
   /** The version number of a [[PieceSet]], used for chronological comparison. */
   final class Version(val toInt: Int):

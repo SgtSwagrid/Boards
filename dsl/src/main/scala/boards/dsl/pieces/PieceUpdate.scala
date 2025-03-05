@@ -5,9 +5,9 @@ import boards.dsl.pieces.PieceRef.PieceId
 import boards.dsl.pieces.PieceState.Version
 import boards.dsl.pieces.PieceUpdate
 import boards.dsl.states.HistoryState
-import boards.math.region.Region.{HasRegionI, RegionI}
-import boards.math.region.Vec.{HasVecI, VecI}
-import boards.math.region.{Ray, Region}
+import boards.math.vector.Region.{HasRegion, RegionI}
+import boards.math.vector.Vec.{HasVecI, VecI}
+import boards.math.vector.{Ray, Region}
 import boards.util.extensions.CollectionOps.contramap
 
 import scala.collection.View
@@ -19,18 +19,18 @@ import scala.collection.View
   * The [[PieceState]] stores all past [[PieceUpdate]]s and these are considered part of the state,
   * and can be queried to shape future control flow.
   */
-sealed trait PieceUpdate extends PieceRef, HasRegionI:
+sealed trait PieceUpdate extends PieceRef, HasRegion[Int]:
   val time: Version
 
 object PieceUpdate:
   
-  def create (pieceId: PieceId, pieceType: PieceType, position: HasVecI, owner: PlayerRef, time: Version): Create =
+  def create (pieceId: PieceId, pieceType: PieceType, position: VecI, owner: PlayerRef, time: Version): Create =
     Create(pieceId, pieceType, position.position, owner.playerId, time)
     
-  def move (pieceId: PieceId, from: HasVecI, to: HasVecI, time: Version): Move =
+  def move (pieceId: PieceId, from: VecI, to: VecI, time: Version): Move =
     Move(pieceId, from.position, to.position, time)
     
-  def destroy (pieceId: PieceId, position: HasVecI, time: Version): Destroy =
+  def destroy (pieceId: PieceId, position: VecI, time: Version): Destroy =
     Destroy(pieceId, position.position, time)
   
   /** A [[PieceUpdate]] describing the past creation of a new [[Piece]].
@@ -97,11 +97,11 @@ object PieceUpdate:
       case move: Move => move
     
     /** Past [[Piece]] movements into some [[RegionI]], within some defined time window and in reverse chronological order. */
-    def movesTo (region: HasRegionI): Iterable[Move] =
+    def movesTo (region: RegionI): Iterable[Move] =
       moves.filter(_.to in region)
     
     /** Past [[Piece]] movements out of some [[RegionI]], within some defined time window and in reverse chronological order. */
-    def movesFrom (region: HasRegionI): Iterable[Move] =
+    def movesFrom (region: RegionI): Iterable[Move] =
       moves.filter(_.from in region)
     
     /** Past [[Piece]] removals, within some defined time window and in reverse chronological order. */
@@ -118,11 +118,11 @@ object PieceUpdate:
     def moved: PieceSet = PieceSet(moves.toSeq*)
     
     /** All [[Piece]]s which were moved into some [[RegionI]] in some defined time window. */
-    def movedTo (region: HasRegionI): PieceSet =
+    def movedTo (region: RegionI): PieceSet =
       PieceSet(movesTo(region).toSeq*)
     
     /** All [[Piece]]s which were moved out of some [[RegionI]] in some defined time window. */
-    def movedFrom (region: HasRegionI): PieceSet =
+    def movedFrom (region: RegionI): PieceSet =
       PieceSet(movesFrom(region).toSeq*)
       
     /** All [[Piece]]s which were destroyed in some defined time window. */
@@ -138,11 +138,11 @@ object PieceUpdate:
     def hasMoved: Boolean = moves.nonEmpty
     
     /** Whether any [[Piece]]s were moved into some [[RegionI]] in this time window. */
-    def hasMovedTo (region: HasRegionI): Boolean =
+    def hasMovedTo (region: RegionI): Boolean =
       movesTo(region).nonEmpty
     
     /** Whether any [[Piece]]s were moved out of some [[RegionI]] in this time window. */
-    def hasMovedFrom (region: HasRegionI): Boolean =
+    def hasMovedFrom (region: RegionI): Boolean =
       movesFrom(region).nonEmpty
       
     /** Whether any [[Piece]]s were destroyed in this time window. */
@@ -150,7 +150,7 @@ object PieceUpdate:
     
     /** All positions which were updated in the time window. */
     def updatedRegion: RegionI =
-      updates.foldLeft(Region.empty[Int])(_ | _)
+      updates.map(_.region).foldLeft(Region.empty[Int])(_ | _)
       
     /** The single most recent piece to have been created in this time window.
       * @throws NoSuchElementException if no pieces were created in this time window.

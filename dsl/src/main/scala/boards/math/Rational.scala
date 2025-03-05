@@ -1,6 +1,6 @@
 package boards.math
 
-import boards.math.Algebra.OrderedField
+import boards.math.algebra.Algebra.OrderedField
 import boards.math.Interval.{IntervalF, IntervalI}
 import io.circe.Codec
 

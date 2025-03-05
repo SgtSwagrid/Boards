@@ -1,8 +1,8 @@
-package boards.math.region
+package boards.math.vector
 
 import boards.math.Number.*
-import boards.math.region.Region.RegionI
-import boards.math.region.Vec.{HasVecI, VecI}
+import boards.math.vector.Region.RegionI
+import boards.math.vector.Vec.VecI
 
 import scala.annotation.targetName
 
@@ -13,21 +13,21 @@ object Dir:
   val orthogonal: RegionI = orthogonal(2)
   /** The orthogonal directions in d-dimensions,
    * whereby there is exactly 1 non-zero component of magnitude 1. */
-  def orthogonal(dim: Int = 2): RegionI =
+  def orthogonal (dim: Int = 2): RegionI =
     Metric.Manhattan.neighbours(VecI.zero(dim))
   
   /** The 4 diagonal directions in 2D. */
   val diagonal: RegionI = diagonal(2)
   /** All diagonal directions in d-dimensions,
    * whereby each component has magnitude at most 1, and more than 1 component is non-zero. */
-  def diagonal(dim: Int = 2): RegionI =
+  def diagonal (dim: Int = 2): RegionI =
     octagonal(dim) \ orthogonal(dim)
   
   /** The 8 orthogonal and diagonal directions in 2D. */
   val octagonal: RegionI = octagonal(2)
   /** All orthogonal and diagonal directions in d-dimensions,
    * whereby each component has magnitude at most 1. */
-  def octagonal(dim: Int = 2): RegionI =
+  def octagonal (dim: Int = 2): RegionI =
     Metric.Chebyshev.neighbours(VecI.zero(dim))
   
   /**
@@ -35,7 +35,7 @@ object Dir:
    * 
    * Equivalent to `VecI.axis(axis, dim) | -VecI.axis(axis, dim)`.
    */
-  def axis(axis: Int, dim: Int = 2): RegionI =
+  def axis (axis: Int, dim: Int = 2): RegionI =
     VecI.axis(axis, dim) | -VecI.axis(axis, dim)
   
   /** The 2D direction pointing to the left, i.e. VecI(-1, 0). */
@@ -88,7 +88,7 @@ object Dir:
    * @example The knight in chess can move in the directions `Dir.knight(1, 2)`,
    *          because it moves 1 space in some direction and 2 spaces in the other.
    */
-  def knight(steps: Int*): RegionI =
+  def knight (steps: Int*): RegionI =
     val dirs =
       for
         dir <- steps.permutations.toSeq
@@ -97,12 +97,12 @@ object Dir:
       yield Vec(dir*) * Vec(sign*)
     Region.from(dirs)
   
-  def of(direction: HasVecI): VecI =
+  def of (direction: VecI): VecI =
     direction.position.direction
   
   /**
    * Find the relative direction between `from` and `to`,
    * by dividing the difference by the GCD of its components.
    */
-  def between(from: HasVecI, to: HasVecI): VecI =
+  def between (from: VecI, to: VecI): VecI =
     from.position.directionTo(to)

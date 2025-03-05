@@ -2,8 +2,8 @@ package boards.components.game
 
 import boards.graphics.{Colour, Scene, Texture}
 import boards.graphics.Scene.{Choice, PieceData}
-import boards.math.region.EmbeddedRegion.Tile
-import boards.math.region.Metric
+import boards.math.vector.Embedding.Tile
+import boards.math.vector.{Bounds, Embedding, Metric, Vec}
 import boards.protocol.GameProtocol.GameRequest
 import boards.protocol.Room.Player
 import boards.views.GameView.{scene, sceneBus, socket}
@@ -36,9 +36,10 @@ import io.laminext.websocket.circe.webSocketReceiveBuilderSyntax
 import boards.components.{ExpandingButton, Footer, InputField, Navbar, SVG, Tabs}
 import boards.dsl.pieces.PieceRef.PieceId
 import boards.dsl.rules.Input
-import boards.math.region.Vec
-import boards.math.region.Vec.{VecF, VecI, given}
-import boards.math.Algebra.{*, given}
+import boards.math.vector.Vec.{VecF, VecI, given}
+import boards.math.algebra.Algebra.{*, given}
+import boards.math.vector.Bounds.{BoundsF, BoundsI}
+import boards.math.Conversions.*
 
 /** The primary component of the [[GameView]], containing the game board itself.
   * Responsible for taking all player input and state rendering.
@@ -50,8 +51,8 @@ class GameBoard (
   response: Observer[GameRequest],
 ):
   
-  val PIECE_MOVEMENT_SPEED = 0.2F
-  val PIECE_GROWTH_SPEED = 0.2F
+  val PIECE_MOVEMENT_SPEED = 0.15F
+  val PIECE_GROWTH_SPEED = 0.06F
   
   val SELECTED_TILE_COLOUR = Colour.British.RiseNShine
   val UPDATED_TILE_COLOUR = Colour.British.Naval
@@ -72,7 +73,19 @@ class GameBoard (
   private val scene = sceneBus.events.startWith(Scene.empty)
   
   /** The HTML canvas into which the current state of the game board should be rendered. */
-  private val canvas = GameCanvas(scene)
+  private val canvas = ReactiveCanvas("game")
+  
+  case class ScaledScene (
+    scene: Scene,
+    canvas: BoundsI,
+  ):
+    val board: Embedding =
+      scene.board.fitTo(canvas.toBoundsF)
+    export scene.{board => _, *}
+    export board.{toEmbeddedSpaceOpt, toEmbeddedSpace, toLogicalSpaceOpt, toLogicalSpace}
+      
+  private val scaledScene: Signal[ScaledScene] =
+    Signal.combine(scene, canvas.bounds).map(ScaledScene.apply.tupled)
   
   /** A collection of events relating to mouse buttons and cursor movement. */
   private object Mouse:
@@ -107,15 +120,13 @@ class GameBoard (
     val cursorPos: Signal[VecI] = moves.stream.mergeWith(leave.stream)
       .map(e => VecI(e.clientX.toInt, e.clientY.toInt))
       .startWith(VecI.zero(2))
-      .map(m => VecI(m.x - canvas.bounds.left.toInt, m.y - canvas.bounds.top.toInt))
+      .map(m => VecI(m.x - canvas.rect.left.toInt, canvas.rect.height.toInt - (m.y - canvas.rect.top.toInt)))
       .distinct
   
   /** The tile over which the cursor is currently hovering. */
   private val hover: Signal[Option[Tile]] =
-    Signal.combine(scene, canvas.config, Mouse.cursorPos).map: (scene, cfg, cursorPos) =>
-      given GameCanvas.Config = cfg
-      if !canvas.inBounds(cursorPos) then None
-      else scene.board.label(canvas.canvasToGameCoords(cursorPos))
+    Signal.combine(scaledScene, Mouse.cursorPos).map: (scene, cursorPos) =>
+      scene.toLogicalSpaceOpt(cursorPos.toVecF).map(scene.board.tile)
   
   /** The tile which is currently being clicked, if any.
     * A tile is considered clicked if: <br />
@@ -150,7 +161,7 @@ class GameBoard (
     
     /** The click input the user might be about to take. */
     val click: Signal[Option[Choice[Input.Click]]] =
-      Signal.combine(scene, clicked).map: (scene, clicked) =>
+      Signal.combine(scaledScene, clicked).map: (scene, clicked) =>
         for
           clicked <- clicked
             choices <- scene.clicksByOrigin.get(clicked.logicalPosition)
@@ -159,10 +170,8 @@ class GameBoard (
     
     /** The drag input the user might be about to take. */
     val drag: Signal[Option[Choice[Input.Drag]]] =
-      Signal.combine(scene, dragged, canvas.config)
-        .flatMapSwitch: (scene, dragged, cfg) =>
-          given GameCanvas.Config = cfg
-          
+      Signal.combine(scaledScene, dragged)
+        .flatMapSwitch { (scene, dragged) =>
           dragged.map { dragged =>
             val choices = scene.dragsByOrigin.getOrElse(dragged.logicalPosition, Seq.empty)
             val targets = choices
@@ -170,10 +179,12 @@ class GameBoard (
               .logicalPosition, None)
             Mouse.cursorPos.map { cursorPos =>
               targets.minBy { (tilePos, _) =>
-                Metric.EuclideanSquared.dist(canvas.gameToCanvasCenterCoords(tilePos), cursorPos)
+                Metric.EuclideanSquared
+                  .dist(scene.toEmbeddedSpace(tilePos).centre.toVecI, cursorPos)
               }.apply(1)
             }
           }.getOrElse(Val(None))
+        }
     
     Signal.combine(click, drag).map(_.orElse(_))
   }
@@ -187,10 +198,10 @@ class GameBoard (
       .collect { case (_, Some(choice)) => choice }
   
   /** All currently existing pieces, indexed by ID. */
-  private val pieceData: Signal[Map[PieceId, PieceData]] =
-    Signal.combine(scene, provisionalInput).map:
-      case (_, Some(input)) => input.result.piecesById
-      case (scene, None) => scene.piecesById
+  private val provisionalScene: Signal[ScaledScene] =
+    Signal.combine(scene, provisionalInput, canvas.bounds).map:
+      case (_, Some(input), bounds) => ScaledScene(input.result, bounds)
+      case (scene, None, bounds) => ScaledScene(scene, bounds)
   
   /** A piece as it exists in the current frame,
     * with additional animation-related metadata.
@@ -204,81 +215,63 @@ class GameBoard (
     */
   private case class PieceSprite (
     pieceId: PieceId,
-    actualCentrePos: VecF,
-    targetCentrePos: VecF,
-    actualScale: Float,
-    isAnimating: Boolean,
-    isMoving: Boolean,
+    actualBounds: BoundsF,
+    targetBounds: BoundsF,
     texture: Texture,
   ):
-    
-    /** The current dimensions of this piece, in pixels. */
-    val actualSize: VecF = Vec.fill(2)(actualScale)
-    
-    /** The current positions of the bottom-left corner of this piece, in canvas coordinates. */
-    val actualCornerPos: VecF = actualCentrePos - (actualSize / 2.0F)
+    val actualSize: VecF = actualBounds.size
+    val actualCentre: VecF = actualBounds.centre
+    val targetSize: VecF = targetBounds.size
+    val targetCentre: VecF = targetBounds.centre
+    val isMoving: Boolean = (targetCentre - actualCentre).abs.norm >= 1.0F
+    val isAnimating: Boolean = isMoving || (targetSize - actualSize).abs.norm >= 1.0F
   
   /** All currently existing pieces, with animation-related metadata. */
   private val pieceSprites: Signal[Seq[PieceSprite]] =
-    canvas.config.flatMapSwitch { cfg =>
-      given GameCanvas.Config = cfg
-      
-      // Render a new frame every 5ms.
-      EventStream.periodic(5)
-        .withCurrentValueOf(pieceData).map(_(1))
-        .scanLeft(Map.empty[PieceId, PieceSprite]) { case (previous, pieceState) =>
-          
-          /** Pieces which previously existed and still exist. */
-          val existing = (previous.keySet & pieceState.keySet)
-            .map(id => (previous(id), pieceState(id))).map: (previous, pieceState) =>
-              val target = canvas.gameToCanvasCenterCoords(pieceState.position).toVecF
-              val isMoving = !(target - previous.actualCentrePos).toVecI.isZero
-              previous.pieceId -> PieceSprite (
-                pieceId = previous.pieceId,
-                actualCentrePos = previous.actualCentrePos + ((target - previous.actualCentrePos) * PIECE_MOVEMENT_SPEED),
-                targetCentrePos = target,
-                actualScale = Math.min(previous.actualScale + (cfg.scale - previous.actualScale) * PIECE_GROWTH_SPEED, cfg.scale),
-                isAnimating = isMoving || previous.actualScale < cfg.scale,
-                isMoving = isMoving,
-                texture = pieceState.texture,
-              )
-            .toMap
-          
-          /** Pieces which were newly created. */
-          val created = (pieceState.keySet -- previous.keySet)
-            .map(pieceState.apply).map: pieceState =>
-              pieceState.pieceId -> PieceSprite (
-                pieceId = pieceState.pieceId,
-                actualCentrePos = canvas.gameToCanvasCenterCoords(pieceState.position).toVecF,
-                targetCentrePos = canvas.gameToCanvasCenterCoords(pieceState.position).toVecF,
-                actualScale = 0.0F,
-                isAnimating = true,
-                isMoving = false,
-                texture = pieceState.texture,
-              )
-            .toMap
-          
-          /** Pieces which were recently deleted. */
-          val deleted = (previous.keySet -- pieceState.keySet)
-            .map(previous.apply).map: previous =>
-              previous.pieceId -> PieceSprite (
-                pieceId = previous.pieceId,
-                actualCentrePos = previous.actualCentrePos,
-                targetCentrePos = previous.actualCentrePos,
-                actualScale = previous.actualScale * (1.0F - PIECE_GROWTH_SPEED),
-                isAnimating = true,
-                isMoving = false,
-                texture = previous.texture,
-              )
-            .filter((_, p) => p.actualScale.toInt > 0)
-            .toMap
-          
-          existing ++ created ++ deleted
-        }
-    }.map(_.values.toSeq)
-  
-      //.sortBy(_.isMoving)
-      //.sortBy(_.actualSize)
+    EventStream.periodic(5)
+      .withCurrentValueOf(provisionalScene).map((_, scene) => scene)
+      .scanLeft(Map.empty[PieceId, PieceSprite]) { (previous, scene) =>
+        
+        /** Pieces which previously existed and still exist. */
+        val existing = (previous.keySet & scene.piecesById.keySet)
+          .map(id => (previous(id), scene.piecesById(id))).map: (previous, piece) =>
+            val target = scene.toEmbeddedSpace(piece.position)
+            val isMoving = !(target.centre - previous.actualCentre).toVecI.isZero
+            previous.pieceId -> PieceSprite (
+              pieceId = previous.pieceId,
+              actualBounds = (previous.actualBounds.extend((target.size - previous.actualSize) * PIECE_GROWTH_SPEED))
+                + ((target.centre - previous.actualCentre) * PIECE_MOVEMENT_SPEED),
+              targetBounds = target,
+              texture = piece.texture,
+            )
+          .toMap
+        
+        /** Pieces which were newly created. */
+        val created = (scene.piecesById.keySet -- previous.keySet)
+          .map(scene.piecesById.apply).map: piece =>
+            piece.pieceId -> PieceSprite (
+              pieceId = piece.pieceId,
+              actualBounds = scene.toEmbeddedSpace(piece.position).collapseToCentre,
+              targetBounds = scene.toEmbeddedSpace(piece.position),
+              texture = piece.texture,
+            )
+          .toMap
+        
+        /** Pieces which were recently deleted. */
+        val deleted = (previous.keySet -- scene.piecesById.keySet)
+          .map(previous.apply).map: previous =>
+            previous.pieceId -> PieceSprite (
+              pieceId = previous.pieceId,
+              actualBounds = previous.actualBounds.scaleCentred(1.0F - PIECE_GROWTH_SPEED),
+              targetBounds = previous.targetBounds.collapseToCentre,
+              texture = previous.texture,
+            )
+          .filter((_, p) => p.isAnimating)
+          .toMap
+        
+        existing ++ created ++ deleted
+        
+      }.map(_.values.toSeq.sortBy(_.isMoving).sortBy(_.actualSize))
   
   /** A single frame to be rendered.
     * @param scene            The scene to render (current game state with player-related metadata).
@@ -287,15 +280,13 @@ class GameBoard (
     * @param dragged          The tile which is currently being dragged from, if any.
     * @param provisionalInput The input that the user might be about to make, if any.
     *                         Used to show a preview of the result.
-    * @param config           The configuration of the game canvas, describing in particular its size.
     */
   private case class Frame (
-    scene: Scene,
+    scene: ScaledScene,
     pieces: Seq[PieceSprite],
     hover: Option[Tile],
     dragged: Option[Tile],
     provisionalInput: Option[Choice[?]],
-    config: GameCanvas.Config,
   )
   
   /** Render a single frame to the board canvas.
@@ -303,14 +294,11 @@ class GameBoard (
     */
   private def draw (frame: Frame) =
     
-    val Frame(scene, pieces, hover, dragged, provisionalInput, cfg) = frame
-    given GameCanvas.Config = cfg
-    val square = VecI.fill(2)(cfg.scale)
-    canvas.clear()
+    val Frame(scene, pieces, hover, dragged, provisionalInput) = frame
+    canvas.clearRect(scene.canvas)
     
     // Draw all tiles in the background.
     for tile <- scene.board.labels do
-      val pos = canvas.gameToCanvasCornerCoords(tile.logicalPosition)
       val baseColour =
         // Highlight the piece currently being dragged, if any.
         if dragged.exists(_.logicalPosition == tile.logicalPosition)
@@ -322,34 +310,37 @@ class GameBoard (
       // Slightly darken the tile over which the cursor is currently hovering.
       val colour = if hover.exists(_.logicalPosition == tile.logicalPosition)
         then baseColour.darken(HOVERED_TILE_DARKEN) else baseColour
-      canvas.fillRect(pos, square, colour)
+      canvas.fillBounds(tile.embeddedPosition.toBoundsI.extendEnd(1), colour)
       
     // If there is no provision input, highlight all possible click inputs.
     if provisionalInput.isEmpty then
       for origin <- scene.clicksByOrigin.keys do
-        val pos = canvas.gameToCanvasCenterCoords(origin)
-        canvas.fillCircle(pos, cfg.scale * SMALL_CIRCLE_SIZE, CIRCLE_COLOUR, HINT_OPACITY)
+        val pos = scene.toEmbeddedSpace(origin).centre.toVecI
+        val size = scene.toEmbeddedSpace(origin).size.components.min.toInt
+        canvas.fillCircle(pos, size * SMALL_CIRCLE_SIZE, CIRCLE_COLOUR, HINT_OPACITY)
       
     // If no piece is currently being dragged, highlight all possible drag inputs.
     if dragged.isEmpty then
       for origin <- scene.dragsByOrigin.keys do
-        val pos = canvas.gameToCanvasCenterCoords(origin)
-        canvas.fillCircle(pos, cfg.scale * LARGE_CIRCLE_SIZE, CIRCLE_COLOUR, HINT_OPACITY)
+        val pos = scene.toEmbeddedSpace(origin).centre.toVecI
+        val size = scene.toEmbeddedSpace(origin).size.components.min.toInt
+        canvas.fillCircle(pos, size * LARGE_CIRCLE_SIZE, CIRCLE_COLOUR, HINT_OPACITY)
     
     // Draw all pieces in the foreground.
     for piece <- pieces do
-      canvas.drawImage(piece.actualCornerPos.toVecI, piece.actualSize.toVecI, piece.texture)
+      canvas.drawImage(piece.actualBounds.toBoundsI, piece.texture)
 
     // If some piece is currently being dragged, highlight all possible destinations.
     dragged.foreach: dragged =>
       for choice <- scene.dragsByOrigin.getOrElse(dragged.logicalPosition, Seq.empty) do
         if !provisionalInput.map(_.input).collect{ case d: Input.Drag => d }.exists(_.to == choice.input.to) then
           choice.input.to.asVec.foreach: to =>
-            val pos = canvas.gameToCanvasCenterCoords(to)
+            val pos = scene.toEmbeddedSpace(to).centre.toVecI
+            val size = scene.toEmbeddedSpace(to).size.components.min.toInt
             if scene.piecesByPos.contains(to)
-            then canvas.drawCross(pos, cfg.scale * CROSS_SIZE, Colour.British.NasturcianFlower,
-              cfg.scale * CROSS_SIZE / 3.0F, HINT_OPACITY)
-            else canvas.fillCircle(pos, cfg.scale * SMALL_CIRCLE_SIZE, CIRCLE_COLOUR, HINT_OPACITY)
+            then canvas.drawCross(pos, size * CROSS_SIZE, Colour.British.NasturcianFlower,
+              size * CROSS_SIZE / 3.0F, HINT_OPACITY)
+            else canvas.fillCircle(pos, size * SMALL_CIRCLE_SIZE, CIRCLE_COLOUR, HINT_OPACITY)
   
   private val frame: Var[Option[Frame]] = Var(None)
   
@@ -367,7 +358,7 @@ class GameBoard (
     
     // Update the frame when something changes.
     scene.changes --> canvas.updates,
-    Signal.combine(scene, pieceSprites, hover, dragged, provisionalInput, canvas.config)
+    Signal.combine(scaledScene, pieceSprites, hover, dragged, provisionalInput)
       .map(Frame.apply).map(Some.apply) --> frame,
     
     // Respond to mouse input.

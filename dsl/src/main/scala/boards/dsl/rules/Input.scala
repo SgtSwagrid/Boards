@@ -1,18 +1,20 @@
 package boards.dsl.rules
 
-import boards.math.region.Region.{HasRegionI, RegionI}
+import boards.math.vector.Region.RegionI
+import io.circe.Codec
+import boards.util.Codecs.given
 
-sealed trait Input:
+sealed trait Input derives Codec.AsObject:
   val region: RegionI
   val from: RegionI
   
 object Input:
   
-  def click(region: HasRegionI): Input.Click =
-    Input.Click(region.region)
+  def click(region: RegionI): Input.Click =
+    Input.Click(region)
     
-  def drag(from: HasRegionI, to: HasRegionI): Input.Drag =
-    Input.Drag(from.region, to.region)
+  def drag(from: RegionI, to: RegionI): Input.Drag =
+    Input.Drag(from, to)
     
   case class Click (region: RegionI) extends Input:
     val from = region
