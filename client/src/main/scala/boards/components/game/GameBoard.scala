@@ -56,15 +56,15 @@ class GameBoard (
   
   val SELECTED_TILE_COLOUR = Colour.British.RiseNShine
   val UPDATED_TILE_COLOUR = Colour.British.Naval
-  val TILE_HIGHLIGHT_OPACITY = 0.75F
+  val TILE_HIGHLIGHT_OPACITY = 192
   val HOVERED_TILE_DARKEN = 15
   
-  val SMALL_CIRCLE_SIZE = 0.1F
-  val LARGE_CIRCLE_SIZE = 0.4F
+  val SMALL_CIRCLE_SIZE = 0.2F
+  val LARGE_CIRCLE_SIZE = 0.8F
   val CROSS_SIZE = 0.15F
   val CIRCLE_COLOUR = Colour.British.LynxWhite
   val CROSS_COLOUR = Colour.British.NasturcianFlower
-  val HINT_OPACITY = 0.6F
+  val HINT_OPACITY = 150
   
   /** The current version of the scene,
     * which contains all necessary information to render the current state of the game.
@@ -77,10 +77,9 @@ class GameBoard (
   
   case class ScaledScene (
     scene: Scene,
-    canvas: BoundsI,
+    canvas: BoundsF,
   ):
-    val board: Embedding =
-      scene.board.fitTo(canvas.toBoundsF)
+    val board: Embedding = scene.board.flipY.fitTo(canvas)
     export scene.{board => _, *}
     export board.{toEmbeddedSpaceOpt, toEmbeddedSpace, toLogicalSpaceOpt, toLogicalSpace}
       
@@ -120,7 +119,7 @@ class GameBoard (
     val cursorPos: Signal[VecI] = moves.stream.mergeWith(leave.stream)
       .map(e => VecI(e.clientX.toInt, e.clientY.toInt))
       .startWith(VecI.zero(2))
-      .map(m => VecI(m.x - canvas.rect.left.toInt, canvas.rect.height.toInt - (m.y - canvas.rect.top.toInt)))
+      .map(m => VecI(m.x - canvas.rect.left.toInt, m.y - canvas.rect.top.toInt))
       .distinct
   
   /** The tile over which the cursor is currently hovering. */
@@ -235,7 +234,7 @@ class GameBoard (
         /** Pieces which previously existed and still exist. */
         val existing = (previous.keySet & scene.piecesById.keySet)
           .map(id => (previous(id), scene.piecesById(id))).map: (previous, piece) =>
-            val target = scene.toEmbeddedSpace(piece.position)
+            val target = scene.toEmbeddedSpace(piece.position).inscribedBounds
             val isMoving = !(target.centre - previous.actualCentre).toVecI.isZero
             previous.pieceId -> PieceSprite (
               pieceId = previous.pieceId,
@@ -249,10 +248,11 @@ class GameBoard (
         /** Pieces which were newly created. */
         val created = (scene.piecesById.keySet -- previous.keySet)
           .map(scene.piecesById.apply).map: piece =>
+            val target = scene.toEmbeddedSpace(piece.position).inscribedBounds
             piece.pieceId -> PieceSprite (
               pieceId = piece.pieceId,
-              actualBounds = scene.toEmbeddedSpace(piece.position).collapseToCentre,
-              targetBounds = scene.toEmbeddedSpace(piece.position),
+              actualBounds = target.collapseToCentre,
+              targetBounds = target,
               texture = piece.texture,
             )
           .toMap
@@ -295,52 +295,61 @@ class GameBoard (
   private def draw (frame: Frame) =
     
     val Frame(scene, pieces, hover, dragged, provisionalInput) = frame
-    canvas.clearRect(scene.canvas)
+    canvas.clear()
     
     // Draw all tiles in the background.
     for tile <- scene.board.labels do
       val baseColour =
         // Highlight the piece currently being dragged, if any.
         if dragged.exists(_.logicalPosition == tile.logicalPosition)
-        then tile.colour.mix(SELECTED_TILE_COLOUR, TILE_HIGHLIGHT_OPACITY)
+        then tile.colour.mix(SELECTED_TILE_COLOUR, TILE_HIGHLIGHT_OPACITY.toFloat / 255.0F)
         // Highlight tiles which were modified in the previous turn.
         else if scene.diff.contains(tile.logicalPosition)
-        then tile.colour.mix(UPDATED_TILE_COLOUR, TILE_HIGHLIGHT_OPACITY)
+        then tile.colour.mix(UPDATED_TILE_COLOUR, TILE_HIGHLIGHT_OPACITY.toFloat / 255.0F)
         else tile.colour
       // Slightly darken the tile over which the cursor is currently hovering.
       val colour = if hover.exists(_.logicalPosition == tile.logicalPosition)
         then baseColour.darken(HOVERED_TILE_DARKEN) else baseColour
-      canvas.fillBounds(tile.embeddedPosition.toBoundsI.extendEnd(1), colour)
+      canvas.fillPolygon(tile.embeddedPosition, colour)
       
     // If there is no provision input, highlight all possible click inputs.
     if provisionalInput.isEmpty then
       for origin <- scene.clicksByOrigin.keys do
-        val pos = scene.toEmbeddedSpace(origin).centre.toVecI
-        val size = scene.toEmbeddedSpace(origin).size.components.min.toInt
-        canvas.fillCircle(pos, size * SMALL_CIRCLE_SIZE, CIRCLE_COLOUR, HINT_OPACITY)
+        canvas.fillCircle (
+          scene.toEmbeddedSpace(origin).inscribedBounds.scaleCentred(SMALL_CIRCLE_SIZE),
+          CIRCLE_COLOUR.withAlpha(HINT_OPACITY),
+        )
       
     // If no piece is currently being dragged, highlight all possible drag inputs.
     if dragged.isEmpty then
       for origin <- scene.dragsByOrigin.keys do
-        val pos = scene.toEmbeddedSpace(origin).centre.toVecI
-        val size = scene.toEmbeddedSpace(origin).size.components.min.toInt
-        canvas.fillCircle(pos, size * LARGE_CIRCLE_SIZE, CIRCLE_COLOUR, HINT_OPACITY)
+        canvas.fillCircle (
+          scene.toEmbeddedSpace(origin).inscribedBounds.scaleCentred(LARGE_CIRCLE_SIZE),
+          CIRCLE_COLOUR.withAlpha(HINT_OPACITY),
+        )
     
     // Draw all pieces in the foreground.
     for piece <- pieces do
-      canvas.drawImage(piece.actualBounds.toBoundsI, piece.texture)
+      canvas.drawImage(piece.actualBounds, piece.texture)
 
     // If some piece is currently being dragged, highlight all possible destinations.
     dragged.foreach: dragged =>
       for choice <- scene.dragsByOrigin.getOrElse(dragged.logicalPosition, Seq.empty) do
         if !provisionalInput.map(_.input).collect{ case d: Input.Drag => d }.exists(_.to == choice.input.to) then
           choice.input.to.asVec.foreach: to =>
-            val pos = scene.toEmbeddedSpace(to).centre.toVecI
-            val size = scene.toEmbeddedSpace(to).size.components.min.toInt
+            val bounds = scene.toEmbeddedSpace(to).inscribedBounds
             if scene.piecesByPos.contains(to)
-            then canvas.drawCross(pos, size * CROSS_SIZE, Colour.British.NasturcianFlower,
-              size * CROSS_SIZE / 3.0F, HINT_OPACITY)
-            else canvas.fillCircle(pos, size * SMALL_CIRCLE_SIZE, CIRCLE_COLOUR, HINT_OPACITY)
+            then canvas.fillCross (
+              bounds.scaleCentred(CROSS_SIZE),
+              bounds.size.components.min * CROSS_SIZE / 3.0F,
+              CROSS_COLOUR.withAlpha(HINT_OPACITY),
+            ) else canvas.fillCircle (
+              bounds.scaleCentred(SMALL_CIRCLE_SIZE),
+              CIRCLE_COLOUR.withAlpha(HINT_OPACITY),
+            )
+    
+    //canvas.drawRect(scene.canvas, Colour.Red, 8.0F)
+    //canvas.drawRect(scene.board.embeddedBounds, Colour.Black, 4.0F)
   
   private val frame: Var[Option[Frame]] = Var(None)
   

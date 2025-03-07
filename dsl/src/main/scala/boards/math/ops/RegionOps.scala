@@ -20,7 +20,7 @@ import RegionOps.*
 /** Some operations which can be performed on regions, separated for F-bounded polymorphism.
   *
   * @tparam X The type of the discrete field over which the region is defined.
-  * @tparam This The type of region which is produced by each operation.
+  * @tparam This The type of region which is produced by each operFation.
   */
 private[math] trait RegionOps [X: Numeric, +This[Y] <: RegionOps[Y, This]] extends
   WindowOps[X, This],

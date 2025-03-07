@@ -47,14 +47,40 @@ enum Interval [@specialized X: Numeric as R] extends
     case Empty() => NegativeInfinity
     
   def end: X = uend.toFinite
-    
-  /** Determines the length of this interval. */
-  def ulength: Unbounded[X] = this match
+  
+  /** The size of this interval, defined as the number of discrete values which lie inside it, which might be infinite.
+    * For non-empty finite intervals, this will be one larger than its length.
+    * For intervals over a continuous field, this doesn't have a meaningful interpretation.
+    * @see size, length, ulength
+    */
+  def usize: Unbounded[X] = this match
     case Between(start, end) => Finite(end - start + R.one)
     case Point(_) => Finite(R.one)
     case Empty() => Finite(R.zero)
     case _ => PositiveInfinity
-    
+  
+  /** The finite size of this interval, defined as the number of discrete values which lie inside it.
+    * For non-empty finite intervals, this will be one larger than its length.
+    * For intervals over a continuous field, this doesn't have a meaningful interpretation.
+    * @throws IllegalStateException if the interval is of infinite size.
+    * @see usize, length, ulength
+    */
+  def size: X = usize.toFinite
+  
+  /** The length of this interval, defined as the difference between its end and start, which might be infinite.
+    * For non-empty finite intervals, this will be one less than its size.
+    * @see length, size, usize
+    */
+  def ulength: Unbounded[X] = this match
+    case Between(start, end) => Finite(end - start)
+    case Point(_) | Empty() => Finite(R.zero)
+    case _ => PositiveInfinity
+  
+  /** The finite length of this interval, defined as the difference between its end and start.
+    * For non-empty finite intervals, this will be one less than its size.
+    * @throws IllegalStateException if the interval is of infinite length.
+    * @see ulength, size, usize
+    */
   def length: X = ulength.toFinite
   
   def enumerate: LazyList[X] = this match

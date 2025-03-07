@@ -97,6 +97,8 @@ extends Region[X], Affine[X, Vec[X]]:
   /** The third component of this vector; equivalent to `apply(2)`. */
   def depth: X = apply(2)
   
+  def aspectRatio: X = abs.x / abs.y
+  
   // INEQUALITIES
   
   /** Whether each component of the first vector is always strictly less than that of the second. */

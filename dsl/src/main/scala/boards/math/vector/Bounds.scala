@@ -11,6 +11,7 @@ import boards.math.algebra.Unbounded
 import boards.math.ops.SetOps.{Intersection, Union}
 import boards.math.ops.TransformOps.UVecFunctor
 import boards.math.ops.MinkowskiOps.Difference
+import boards.util.extensions.CollectionOps.cartesianProduct
 import io.circe.*
 
 /** An axis-aligned bounding box in arbitrary-dimensional Euclidean space.
@@ -36,9 +37,33 @@ case class Bounds [@specialized X: Numeric as R] (
   val uend: UVec[X] = Vec(intervals.map(_.uend))
   def end: Vec[X] = uend.toFinite[X]
   
-  /** The dimensions of this bounding box. */
-  val usize: UVec[X] = Vec(intervals.map(_.ulength))
+  /** The size of these bounds, defined as the number of discrete values which lie along each axis, which might be infinite.
+    * For non-empty finite bounds, this will be one larger than its length in all axes.
+    * For bounds over a continuous field, this doesn't have a meaningful interpretation.
+    * @see size, length, ulength
+    */
+  val usize: UVec[X] = Vec(intervals.map(_.usize))
+  
+  /** The finite size of these bounds, defined as the number of discrete values which lie along each axis.
+    * For non-empty finite bounds, this will be one larger than its length in all axes.
+    * For bounds over a continuous field, this doesn't have a meaningful interpretation.
+    * @throws IllegalStateException if the bounds are of infinite size.
+    * @see usize, length, ulength
+    */
   def size: Vec[X] = usize.toFinite[X]
+  
+  /** The length of these bounds, defined as the difference between its end and start along each axis, which might be infinite.
+    * For non-empty finite bounds, this will be one less than its size in all axes.
+    * @see length, size, usize
+    */
+  val ulength: UVec[X] = Vec(intervals.map(_.ulength))
+  
+  /** The finite length of these bounds, defined as the difference between its end and start along each axis.
+    * For non-empty finite bounds, this will be one less than its size in all exes.
+    * @throws IllegalStateException if the bounds are of infinite length.
+    * @see ulength, size, usize
+    */
+  def length: Vec[X] = ulength.toFinite[X]
   
   val uarea: Unbounded[X] = usize.product
   def area: X = uarea.toFinite
@@ -107,6 +132,15 @@ case class Bounds [@specialized X: Numeric as R] (
   
   def extendEnd (dim: Int) (x: X): Bounds[X] =
     extendEnd(Vec.axis(dim, this.dim) * x)
+    
+  def fitTo (container: Bounds[X]): Bounds[X] =
+    if isEmpty || isInfinite || container.isEmpty || container.isInfinite then this else
+      val factor = (container.length / length).components.min
+      this
+        .translate(-bottomLeft)
+        .scale(factor)
+        .translate(container.bottomLeft)
+        .translate((container.length - (length * factor)) / R.two)
   
   /** Whether this bounding box contains no vectors. */
   def isEmpty: Boolean = intervals.isEmpty || intervals.exists(_.isEmpty)
@@ -129,15 +163,24 @@ case class Bounds [@specialized X: Numeric as R] (
   def utop: Unbounded[X] = uend(1)
   def top: X = uend(1).toFinite
   
+  def corners: Seq[Vec[X]] =
+    intervals.map(i => Seq(i.start, i.end)).cartesianProduct.map(Vec.apply)
+  
   def bottomLeft: Vec[X] = Vec(left, bottom)
   def topLeft: Vec[X] = Vec(left, top)
   def bottomRight: Vec[X] = Vec(right, bottom)
   def topRight: Vec[X] = Vec(right, top)
   
+  def centreLeft: Vec[X] = Vec(left, centre.y)
+  def centreRight: Vec[X] = Vec(right, centre.y)
+  def bottomCentre: Vec[X] = Vec(centre.x, bottom)
+  def topCentre: Vec[X] = Vec(centre.x, top)
+  
   def ucentre: UVec[X] = (ustart + uend) / Finite(R.two)
-  def centre: Vec[X] = (ustart + uend).toFinite[X] / R.two
+  def centre: Vec[X] = (start  + end) / R.two
   def centred: Bounds[X] = this - centre
   def collapseToCentre: Bounds[X] = Bounds.point(centre)
+  def withLength (length: Vec[X]): Bounds[X] = Bounds.at(centre, length)
   def scaleCentred (factor: X): Bounds[X] = (centred * factor) + centre
   def scaleCentred (factors: Vec[X]): Bounds[X] = (centred * factors) + centre
   def directionTo (that: Bounds[X]): Vec[X] = that.centre - this.centre
@@ -145,6 +188,7 @@ case class Bounds [@specialized X: Numeric as R] (
   def width: X = size(0)
   def height: X = size(1)
   def depth: X = size(2)
+  def aspectRatio: X = width / height
   
   override def toString = s"$ustart : $uend"
     
@@ -171,6 +215,9 @@ object Bounds:
     
   def ubetween [X: Numeric] (start: UVec[X], end: UVec[X]): Bounds[X] =
     Bounds((start.components zip end.components).map(Interval.ubetween(_, _)))
+    
+  def at [X: Numeric as N] (centre: Vec[X], length: Vec[X]): Bounds[X] =
+    Bounds.between(centre - (length / N.two), centre + (length / N.two))
   
   /** Create an empty bounding box. */
   def empty [X: Numeric]: Bounds[X] =
@@ -199,7 +246,7 @@ object Bounds:
     
   /** Create a bounding box from the origin in the positive orthant of the given size. */
   def fromOrigin [X: Numeric as R] (size: Vec[X]): Bounds[X] =
-    Bounds.between(Vec.zero(size.dim), size - Vec.one(size.dim))
+    Bounds.between(Vec.zero(size.dim), size)
     
   given [X: {Numeric, Encoder}]: Encoder[Bounds[X]] =
     summon[Encoder[Seq[Interval[X]]]]

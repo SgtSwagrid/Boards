@@ -28,7 +28,8 @@ enum Unbounded [@specialized +X]:
   /** Assume this value is finite, throwing an exception if it isn't. */
   def toFinite: X = this match
     case Finite(x) => x
-    case _ => throw new IllegalStateException("Value is infinite.")
+    case _ =>
+      throw new IllegalStateException("Infinite value was wrongly assumed to be finite.")
     
   def toFiniteOption: Option[X] = this match
     case Finite(x) => Some(x)

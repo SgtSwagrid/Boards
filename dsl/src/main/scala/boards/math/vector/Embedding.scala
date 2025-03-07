@@ -1,6 +1,7 @@
 package boards.math.vector
 
-import boards.graphics.{Colour, Shape}
+import boards.graphics.{Colour, Polygon}
+import boards.graphics.Polygon.Orientation
 import boards.math.vector.Bounds.{BoundsF, BoundsI, given}
 import boards.math.vector.Embedding.*
 import boards.math.vector.Vec.{VecF, VecI}
@@ -15,6 +16,8 @@ import boards.math.vector.RegionMap.{HasRegionMap, RegionMapI}
 import io.circe.Codec
 import io.circe.generic.auto.*
 
+import scala.collection.mutable
+
 /** An embedding of a [[RegionI]] in the plane. */
 sealed trait Embedding
   extends HasRegionMap[Int, Tile],
@@ -22,59 +25,118 @@ sealed trait Embedding
   derives Codec.AsObject:
   
   protected def keys: RegionI
-  def region: RegionMapI[Tile] = keys.withLabels(tile)
+  final def region: RegionMapI[Tile] = keys.withLabels(tile)
   
-  /** Convert a position from embedded-space to logical-space.
-    * Useful for converting a cursor position back to game coordinates. */
-  def toLogicalSpaceOpt (v: VecF): Option[VecI]
-  def toLogicalSpace (v: VecF): VecI = toLogicalSpaceOpt(v).get
+  private val embeddings: mutable.Map[VecI, Polygon] = mutable.Map.empty
   
-  /** Convert a position from logical-space to embedded-space.
-    * Useful for determining where a board tile should be rendered. */
-  def toEmbeddedSpaceOpt (v: VecI): Option[BoundsF]
-  def toEmbeddedSpace (v: VecI): BoundsF = toEmbeddedSpaceOpt(v).get
+  protected def embed (v: VecI): Polygon
   
-  lazy val logicalPositions: LazyList[VecI] = region.positions
-  lazy val embeddedPositions: LazyList[BoundsF] = logicalPositions.map(toEmbeddedSpace)
+  /** Convert a position in logical space to a [[Polygon]] in embedded space.
+    * Yields [[None]] when the position is not contained in this region.
+    * @see [[toEmbeddedSpace]], [[toLogicalSpaceOpt]], [[toLogicalSpace]]
+    */
+  final def toEmbeddedSpaceOpt (v: VecI): Option[Polygon] =
+    Option.when(containsLogical(v))(embeddings.getOrElseUpdate(v, embed(v)))
   
-  def containsLogical (v: VecI): Boolean = region.contains(v)
-  def containsEmbedded (v: VecF): Boolean = toLogicalSpaceOpt(v).isDefined
+  /** Convert a position in logical space to a [[Polygon]] in embedded space.
+    * @throws IllegalStateException when the position is not contained in this region.
+    */
+  final def toEmbeddedSpace (v: VecI): Polygon =
+    toEmbeddedSpaceOpt(v).get
   
-  def logicalBounds: BoundsI = region.bounds
+  protected def unembed (v: VecF): VecI
+  
+  /** Convert a position in embedded space to a position in logical space.
+    * Will find the address of the unique tile in which the given position is contained.
+    * Yields [[None]] when the position is not contained in this region.
+    * @see [[toLogicalSpace]], [[toEmbeddedSpaceOpt]], [[toEmbeddedSpace]]
+    */
+  final def toLogicalSpaceOpt (v: VecF): Option[VecI] =
+    Some(unembed(v)).filter(containsLogical)
+  
+  /** Convert a position in embedded space to a position in logical space.
+    * Will find the address of the unique tile in which the given position is contained.
+    * @throws IllegalStateException when the position is not contained in this region.
+    * @see [[toLogicalSpaceOpt]], [[toEmbeddedSpaceOpt]], [[toEmbeddedSpace]]
+    */
+  final def toLogicalSpace (v: VecF): VecI =
+    toLogicalSpaceOpt(v).get
+  
+  /** The set of all positions in this region in logical space.
+    * Logical space describes the logical address of each tile in the region.
+    * @see [[embeddedPositions]]
+    */
+  final lazy val logicalPositions: LazyList[VecI] = region.positions
+  
+  /** The set of all positions in this region in embedded space.
+    * Embedded space describes the position and size of each tile in the plane.
+    * @see [[logicalPositions]]
+    */
+  final lazy val embeddedPositions: LazyList[Polygon] = logicalPositions.map(toEmbeddedSpace)
+  
+  /** An axis-aligned bounding box for this region in logical space.
+    * Logical space describes the logical address of each tile in the region.
+    * @see [[embeddedBounds]]
+    */
+  final def logicalBounds: BoundsI = region.bounds
+  
+  /** An axis-aligned bounding box for this region in embedded space.
+    * Embedded space describes the position and size of each tile in the plane.
+    * @see [[logicalBounds]]
+    */
   def embeddedBounds: BoundsF
   
-  def logicalSize: VecI = logicalBounds.size
-  def embeddedSize: VecF = embeddedBounds.size
+  final def logicalSize: VecI = logicalBounds.size
+  final def embeddedSize: VecF = embeddedBounds.length
   
-  def inLogicalBounds (v: VecI): Boolean = logicalBounds.contains(v)
-  def inEmbeddedBounds (v: VecF): Boolean = embeddedBounds.contains(v)
+  /** Determine whether [[v]], a logical position, is the valid address of any tile.
+    * @see containsEmbedded, inLogicalBounds, inEmbeddedBounds
+    */
+  final def containsLogical (v: VecI): Boolean = region.contains(v)
   
-  def dim: Int = logicalBounds.dim
+  /** Determine whether [[v]], a position in the plane, is contained in the embedding of any tile.
+    * @see [[containsLogical]], [[inLogicalBounds]], [[inEmbeddedBounds]]
+    */
+  final def containsEmbedded (v: VecF): Boolean = toLogicalSpaceOpt(v).isDefined
   
-  def shapeOpt (v: VecI): Option[Shape]
-  def shape (v: VecI): Shape = shapeOpt(v).get
+  /** Determine whether [[v]], a logical position, lies inside the region's key bounding box.
+    * Note that [[v]] being in bounds does not imply that [[v]] is a valid position.
+    * @see [[inEmbeddedBounds]], [[containsLogical]], [[containsEmbedded]]
+    */
+  final def inLogicalBounds (v: VecI): Boolean = logicalBounds.contains(v)
   
-  def colourOpt (v: VecI): Option[Colour]
-  def colour (v: VecI): Colour = colourOpt(v).get
+  /** Determine whether [[v]], a position in the plane, is contained in the embedding's bounding box.
+    * Note that [[v]] being in bounds does not imply that [[v]] lies inside a tile.
+    * @see [[inLogicalBounds]], [[containsLogical]], [[containsEmbedded]]
+    */
+  final def inEmbeddedBounds (v: VecF): Boolean = embeddedBounds.contains(v)
   
-  def tileOpt (v: VecI): Option[Tile] = Option.when(containsLogical(v)):
-    Tile(v, toEmbeddedSpace(v), shape(v), colour(v))
+  final def dim: Int = logicalBounds.dim
+  
+  private val colours: mutable.Map[VecI, Colour] = mutable.Map.empty
+  protected def getColour (v: VecI): Colour
+  final def colourOpt (v: VecI): Option[Colour] =
+    Option.when(containsLogical(v))(colours.getOrElseUpdate(v, getColour(v)))
+  final def colour (v: VecI): Colour = colourOpt(v).get
+  
+  final def tileOpt (v: VecI): Option[Tile] = Option.when(containsLogical(v)):
+    Tile(v, toEmbeddedSpace(v), colour(v))
     
-  def tile (v: VecI): Tile = tileOpt(v).get
+  final def tile (v: VecI): Tile = tileOpt(v).get
   
-  def mapAffine (f: AffineBijection[Float, Float]): Embedding =
+  final def mapAffine (f: AffineBijection[Float, Float]): Embedding =
     TransformedEmbedding(this, f)
   
-  def translate (offset: VecF): Embedding =
+  final def translate (offset: VecF): Embedding =
     mapAffine(Bijection.Translate(offset))
   
-  def flip (axis: Int): Embedding =
+  final def flip (axis: Int): Embedding =
     mapAffine(Bijection.Flip(axis))
     
-  def rotate (from: Int, to: Int): Embedding =
+  final def rotate (from: Int, to: Int): Embedding =
     mapAffine(Bijection.Rotate(from, to))
   
-  def scale (scale: VecF): Embedding =
+  final def scale (scale: VecF): Embedding =
     mapAffine(Bijection.Scale(scale))
   
   def pad (start: VecF = Vec.zero[Float](2), end: VecF = Vec.zero[Float](2)): Embedding =
@@ -92,12 +154,11 @@ sealed trait Embedding
     */
   def fitTo (container: BoundsF): Embedding =
     if embeddedBounds.isEmpty || embeddedBounds.isInfinite || container.isEmpty || container.isInfinite then this else
-      val factor = (container.size / embeddedSize).components.min
-      val result = this
-        .scale(Vec.fill(dim)(factor))
-        .translate(container.start - embeddedBounds.start
-          + ((container.size - (embeddedBounds.size * factor)) / 2.0F))
-      result
+      val factor = (container.length / embeddedSize).components.min
+      this
+        .translate(-embeddedBounds.bottomLeft)
+        .scale(factor)
+        .translate(container.bottomLeft + (container.length - (embeddedBounds.length * factor)) * 0.5F)
   
   def join (that: Embedding, align: Align): Embedding =
     JoinedEmbedding(this, that, align)
@@ -111,8 +172,7 @@ object Embedding:
   
   case class Tile (
     logicalPosition: VecI,
-    embeddedPosition: BoundsF,
-    shape: Shape,
+    embeddedPosition: Polygon,
     colour: Colour,
   ) derives Codec.AsObject
   
@@ -137,35 +197,82 @@ object Embedding:
     borders: VecF = Vec.zero[Float](2),
   ) extends Embedding:
     
-    def toEmbeddedSpaceOpt (v: VecI) = Option.when(containsLogical(v)):
+    def embed (v: VecI): Polygon =
       val position = v.toVecF + (borders * (v - keys.bounds.start).toVecF)
-      Bounds.between(position, position + Vec(1.0F, 1.0F))
+      Polygon.Rectangle.stretchTo:
+        Bounds.between(position, position + Vec(1.0F, 1.0F))
     
-    def toLogicalSpaceOpt (v: VecF) = Option.when(containsLogical(v.toVecI)):
-      v.toVecI
-    
-    def shapeOpt (v: VecI) = Option.when(containsLogical(v)):
-      Shape.Rectangle
+    def unembed (v: VecF): VecI = v.toVecI
       
-    def colourOpt (v: VecI) = Option.when(containsLogical(v)):
-      Colour.White
+    def getColour (v: VecI): Colour = Colour.White
       
     val embeddedBounds: BoundsF = keys.bounds.toBoundsF
-      .extendEnd(borders * (logicalSize.toVecF - Vec.fill(dim)(1.0F)))
+      .extendEnd(Vec.one[Float](dim))
+      //.extendEnd(borders * (logicalSize.toVecF - Vec.fill(dim)(1.0F)))
+    
+  case class HexagonalEmbedding (
+    keys: RegionI,
+    orientation: Orientation = Orientation.Vertical,
+    borders: Float = 0.0F,
+  ) extends Embedding:
+    
+    private val l_short_diag = 3.7F
+    private val l_spike = l_short_diag * 0.5F / Math.sqrt(3.0F).toFloat
+    private val l_side = 2.0F * l_spike
+    private val l_offset = 3.0F * l_spike
+    private val l_long_diag = 4.0F * l_spike
+    private val l_inscribed = 2.0F * l_side / (1.0F + 2.0F * l_spike / l_short_diag)
+    
+    def embed (v: VecI): Polygon =
+      Polygon.Hexagon.stretchTo:
+        orientation match
+          
+          case Orientation.Vertical =>
+            val x = v.x * l_short_diag + v.y * l_short_diag * 0.5F
+            val y = v.y * l_offset
+            Bounds.between(Vec(x, y), Vec(x + l_short_diag, y + l_long_diag))
+            
+          case Orientation.Horizontal =>
+            val x = v.x * l_offset
+            val y = v.y + v.x * l_short_diag * 0.5F
+            Bounds.between(Vec(x, y), Vec(x + l_long_diag, y + l_short_diag))
+    
+    def unembed (v: VecF): VecI = orientation match
+      
+      case Orientation.Vertical =>
+        
+        val y = v.y / l_offset
+        val y_int = if y < 0.0F then y.toInt - 1 else y.toInt
+        val y_frac = y - y_int
+        
+        val x = v.x / l_short_diag - y_int * 0.5F
+        val x_int = if x < 0.0F then x.toInt - 1 else x.toInt
+        val x_frac = x - x_int
+        
+        if (x_frac * 2.0F) + (y_frac * 3.0F) < 1.0F then Vec(x_int, y_int - 1)
+        else if ((1.0F - x_frac) * 2.0F) + (y_frac * 3.0F) < 1.0F then Vec(x_int + 1, y_int - 1)
+        else Vec(x_int, y_int)
+        
+      case Orientation.Horizontal =>
+        ???
+      
+    def getColour (v: VecI): Colour = Colour.White
+      
+    lazy val embeddedBounds: BoundsF =
+      embeddedPositions.map(_.circumscribedBounds).reduce(_ | _)
   
   case class TransformedEmbedding (
     base: Embedding,
     f: AffineBijection[Float, Float],
   ) extends Embedding:
     
-    def toEmbeddedSpaceOpt (v: VecI) =
-      base.toEmbeddedSpaceOpt(v).map(_.map(f))
+    def embed (v: VecI): Polygon =
+      base.embed(v).mapAffine(f)
       
-    def toLogicalSpaceOpt (v: VecF) =
-      base.toLogicalSpaceOpt(f.inverse(v.toUnbounded).toFinite)
-      
-    def shapeOpt (v: VecI) = base.shapeOpt(v)
-    def colourOpt (v: VecI) = base.colourOpt(v)
+    def unembed (v: VecF): VecI =
+      base.unembed(f.inverse(v.toUnbounded).toFinite)
+    
+    def getColour (v: VecI): Colour = base.getColour(v)
     
     val embeddedBounds = base.embeddedBounds.map(f)
     
@@ -178,12 +285,11 @@ object Embedding:
     end: VecF = Vec.zero[Float](2),
   ) extends Embedding:
     
-    def toEmbeddedSpaceOpt (v: VecI) = base.toEmbeddedSpaceOpt(v)
+    def embed (v: VecI): Polygon = base.embed(v)
     
-    def toLogicalSpaceOpt (v: VecF) = base.toLogicalSpaceOpt(v)
+    def unembed (v: VecF): VecI = base.unembed(v)
     
-    def shapeOpt (v: VecI) = base.shapeOpt(v)
-    def colourOpt (v: VecI) = base.colourOpt(v)
+    def getColour (v: VecI): Colour = base.getColour(v)
     
     val embeddedBounds = base.embeddedBounds.extendStart(start).extendEnd(end)
     
@@ -206,18 +312,15 @@ object Embedding:
     
     val keys = left.join(right, alignment)
     
-    def toEmbeddedSpaceOpt (v: VecI) =
-      if left.contains(v) then left.toEmbeddedSpaceOpt(v)
-      else right.toEmbeddedSpaceOpt(v - logicalOffset).map(_.translate(embeddedOffset))
+    def embed (v: VecI): Polygon =
+      if left.contains(v) then left.embed(v)
+      else right.embed(v - logicalOffset).translate(embeddedOffset)
     
-    def toLogicalSpaceOpt (v: VecF) =
-      left.toLogicalSpaceOpt(v) orElse right.toLogicalSpaceOpt(v - embeddedOffset)
+    def unembed (v: VecF): VecI =
+      left.toLogicalSpaceOpt(v) getOrElse right.unembed(v - embeddedOffset)
       
-    def shapeOpt (v: VecI) =
-      if left.contains(v) then left.shapeOpt(v) else right.shapeOpt(v - logicalOffset)
-      
-    def colourOpt (v: VecI) =
-      if left.contains(v) then left.colourOpt(v) else right.colourOpt(v - logicalOffset)
+    def getColour (v: VecI): Colour =
+      if left.contains(v) then left.getColour(v) else right.getColour(v - logicalOffset)
     
     val embeddedBounds = left.embeddedBounds | right.embeddedBounds.translate(embeddedOffset)
     
@@ -226,12 +329,10 @@ object Embedding:
     colours: Map[VecI, Colour],
   ) extends Embedding:
     
-    def toEmbeddedSpaceOpt (v: VecI) = base.toEmbeddedSpaceOpt(v)
-    def toLogicalSpaceOpt (v: VecF) = base.toLogicalSpaceOpt(v)
+    def embed (v: VecI): Polygon = base.embed(v)
+    def unembed (v: VecF): VecI = base.unembed(v)
     
-    def shapeOpt (v: VecI) = base.shapeOpt(v)
-    def colourOpt (v: VecI) = Option.when(containsLogical(v)):
-      colours(v)
+    def getColour (v: VecI): Colour = colours(v)
     
     val embeddedBounds = base.embeddedBounds
     
@@ -242,3 +343,4 @@ object Embedding:
       * A default embedding consists of equal-sized square tiles with no additional spacing.
       */
     def embed: RectilinearEmbedding = RectilinearEmbedding(region)
+    def embedHex: HexagonalEmbedding = HexagonalEmbedding(region)

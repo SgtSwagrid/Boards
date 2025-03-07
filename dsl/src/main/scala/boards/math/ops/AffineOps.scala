@@ -21,9 +21,10 @@ object AffineOps:
     final inline def translate (offset: X*): This = translate(Vec(offset))
     final inline def fromHere (using offset: Vec[X]): This = translate(offset)
     
-    final inline def translateX (offset: X): This = translate(Vec.axis(0, 0) * offset)
-    final inline def translateY (offset: X): This = translate(Vec.axis(1, 1) * offset)
-    final inline def translateZ (offset: X): This = translate(Vec.axis(2, 2) * offset)
+    final inline def translate (dim: Int) (offset: X): This = translate(Vec.axis(dim, dim) * offset)
+    final inline def translateX (dx: X): This = translate(0)(dx)
+    final inline def translateY (dy: X): This = translate(1)(dy)
+    final inline def translateZ (dz: X): This = translate(2)(dz)
     
     infix def + (offset: Vec[X]): This = translate(offset)
     infix def - (offset: Vec[X]): This = translate(-offset)
@@ -80,7 +81,12 @@ object AffineOps:
     def * (factor: X): This[X] = map(_ * factor)*/
   
   trait Affine [X: Numeric, +This <: Affine[X, This]]
-  extends Translate[X, This], Flip[This], Rotate[This], ScaleHeterogeneous[X, This]
+  extends Translate[X, This], Flip[This], Rotate[This], ScaleHeterogeneous[X, This]:
+    
+    def flipOver (dim: Int) (x: X): This = (this.translate(dim)(-x)).flip(dim).translate(dim)(x)
+    def flipOverX (x: X): This = flipOver(0)(x)
+    def flipOverY (y: X): This = flipOver(1)(y)
+    def flipOverZ (z: X): This = flipOver(2)(z)
   
   /*trait AffineWithMap [X: Numeric, This[Y] <: AffineWithMap[Y, This]] extends Affine[X, This]:
     

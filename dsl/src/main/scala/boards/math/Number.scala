@@ -1,6 +1,7 @@
 package boards.math
 
 import scala.annotation.tailrec
+import scala.math.Ordered.orderingToOrdered
 
 object Number:
   
@@ -12,10 +13,10 @@ object Number:
    *
    * @throws UnsupportedOperationException if the list of numbers is empty.
    */
-  def gcd(x: Int*): Int =
+  def gcd (x: Int*): Int =
     
     @tailrec
-    def gcd2(a: Int, b: Int): Int =
+    def gcd2 (a: Int, b: Int): Int =
       if a == b || b == 0 then a
       else gcd2(b, a % b)
       
@@ -29,10 +30,15 @@ object Number:
    *
    * @throws UnsupportedOperationException if the list of numbers is empty.
    */
-  def lcm(x: Int*): Int =
+  def lcm (x: Int*): Int =
     
-    def lcm2(a: Int, b: Int) =
+    def lcm2 (a: Int, b: Int) =
       if a == 0 && b == 0 then 0
       else a.abs * (b.abs / gcd(a, b))
       
     x.reduce(lcm2)
+    
+  def clamp [X: Ordering] (x: X, min: X, max: X): X =
+    if x < min then min
+    else if x > max then max
+    else x

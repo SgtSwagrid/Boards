@@ -151,7 +151,7 @@ object Ray:
       val bounds = lengthBounds & steps(window)
       lazy val positions = if bounds.isEmpty then LazyList.empty else
         this.positions.dropWhile(v => !window.contains(v)).takeWhile(window.contains)
-      refine(bounds, length.limitBelow(bounds.ulength).orElse(0), positions)
+      refine(bounds, length.limitBelow(bounds.usize).orElse(0), positions)
   
   /**
    * A multiple-source, multiple-direction collection of rays.

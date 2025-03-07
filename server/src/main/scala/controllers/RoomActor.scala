@@ -46,8 +46,6 @@ extends Actor:
       
   /** Provide a given client with the latest information so that the scene may be updated. */
   def render (sub: Subscriber): Unit =
-    
-    println(s"Rendering room $roomId to ${sub.user}")
   
     // If the client is currently viewing an old state, we need to provide them with this instead.
     val stateAtTime = sub.turnId match
@@ -164,12 +162,12 @@ extends Actor:
         
 object RoomActor:
   
-  def props(roomId: String, system: ActorRef)(using Database) =
+  def props (roomId: String, system: ActorRef) (using Database) =
     Props(RoomActor(roomId, system))
     
   enum Protocol:
-    case Subscribe(user: Option[User], out: ActorRef)
-    case Act(userId: Option[Int], out: ActorRef, request: GameRequest)
+    case Subscribe (user: Option[User], out: ActorRef)
+    case Act (userId: Option[Int], out: ActorRef, request: GameRequest)
     case ReloadRoom
     case ReloadState
     

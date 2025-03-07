@@ -31,7 +31,7 @@ object Box:
   /** Create a bounded box region from a bounding box. */
   def fromBounds (bounds: BoundsI): Box = new Box(bounds)
   /** Create a bounded box region of a given size in the positive orthant. */
-  def apply (size: VecI): Box = Box.fromBounds(Bounds.fromOrigin(size))
+  def apply (size: VecI): Box = Box.fromBounds(Bounds.fromOrigin(size - Vec.one[Int](size.dim)))
   /** Create a bounded box region of a given size in the positive orthant. */
   def apply (size: Int*): Box = Box(VecI(size*))
   /** Create a bounded box region with the given min and max corners. */
