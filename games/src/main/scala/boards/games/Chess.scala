@@ -9,7 +9,7 @@ import boards.dsl.states.HistoryState
 import boards.graphics.{Colour, Pattern, Texture}
 import boards.math.vector.{Box, Dir}
 import boards.math.algebra.Algebra.{*, given}
-import boards.math.vector.Embedding.embedHex
+import boards.math.vector.Embedding.embed
 import boards.dsl.Shortcuts.{*, given}
 import boards.dsl.pieces.PieceView.Pieces
 import boards.dsl.states.GameState.Outcome.Draw
@@ -22,8 +22,8 @@ object Chess extends Game:
   val black = Player(1, "Black", Colour.British.MattPurple)
   override val players = Seq(white, black)
   
-  override def board = Box(8, 8).embedHex
-    .paint(Pattern.CheckeredHex(Colour.Chess.HexDark, Colour.Chess.HexMedium, Colour.Chess.HexLight))
+  override def board = Box(8, 8).embed
+    .paint(Pattern.Checkered(Colour.Chess.Dark, Colour.Chess.Light))
   
   override def setup =
     board.row(7).create(black, Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook) |>

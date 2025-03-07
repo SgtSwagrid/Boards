@@ -103,41 +103,6 @@ class ReactiveCanvas (id: String = "canvas"):
       setColour(colour)
       setThickness(thickness)
       context.strokeRect(bounds.left, bounds.bottom, bounds.width, bounds.height)
-    
-  def fillVerticalHexagon (bounds: BoundsF, colour: Colour): Unit =
-    
-    val offset = (Math.sqrt(4.0F * bounds.height * bounds.height + 3.0F * bounds.width * bounds.width).toFloat - bounds.height) / 6.0F
-    
-    setColour(colour)
-    
-    fill (
-      bounds.topCentre,
-      bounds.centreLeft.translateY(offset),
-      bounds.centreLeft.translateY(-offset),
-      bounds.bottomCentre,
-      bounds.centreRight.translateY(-offset),
-      bounds.centreRight.translateY(offset),
-    )
-  
-  def fillHorizontalHexagon (bounds: BoundsF, colour: Colour): Unit =
-    
-    val offset = (Math.sqrt(4.0F * bounds.width * bounds.width + 3.0F * bounds.height * bounds.height).toFloat - bounds.width) / 6.0F
-    
-    setColour(colour)
-    
-    fill (
-      bounds.centreRight,
-      bounds.topCentre.translateX(offset),
-      bounds.topCentre.translateX(-offset),
-      bounds.centreLeft,
-      bounds.bottomCentre.translateX(-offset),
-      bounds.bottomCentre.translateX(offset),
-    )
-    
-  def fillHexagon (bounds: BoundsF, orientation: Orientation, colour: Colour): Unit =
-    orientation match
-      case Orientation.Vertical => fillVerticalHexagon(bounds, colour)
-      case Orientation.Horizontal => fillHorizontalHexagon(bounds, colour)
   
   def fillCircle (centre: VecF, radius: Float, colour: Colour): Unit =
     setColour(colour)

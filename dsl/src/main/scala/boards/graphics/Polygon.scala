@@ -71,7 +71,7 @@ object Polygon:
       
   case object Hexagon extends Polygon:
     
-    private val l_short_diag = 6.9F
+    private val l_short_diag = 1.0F
     private val l_radius     = 0.5F * l_short_diag
     private val l_spike      = l_short_diag * 0.5F / Math.sqrt(3.0F).toFloat
     private val l_side       = 2.0F * l_spike
@@ -85,20 +85,20 @@ object Polygon:
       })
       
     val vertices: Seq[VecF] = Seq (
-      Vec(0.0F, l_side),
-      Vec(-l_radius, l_spike),
+      Vec(0.0F,       l_side),
+      Vec(-l_radius,  l_spike),
       Vec(-l_radius, -l_spike),
-      Vec(0.0F, -l_side),
-      Vec(l_radius, -l_spike),
-      Vec(l_radius, l_spike),
+      Vec(0.0F,      -l_side),
+      Vec(l_radius,  -l_spike),
+      Vec(l_radius,   l_spike),
     )
     
     def contains (v: VecF): Boolean =
       v.x >= -l_radius &&
-      v.x <= l_radius &&
-      (v.x / l_radius) + (v.y / l_side) <= 1.0F &&
-      (-v.x / l_radius) + (v.y / l_side) <= 1.0F &&
-      (v.x / l_radius) + (-v.y / l_side) <= 1.0F &&
+      v.x <=  l_radius &&
+      (v.x  / l_radius) + (v.y  / l_side) <= 1.0F &&
+      (-v.x / l_radius) + (v.y  / l_side) <= 1.0F &&
+      (v.x  / l_radius) + (-v.y / l_side) <= 1.0F &&
       (-v.x / l_radius) + (-v.y / l_side) <= 1.0F
     
   case class TransformedPolygon (

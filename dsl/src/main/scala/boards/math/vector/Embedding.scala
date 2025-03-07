@@ -212,34 +212,25 @@ object Embedding:
     
   case class HexagonalEmbedding (
     keys: RegionI,
-    orientation: Orientation = Orientation.Vertical,
+    orientation: Orientation = Orientation.Horizontal,
     borders: Float = 0.0F,
   ) extends Embedding:
     
-    private val l_short_diag = 3.7F
-    private val l_spike = l_short_diag * 0.5F / Math.sqrt(3.0F).toFloat
-    private val l_side = 2.0F * l_spike
-    private val l_offset = 3.0F * l_spike
-    private val l_long_diag = 4.0F * l_spike
-    private val l_inscribed = 2.0F * l_side / (1.0F + 2.0F * l_spike / l_short_diag)
+    private val l_short_diag = 1.0F
+    private val l_radius     = 0.5F * l_short_diag
+    private val l_spike      = l_short_diag * 0.5F / Math.sqrt(3.0F).toFloat
+    private val l_side       = 2.0F * l_spike
+    private val l_offset     = 3.0F * l_spike
+    private val l_long_diag  = 4.0F * l_spike
     
     def embed (v: VecI): Polygon =
-      Polygon.Hexagon.stretchTo:
-        orientation match
-          
-          case Orientation.Vertical =>
-            val x = v.x * l_short_diag + v.y * l_short_diag * 0.5F
-            val y = v.y * l_offset
-            Bounds.between(Vec(x, y), Vec(x + l_short_diag, y + l_long_diag))
-            
-          case Orientation.Horizontal =>
-            val x = v.x * l_offset
-            val y = v.y + v.x * l_short_diag * 0.5F
-            Bounds.between(Vec(x, y), Vec(x + l_long_diag, y + l_short_diag))
-    
-    def unembed (v: VecF): VecI = orientation match
       
-      case Orientation.Vertical =>
+      Polygon.Hexagon.stretchTo:
+        val x = v.x * l_short_diag + v.y * l_radius
+        val y = v.y * l_offset
+        Bounds.between(Vec(x, y), Vec(x + l_short_diag, y + l_long_diag))
+    
+    def unembed (v: VecF): VecI =
         
         val y = v.y / l_offset
         val y_int = if y < 0.0F then y.toInt - 1 else y.toInt
@@ -252,9 +243,6 @@ object Embedding:
         if (x_frac * 2.0F) + (y_frac * 3.0F) < 1.0F then Vec(x_int, y_int - 1)
         else if ((1.0F - x_frac) * 2.0F) + (y_frac * 3.0F) < 1.0F then Vec(x_int + 1, y_int - 1)
         else Vec(x_int, y_int)
-        
-      case Orientation.Horizontal =>
-        ???
       
     def getColour (v: VecI): Colour = Colour.White
       
