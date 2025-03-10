@@ -2,8 +2,9 @@ package controllers
 
 import RoomActor.Subscriber
 import RoomActor.Protocol.*
+import boards.bots.BotCatalogue
 import boards.dsl.meta.TurnId
-import boards.dsl.meta.TurnId.{TurnId, next}
+import boards.dsl.meta.TurnId.{next, TurnId}
 import boards.dsl.rules.Cause
 import boards.dsl.states.GameState
 import boards.dsl.states.InstantaneousState.given
@@ -11,7 +12,7 @@ import boards.graphics.Scene
 import boards.protocol.GameProtocol.*
 import boards.protocol.GameProtocol.GameRequest.*
 import boards.protocol.Room
-import boards.protocol.Room.{Player, RichRoom, Status}
+import boards.protocol.Room.{Player, PlayerIdentity, RichPlayer, RichRoom, Status}
 import boards.protocol.UserProtocol.User
 import boards.dsl.meta.TurnId.next
 import models.GameModel
@@ -24,6 +25,7 @@ import slick.lifted.Functions.user
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.DurationInt
+import scala.util.Random
 
 class RoomActor
   (roomId: String, system: ActorRef)
@@ -54,6 +56,9 @@ extends Actor:
       
     // Construct a scene summarising all relevant information and send it to the client.
     sub.session ! GameResponse.Render(Scene(room, sub.user.map(_.userId), stateAtTime, state))
+    
+  private def activePlayer: RichPlayer =
+    room.players(state.activePlayer.toInt)
   
   private def canTakeAction (userId: Int): Boolean =
     room.isActive &&
@@ -88,13 +93,29 @@ extends Actor:
         result <- state.applyInputById(inputId)
         if canTakeAction(me)
       do for
-        _ <- GameModel().takeAction(roomId, me, inputId, result.isFinal)
+        _ <- GameModel().takeAction(roomId, inputId, result.isFinal)
       do
         this.state = result
         if result.isFinal then
           this.room = this.room.withStatus(Status.Complete)
-        context.system.scheduler.scheduleOnce(100.millis):
-          render()
+        render()
+        if room.isActive && activePlayer.isBot then
+          self ! PlayAsBot
+    
+    case PlayAsBot =>
+      activePlayer.asBotOpt
+        .map(_.botId).map(BotCatalogue.byId.apply)
+        .foreach: bot =>
+          val input   = bot.choose(state)
+          val result  = state.applyInput(input).get
+          val inputId = state.inputs.indexOf(input)
+          GameModel().takeAction(roomId, inputId, result.isFinal).foreach: _ =>
+            this.state = result
+            if result.isFinal then
+              this.room = this.room.withStatus(Status.Complete)
+            render()
+            if room.isActive && activePlayer.isBot then
+              self ! PlayAsBot
       
     case Act(Some(me), out, InviteToRoom(user)) => ???
     
@@ -127,10 +148,19 @@ extends Actor:
           if room.forkedFrom.isEmpty then self ! ReloadState
           if room.rematchOf.nonEmpty then system ! SystemActor.Protocol.ReloadRoom(room.rematchOf.get.id)
     
+    case Act(Some(me), out, AddBot(id)) =>
+      if room.isPending && room.userIsPlaying(me) then
+        for _ <- GameModel().addBot(room.id, id) do
+          self ! ReloadRoom
+          if room.forkedFrom.isEmpty then self ! ReloadState
+          if room.rematchOf.nonEmpty then system ! SystemActor.Protocol.ReloadRoom(room.rematchOf.get.id)
+    
     case Act(Some(me), out, StartGame) =>
       if room.isParticipating(me) then
         for _ <- GameModel().startGame(roomId) do
           self ! ReloadRoom
+          if activePlayer.isBot then
+            self ! PlayAsBot
     
     case Act(Some(me), out, CancelRoom) => ???
     
@@ -138,7 +168,7 @@ extends Actor:
       for
         players <- GameModel().getPlayers(roomId)
         // Ensure user can't resign on behalf of a player on another device.
-        myPositions = players.filter(_.userId == me).map(_.position).filter(positions.contains)
+        myPositions = players.filter(_.userIdOpt.contains(me)).map(_.position).filter(positions.contains)
         _ <- GameModel().resign(roomId, resign)(myPositions*)
       do self ! ReloadRoom
     
@@ -146,7 +176,7 @@ extends Actor:
       for
         players <- GameModel().getPlayers(roomId)
         // Ensure user can't offer draw on behalf of a player on another device.
-        myPositions = players.filter(_.userId == me).map(_.position).filter(positions.contains)
+        myPositions = players.filter(_.userIdOpt.contains(me)).map(_.position).filter(positions.contains)
         _ <- GameModel().offerDraw(roomId, draw)(myPositions*)
       do self ! ReloadRoom
     
@@ -170,6 +200,7 @@ object RoomActor:
     case Act (userId: Option[Int], out: ActorRef, request: GameRequest)
     case ReloadRoom
     case ReloadState
+    case PlayAsBot
     
   /**
    * An active subscription for a user who is viewing or participating in this room.

@@ -8,6 +8,7 @@
     <output-test url="file://$MODULE_DIR$/../../bots/target/test-classes" />
     <exclude-output />
     <content url="file://$MODULE_DIR$/../../bots">
+      <sourceFolder url="file://$MODULE_DIR$/../../bots/src/main/scala" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/../../bots/target" />
     </content>
     <orderEntry type="inheritedJdk" />

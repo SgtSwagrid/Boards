@@ -1,6 +1,6 @@
 package boards.views
 
-import boards.Catalogue
+import boards.GameCatalogue
 import boards.components.{Footer, Navbar}
 import boards.dsl.meta.Game
 import boards.protocol.GameProtocol.{CreateRoomRequest, CreateRoomResponse}
@@ -31,7 +31,7 @@ object StartView extends View:
       position("absolute"),
       top("120px"), left("50px"), right("50px"),
       width("fit-content"),
-      Catalogue.all.map: game =>
+      GameCatalogue.all.map: game =>
         div (
           onClick.flatMapTo(createRequest(game.name))
             --> (response => goto(s"/game/${response.roomId}")),

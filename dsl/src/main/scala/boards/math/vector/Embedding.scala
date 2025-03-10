@@ -44,7 +44,7 @@ sealed trait Embedding
   final def toEmbeddedSpace (v: VecI): Polygon =
     toEmbeddedSpaceOpt(v).get
   
-  protected def unembed (v: VecF): VecI
+  protected def unembed (v: VecF): Option[VecI]
   
   /** Convert a position in embedded space to a position in logical space.
     * Will find the address of the unique tile in which the given position is contained.
@@ -52,7 +52,7 @@ sealed trait Embedding
     * @see [[toLogicalSpace]], [[toEmbeddedSpaceOpt]], [[toEmbeddedSpace]]
     */
   final def toLogicalSpaceOpt (v: VecF): Option[VecI] =
-    Some(unembed(v)).filter(containsLogical)
+    unembed(v).filter(containsLogical)
   
   /** Convert a position in embedded space to a position in logical space.
     * Will find the address of the unique tile in which the given position is contained.
@@ -202,13 +202,19 @@ object Embedding:
       Polygon.Rectangle.stretchTo:
         Bounds.between(position, position + Vec(1.0F, 1.0F))
     
-    def unembed (v: VecF): VecI = v.toVecI
+    def unembed (v: VecF): Option[VecI] =
+      if !(v >= embeddedBounds.start) then None else
+        val v_scaled = (v - embeddedBounds.start) / (Vec.one(2) + borders)
+        val v_int = v_scaled.toVecI
+        val v_frac = v_scaled - v_int.toVecF
+        Option.when(v_frac.components.zip(borders.components).forall((v, b) => v <= 1.0F / (1.0F + b))):
+          v_int + logicalBounds.start
       
     def getColour (v: VecI): Colour = Colour.White
       
     val embeddedBounds: BoundsF = keys.bounds.toBoundsF
       .extendEnd(Vec.one[Float](dim))
-      //.extendEnd(borders * (logicalSize.toVecF - Vec.fill(dim)(1.0F)))
+      .extendEnd(borders * (logicalSize.toVecF - Vec.fill(dim)(1.0F)))
     
   case class HexagonalEmbedding (
     keys: RegionI,
@@ -230,7 +236,7 @@ object Embedding:
         val y = v.y * l_offset
         Bounds.between(Vec(x, y), Vec(x + l_short_diag, y + l_long_diag))
     
-    def unembed (v: VecF): VecI =
+    def unembed (v: VecF): Option[VecI] = Some:
         
         val y = v.y / l_offset
         val y_int = if y < 0.0F then y.toInt - 1 else y.toInt
@@ -239,7 +245,7 @@ object Embedding:
         val x = v.x / l_short_diag - y_int * 0.5F
         val x_int = if x < 0.0F then x.toInt - 1 else x.toInt
         val x_frac = x - x_int
-        
+      
         if (x_frac * 2.0F) + (y_frac * 3.0F) < 1.0F then Vec(x_int, y_int - 1)
         else if ((1.0F - x_frac) * 2.0F) + (y_frac * 3.0F) < 1.0F then Vec(x_int + 1, y_int - 1)
         else Vec(x_int, y_int)
@@ -257,7 +263,7 @@ object Embedding:
     def embed (v: VecI): Polygon =
       base.embed(v).mapAffine(f)
       
-    def unembed (v: VecF): VecI =
+    def unembed (v: VecF): Option[VecI] =
       base.unembed(f.inverse(v.toUnbounded).toFinite)
     
     def getColour (v: VecI): Colour = base.getColour(v)
@@ -275,7 +281,7 @@ object Embedding:
     
     def embed (v: VecI): Polygon = base.embed(v)
     
-    def unembed (v: VecF): VecI = base.unembed(v)
+    def unembed (v: VecF): Option[VecI] = base.unembed(v)
     
     def getColour (v: VecI): Colour = base.getColour(v)
     
@@ -304,8 +310,8 @@ object Embedding:
       if left.contains(v) then left.embed(v)
       else right.embed(v - logicalOffset).translate(embeddedOffset)
     
-    def unembed (v: VecF): VecI =
-      left.toLogicalSpaceOpt(v) getOrElse right.unembed(v - embeddedOffset)
+    def unembed (v: VecF): Option[VecI] =
+      left.toLogicalSpaceOpt(v) orElse right.unembed(v - embeddedOffset)
       
     def getColour (v: VecI): Colour =
       if left.contains(v) then left.getColour(v) else right.getColour(v - logicalOffset)
@@ -318,7 +324,7 @@ object Embedding:
   ) extends Embedding:
     
     def embed (v: VecI): Polygon = base.embed(v)
-    def unembed (v: VecF): VecI = base.unembed(v)
+    def unembed (v: VecF): Option[VecI] = base.unembed(v)
     
     def getColour (v: VecI): Colour = colours(v)
     
@@ -327,8 +333,12 @@ object Embedding:
     val keys = base.keys
   
   extension (region: RegionI)
+    
     /** Create an embedding of this [[Region]] in the plane.
       * A default embedding consists of equal-sized square tiles with no additional spacing.
       */
     def embed: RectilinearEmbedding = RectilinearEmbedding(region)
+    def embed (border: Float): RectilinearEmbedding = RectilinearEmbedding(region, Vec(border, border))
+    def embed (borders: VecF): RectilinearEmbedding = RectilinearEmbedding(region, borders)
+    
     def embedHex: HexagonalEmbedding = HexagonalEmbedding(region)

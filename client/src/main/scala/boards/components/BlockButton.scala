@@ -13,10 +13,37 @@ object BlockButton:
   : HtmlElement =
     
     button (
-      Seq (
-        className(s"btn btn-$colour"),
+      className(s"btn btn-$colour no-animation"),
+      width("100%"),
+      marginBottom("10px"),
+      modifiers,
+    )
+    
+  def dropdown
+    (colour: String)
+    (modifiers: Modifier[HtmlElement]*)
+    (contents: Seq[HtmlElement])
+  : HtmlElement =
+    
+    div (
+      className("dropdown dropdown-right dropdown-end"),
+      width("100%"),
+      marginBottom("10px"),
+      div (
+        className(s"btn btn-$colour no-animation"),
         width("100%"),
-        marginBottom("10px"),
-      ) ++ modifiers
-      *
+        tabIndex(0),
+        role("button"),
+        modifiers,
+      ),
+      ul (
+        tabIndex(0),
+        className("dropdown-content menu box"),
+        backgroundColor("#353b48"),
+        opacity("98%"),
+        width("210px"),
+        marginLeft("25px"),
+        zIndex(10),
+        contents.map(item => li(item)),
+      ),
     )

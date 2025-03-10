@@ -95,6 +95,7 @@ object Game:
   case class GameConfig (
     numPlayers: Int = 2,
     properties: Map[String, Int] = Map.empty,
+    seed: Long = 0L,
   ):
     def apply(property: String): Int = properties(property)
     

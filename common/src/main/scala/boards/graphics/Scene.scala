@@ -110,7 +110,7 @@ case class Scene (
   def isMe (playerId: PlayerId): Boolean = myPlayers.exists(_.position == playerId)
   
   /** Whether it is the turn of a player on this device. */
-  def isMyTurn: Boolean = userId.contains(activePlayer.userId)
+  def isMyTurn: Boolean = (userId zip activePlayer.userIdOpt).exists(_ == _)
   /** Whether it is the turn of the only player on this device. */
   def isMyTurnAlone: Boolean = isMyTurn && !iAmPlayingHotseat
   
@@ -139,13 +139,13 @@ case class Scene (
   
   
   def iWon: Boolean =
-    winner.exists(winner => userId.contains(winner.userId))
+    winner.exists(winner => (userId zip winner.userIdOpt).exists(_ == _))
   /** Whether the only player on this device won the game. */
   def iWonAlone: Boolean = iWon && iAmPlayingAlone
   
   /** Whether a player on another device won the game. */
   def iLost: Boolean =
-    userId.isDefined && winner.exists(winner => !userId.contains(winner.userId))
+    iAmPlaying && winner.exists(_.userIdOpt != userId)
   /** Whether the only player on this device lost the game. */
   def iLostAlone: Boolean = iLost && iAmPlayingAlone
   
@@ -223,8 +223,8 @@ object Scene:
       PieceData(piece.pieceId, piece.position, piece.texture)
     
     val choices =
-      val isMyTurn = room.isActive &&
-        userId.contains(room.player(currentState.activePlayer).userId) &&
+      val isMyTurn = room.isActive && userId.exists(room.userIsPlaying) &&
+        userId == room.player(currentState.activePlayer).userIdOpt &&
         !room.player(currentState.activePlayer).hasResigned
       if !isMyTurn then Seq.empty else
         currentState.next.zipWithIndex.map: (successor, id) =>

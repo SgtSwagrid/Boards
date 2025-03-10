@@ -29,6 +29,8 @@ object GameProtocol:
     case ChangeGame (gameId: Int)
     /** Request to the join the room; automatically accepted if there is still space. */
     case JoinRoom (multiplicity: Int)
+    /** Add a new bot to the game. */
+    case AddBot (name: String)
     /**
      * Start the game.
      * Will fail if the game has already started or if there are not enough players.

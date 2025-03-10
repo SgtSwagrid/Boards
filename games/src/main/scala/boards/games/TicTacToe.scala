@@ -11,7 +11,7 @@ import boards.graphics.{Colour, Texture}
 import boards.math.vector.Embedding.embed
 import boards.dsl.Shortcuts.{*, given}
 import boards.math.algebra.Algebra.{*, given}
-import boards.math.vector.{Box, Dir}
+import boards.math.vector.{Box, Dir, Vec}
 
 object TicTacToe extends Game:
   
@@ -25,7 +25,8 @@ object TicTacToe extends Game:
   val target = Property("Target", 3 to 9,  default = 4)
   override val properties = Seq(size, target)
   
-  override def board = Box(size, size).embed.paintSolid(Colour.White)
+  override def board = Box(size, size).embed(0.05F)
+    .paintSolid(Colour.American.SourLemon)
   
   override def loop = Rule.alternatingTurns:
     state.board.ontoEmpty.placeFriendly(Stone) |>

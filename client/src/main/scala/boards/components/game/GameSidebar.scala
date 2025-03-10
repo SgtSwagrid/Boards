@@ -1,5 +1,6 @@
 package boards.components.game
 
+import boards.bots.BotCatalogue
 import boards.components.{BlockButton, Footer, Navbar, SVG}
 import boards.dsl.meta.Game.Property
 import boards.dsl.meta.TurnId
@@ -145,7 +146,7 @@ class GameSidebar (scene: Signal[Scene], respond: Observer[GameRequest]):
       "Waiting to Start",
     )
     
-  private def activeStatus(using scene: Scene) =
+  private def activeStatus (using scene: Scene) =
     
     p (
       textAlign("center"),
@@ -158,7 +159,7 @@ class GameSidebar (scene: Signal[Scene], respond: Observer[GameRequest]):
       if scene.isMyTurnAlone then " Turn" else " to Play",
     )
     
-  private def completeStatus(using scene: Scene) =
+  private def completeStatus (using scene: Scene) =
     
     scene.winner match
       case Some(winner) =>
@@ -179,7 +180,7 @@ class GameSidebar (scene: Signal[Scene], respond: Observer[GameRequest]):
           "Draw",
         )
   
-  private def playerPanel(using scene: Scene) =
+  private def playerPanel (using scene: Scene) =
     
     div (
       top("0"), left("0"), right("0"),
@@ -189,37 +190,37 @@ class GameSidebar (scene: Signal[Scene], respond: Observer[GameRequest]):
           case Seq(left, right) => playerDivider(left, right)
     )
   
-  private def playerInfo(player: RichPlayer)(using scene: Scene) =
+  private def playerInfo (player: RichPlayer) (using scene: Scene) =
     
     span (
       display("block"),
       width("100%"),
-      playerIcon,
+      playerIcon(player),
       playerName(player),
       removePlayerButton(player),
       playerTurnMarker(player),
       playerWinMarker(player),
     )
   
-  private def playerIcon(using scene: Scene) =
+  private def playerIcon (player: RichPlayer) (using scene: Scene) =
     
     img (
       display("inline-block"),
       marginLeft("10px"),
-      src("/assets/images/ui/game/player.svg"),
+      src(s"/assets/images/ui/game/${if player.isBot then "bot" else "player"}.svg"),
       width("30px"), height("30px"),
       verticalAlign("top"),
       marginTop("10px"),
     )
   
-  private def playerName(player: RichPlayer)(using scene: Scene) =
+  private def playerName (player: RichPlayer) (using scene: Scene) =
     
     div (
       display("inline-block"),
       marginLeft("15px"),
       b (
         fontSize("16px"),
-        player.username,
+        player.displayName,
         span (
           Colour.British.ChainGangGrey.textColour,
           fontFamily("serif"),
@@ -246,7 +247,7 @@ class GameSidebar (scene: Signal[Scene], respond: Observer[GameRequest]):
       else emptyNode,
     )
   
-  private def removePlayerButton(player: RichPlayer)(using scene: Scene) =
+  private def removePlayerButton (player: RichPlayer) (using scene: Scene) =
     
     when (scene.isPending && scene.iAmPlaying) (
       div (
@@ -254,7 +255,7 @@ class GameSidebar (scene: Signal[Scene], respond: Observer[GameRequest]):
         display("inline-block"),
         marginTop("10px"),
         float("right"),
-        dataTip(s"Remove ${player.username}"),
+        dataTip(s"Remove ${player.displayName}"),
         button (
           className("btn btn-circle btn-ghost btn-sm"),
           SVG.Cross,
@@ -263,7 +264,7 @@ class GameSidebar (scene: Signal[Scene], respond: Observer[GameRequest]):
       ),
     )
   
-  private def playerTurnMarker(player: RichPlayer)(using scene: Scene) =
+  private def playerTurnMarker (player: RichPlayer) (using scene: Scene) =
     
     when (scene.isActiveHere && player.position == scene.activePlayerId) (
       img (
@@ -276,7 +277,7 @@ class GameSidebar (scene: Signal[Scene], respond: Observer[GameRequest]):
       ),
     )
   
-  private def playerWinMarker(player: RichPlayer)(using scene: Scene) =
+  private def playerWinMarker (player: RichPlayer) (using scene: Scene) =
     
     when (scene.isLatestState && scene.isWinner(player.position)) (
       img (
@@ -289,7 +290,7 @@ class GameSidebar (scene: Signal[Scene], respond: Observer[GameRequest]):
       ),
     )
   
-  private def playerDivider(left: RichPlayer, right: RichPlayer)(using scene: Scene) =
+  private def playerDivider (left: RichPlayer, right: RichPlayer) (using scene: Scene) =
     
     val canSwap = scene.isPending && scene.iAmPlaying
     
@@ -297,12 +298,12 @@ class GameSidebar (scene: Signal[Scene], respond: Observer[GameRequest]):
       className("divider"),
       marginTop(if canSwap then "20px" else "10px"),
       marginBottom(if canSwap then "20px" else "10px"),
-      when(canSwap && left.userId != right.userId) (
+      when(canSwap && (left.userIdOpt zip right.userIdOpt).forall(_ != _)) (
         div (
           className("tooltip"),
           display("inline-block"),
           float("right"),
-          dataTip(s"Swap ${left.username} and ${right.username}"),
+          dataTip(s"Swap ${left.displayName} and ${right.displayName}"),
           button (
             className("btn btn-circle btn-ghost btn-sm"),
             SVG.Swap,
@@ -331,7 +332,7 @@ class GameSidebar (scene: Signal[Scene], respond: Observer[GameRequest]):
         )
     )
     
-  private def propertySlider(property: Property, default: Int, showSlider: Boolean = false) =
+  private def propertySlider (property: Property, default: Int, showSlider: Boolean = false) =
     
     val updates = new EventBus[Int]
     
@@ -366,7 +367,7 @@ class GameSidebar (scene: Signal[Scene], respond: Observer[GameRequest]):
       ),
     )
   
-  private def buttonPanel(using scene: Scene) =
+  private def buttonPanel (using scene: Scene) =
     
     div (
       padding("20px"),
@@ -375,6 +376,7 @@ class GameSidebar (scene: Signal[Scene], respond: Observer[GameRequest]):
       if scene.isPending then div (
         leaveButton,
         joinButton,
+        botButton,
         startButton,
       ) else if scene.isActive && scene.iAmPlaying then div (
         drawButton,
@@ -386,7 +388,7 @@ class GameSidebar (scene: Signal[Scene], respond: Observer[GameRequest]):
       ) else emptyNode,
     )
   
-  private def leaveButton(using scene: Scene) =
+  private def leaveButton (using scene: Scene) =
     
     when (scene.iAmPlaying) (
       BlockButton("error") (
@@ -395,7 +397,7 @@ class GameSidebar (scene: Signal[Scene], respond: Observer[GameRequest]):
       )
     )
   
-  private def joinButton(using scene: Scene) =
+  private def joinButton (using scene: Scene) =
     
     when (!scene.isFull) (
       BlockButton("info") (
@@ -405,8 +407,27 @@ class GameSidebar (scene: Signal[Scene], respond: Observer[GameRequest]):
         else onClick --> goto("/login", "next" -> s"/game/${scene.room.id}/join"),
       ),
     )
+    
+  private def botButton (using scene: Scene) =
+    
+    when (!scene.isFull && scene.iAmPlaying) (
+      BlockButton.dropdown("primary") ("Add Bot") (
+        BotCatalogue.all.map: bot =>
+          a (
+            display("flex"),
+            justifyContent("space-between"),
+            bot.name,
+            img (
+              src(s"/assets/images/bots/${bot.name.toLowerCase}.svg"),
+              display("inline-block"),
+              width("20px"), height("20px"),
+            ),
+            onClick.mapTo(GameRequest.AddBot(bot.name)) --> respond,
+          )
+      )
+    )
   
-  private def startButton(using scene: Scene) =
+  private def startButton (using scene: Scene) =
     
     when (scene.canStart && scene.iAmPlaying) (
       BlockButton("accent") (
@@ -415,9 +436,9 @@ class GameSidebar (scene: Signal[Scene], respond: Observer[GameRequest]):
       ),
     )
   
-  private def drawButton(using scene: Scene) =
+  private def drawButton (using scene: Scene) =
     
-    if scene.iHaveResignedAll then emptyNode else
+    if scene.iHaveResignedAll || scene.humanPlayers.size < 2 then emptyNode else
       if !scene.iHaveOfferedDraw then
         BlockButton("warning") (
           if scene.isExclusivelyHotseat then "Declare Draw"
@@ -431,7 +452,7 @@ class GameSidebar (scene: Signal[Scene], respond: Observer[GameRequest]):
           onClick.mapTo(GameRequest.OfferDraw(false, scene.myDrawnPlayers.map(_.position)*)) --> respond,
         )
   
-  private def resignButton(using scene: Scene) =
+  private def resignButton (using scene: Scene) =
     
     val (toRejoin, toResign) =
       (if scene.isMyTurn then Seq(scene.activePlayer) else scene.myPlayers)
@@ -453,19 +474,21 @@ class GameSidebar (scene: Signal[Scene], respond: Observer[GameRequest]):
       )
     else emptyNode
     
-  private def rematchButton(using scene: Scene) =
+  private def rematchButton (using scene: Scene) =
     
-    if scene.iCanOfferRematch || scene.iCanJoinRematch then BlockButton("warning") (
-      if scene.rematch.isEmpty
-      then if scene.iAmPlayingExclusivelyHotseat then "Play Rematch" else "Offer Rematch"
-      else "Accept Rematch",
-      onClick.mapTo(GameRequest.OfferRematch) --> respond,
-    ) else if scene.rematch.nonEmpty then BlockButton("warning") (
-      "View Rematch",
-      onClick --> goto(s"/game/${scene.rematch.get.id}"),
-    ) else emptyNode
+    when (scene.humanPlayers.size >= 2) (
+      if scene.iCanOfferRematch || scene.iCanJoinRematch then BlockButton("warning") (
+        if scene.rematch.isEmpty
+        then if scene.iAmPlayingExclusivelyHotseat then "Play Rematch" else "Offer Rematch"
+        else "Accept Rematch",
+        onClick.mapTo(GameRequest.OfferRematch) --> respond,
+      ) else if scene.rematch.nonEmpty then BlockButton("warning") (
+        "View Rematch",
+        onClick --> goto(s"/game/${scene.rematch.get.id}"),
+      ) else emptyNode
+    )
     
-  private def forkButton(using scene: Scene) =
+  private def forkButton (using scene: Scene) =
     
     if scene.logicalOutcome.isDefined && !scene.isActiveHere then emptyNode else
       BlockButton("info") (
@@ -476,7 +499,7 @@ class GameSidebar (scene: Signal[Scene], respond: Observer[GameRequest]):
       )
     
   /** The forward and back buttons which appear when the game is over to browse past states. */
-  private def navigationButtons(using scene: Scene) =
+  private def navigationButtons (using scene: Scene) =
     
     div (
       windowEvents(_.onWheel).filter(_ => scene.isComplete).collect {
@@ -596,7 +619,7 @@ class GameSidebar (scene: Signal[Scene], respond: Observer[GameRequest]):
       ),
     )
     
-  private def copyToClipboard(text: String): Unit =
+  private def copyToClipboard (text: String): Unit =
     navigator.clipboard.writeText(text)
   
 end GameSidebar

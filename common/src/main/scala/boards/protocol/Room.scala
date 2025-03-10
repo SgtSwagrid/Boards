@@ -3,7 +3,7 @@ package boards.protocol
 import boards.protocol.UserProtocol.User
 import boards.util.extensions.IntOps.*
 import Room.*
-import boards.Catalogue
+import boards.GameCatalogue
 import boards.dsl.meta.Game
 import boards.dsl.meta.PlayerRef.PlayerId
 import boards.dsl.meta.TurnId.TurnId
@@ -26,14 +26,14 @@ case class Room (
   gameId: String,
   status: Status,
   properties: Map[String, Int] = Map.empty,
-  
+  seed: Long = 0L,
   forkedFrom: Option[String] = None,
   forkedTurn: Option[TurnId] = None,
   rematchOf: Option[String] = None,
   rematch: Option[String] = None,
 ) derives Codec.AsObject:
   /** The game which is being played in this room. */
-  lazy val game: Game = Catalogue.byName.getOrElse(gameId, Game.none)
+  lazy val game: Game = GameCatalogue.byName.getOrElse(gameId, Game.none)
   
   /** The permissible options for number of players according to the game. */
   lazy val possiblePlayerCounts: Seq[Int] = game.numPlayers
@@ -63,8 +63,8 @@ object Room:
         player = player,
         name = game.players(player.position.toInt).name,
         colour = game.players(player.position.toInt).colour,
-        isHotseat = simplePlayers.filter(_.userId == player.userId).sizeIs > 1,
-        hotseatOrder = simplePlayers.filter(_.userId == player.userId)
+        isHotseat = simplePlayers.count(_.belongsToUser(player.userIdOpt)) > 1,
+        hotseatOrder = simplePlayers.filter(_.belongsToUser(player.userIdOpt))
           .count(_.position.toInt < player.position.toInt),
       )
     
@@ -72,33 +72,43 @@ object Room:
     
     /** The players who are participating in this room, grouped by the device they are playing on. */
     lazy val playersByUser: Map[Int, Seq[RichPlayer]] =
-      players.groupBy(_.userId)
+      players.groupBy(_.userIdOpt.getOrElse(-1))
+      
+    def userIsPlaying (userId: Int): Boolean =
+      playersByUser.contains(userId)
     
     /** The IDs of all users who are participating in this game with at least one player. */
     lazy val users: Seq[Int] = playersByUser.keys.toSeq
     
     /** Find all the players who are controlled by the current user. */
-    def playersOf(userId: Int): Seq[RichPlayer] =
+    def playersOf (userId: Int): Seq[RichPlayer] =
       playersByUser.get(userId).toSeq.flatten
+      
+    def playersOf (identity: PlayerIdentity): Seq[RichPlayer] =
+      identity.userIdOpt.map(playersOf).getOrElse(Seq.empty)
+      
     /** The users who are participating in this game. */
-    lazy val userIds: Seq[Int] = players.map(_.userId).distinct
+    lazy val userIds: Seq[Int] = players.flatMap(_.userIdOpt).distinct
     /** Whether the given user is participating in this room. */
     def isParticipating(userId: Int): Boolean = userIds.contains(userId)
     
     /** The number of players currently participating in this room. */
-    lazy val numPlayers: Int = simplePlayers.size
+    def numPlayers: Int = simplePlayers.size
     /** The number of distinct users currently participating in this room. */
-    lazy val numUsers: Int = playersByUser.keys.size
+    def numUsers: Int = playersByUser.keys.size
     
     /** Whether some device has multiple players. */
-    lazy val isHotseat: Boolean = numUsers < numPlayers
+    def isHotseat: Boolean = numUsers < numPlayers
     /** Whether all players are on the same device. */
-    lazy val isExclusivelyHotseat: Boolean = numUsers == 1
+    def isExclusivelyHotseat: Boolean = numUsers == 1
     
     /** Whether players on multiple devices are involved. */
-    lazy val isOnline: Boolean = numUsers > 1
+    def isOnline: Boolean = numUsers > 1
     /** Whether no device has multiple players. */
-    lazy val isExclusivelyOnline: Boolean = numUsers == numPlayers
+    def isExclusivelyOnline: Boolean = numUsers == numPlayers
+    
+    def humanPlayers: Seq[RichPlayer] = players.filter(_.isHuman)
+    def botPlayers: Seq[RichPlayer] = players.filter(_.isBot)
     
     /** The single player who hasn't resigned, if all other players have. */
     lazy val winnerByResignation: Option[RichPlayer] =
@@ -173,6 +183,38 @@ object Room:
     def isComplete: Boolean = this match
       case Complete => true
       case _ => false
+      
+  enum PlayerIdentity:
+    
+    case Human (userId: Int, username: String)
+    case Bot (botId: String)
+    
+    def displayName: String = this match
+      case Human(_, username) => username
+      case Bot(id) => id
+    
+    def isHuman: Boolean = this match
+      case Human(_, _) => true
+      case Bot(_) => false
+      
+    def isBot: Boolean = !isHuman
+    
+    def asHumanOpt: Option[Human] = this match
+      case id: Human => Some(id)
+      case _ => None
+      
+    def asBotOpt: Option[Bot] = this match
+      case id: Bot => Some(id)
+      case _ => None
+      
+    def userIdOpt: Option[Int] = asHumanOpt.map(_.userId)
+    def botIdOpt: Option[String] = asBotOpt.map(_.botId)
+    
+    def belongsToUser (userId: Int): Boolean =
+      userIdOpt.contains(userId)
+      
+    def belongsToUser (userId: Option[Int]): Boolean =
+      userId.exists(belongsToUser)
   
   /**
    * A human player who is participating in a game room.
@@ -188,14 +230,15 @@ object Room:
    * @param hasOfferedDraw Whether this player has decided to offer a draw.
    */
   case class Player (
-    userId: Int,
-    username: String,
+    identity: PlayerIdentity,
     roomId: String,
     position: PlayerId,
     isOwner: Boolean,
     hasResigned: Boolean = false,
     hasOfferedDraw: Boolean = false,
-  )
+  ):
+    
+    export identity.{displayName, isHuman, isBot, asHumanOpt, asBotOpt, userIdOpt, botIdOpt, belongsToUser}
   
   /**
    * A human player who is participating in a game room.
@@ -219,7 +262,7 @@ object Room:
   ):
     
     /** The display name is the username, with a number added when the same user appears multiple times. */
-    lazy val displayName: String = username + suffix
+    lazy val displayNameWithSuffix: String = displayName + suffix
     /** A roman numeral to indicate hotseat order, only if this is a hotseat player. */
     lazy val suffix: String =
       if isHotseat then " " + (hotseatOrder + 1).toRomanNumeral else ""

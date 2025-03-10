@@ -13,12 +13,13 @@ class RoomTable(tag: Tag) extends Table[Room](tag, "ROOMS"):
   def gameId = column[String]("GAME_ID")
   def status = column[Status]("STATUS")
   def properties = column[Map[String, Int]]("PROPERTIES")
+  def seed = column[Long]("SEED")
   def forkedFrom = column[Option[String]]("FORKED_FROM")
   def forkedTurn = column[Option[TurnId]]("FORKED_TURN")
   def rematchOf = column[Option[String]]("REMATCH_OF")
   def rematch = column[Option[String]]("REMATCH")
   
-  def * = (id, gameId, status, properties, forkedFrom, forkedTurn, rematchOf, rematch).mapTo[Room]
+  def * = (id, gameId, status, properties, seed, forkedFrom, forkedTurn, rematchOf, rematch).mapTo[Room]
   
   def forkedFromFk = foreignKey("FORKED_FROM_FK", forkedFrom, RoomTable.rooms)(_.id.?)
   def rematchOfFk = foreignKey("REMATCH_OF_FK", rematchOf, RoomTable.rooms)(_.id.?)

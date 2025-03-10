@@ -3,7 +3,7 @@ package boards
 import boards.dsl.meta.Game
 import boards.games.*
 
-object Catalogue:
+object GameCatalogue:
   
   val all = Seq[Game] (
     Chess,

@@ -115,6 +115,12 @@ object Colour:
     /** 0x192a56 */ val PicoVoid             = Colour.hex(0x192a56)
     /** 0x2f3640 */ val Electromagnetic      = Colour.hex(0x2f3640)
   
+  /** The American Palette from [[https://flatuicolors.com/palette/us]]. */
+  object American:
+    /** 0x81ecec */ val FadedPoster   = Colour.hex(0x81ecec)
+    /** 0x00cec9 */ val RobinsEggBlue = Colour.hex(0x00cec9)
+    /** 0xffeaa7 */ val SourLemon     = Colour.hex(0xffeaa7)
+  
   /** The French Palette from [[https://flatuicolors.com/palette/fr]]. */
   object French:
     /** 0x6a89cc */ val Livid         = Colour.hex(0x6a89cc)
