@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module external.linked.project.id="bots-sources.test" external.linked.project.path="$MODULE_DIR$/../../../../../bots" external.root.project.path="$MODULE_DIR$/../../../../.." external.system.id="SBT" external.system.module.type="sbtSourceSet" type="SHARED_SOURCES_MODULE" version="4">
+  <component name="DisplayModuleName">
+    <option name="name" value="bots-sources.test" />
+  </component>
+  <component name="NewModuleRootManager">
+    <output-test url="file://$MODULE_DIR$/../../../../../bots/target/test-classes" />
+    <exclude-output />
+    <content url="file://$MODULE_DIR$/../../../../../bots/src/test" />
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="sbt: scala-sdk-3.6.2" level="project" />
+    <orderEntry type="module" module-name="root.boards-bots.botsJVM.main" />
+    <orderEntry type="module" module-name="root.boards-dsl.dslJVM.main" />
+    <orderEntry type="library" name="sbt: io.circe:circe-parser_sjs1_3:0.14.9:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-js:scalajs-library_2.13:1.18.2:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.circe:circe-numbers_sjs1_3:0.14.9:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-lang:scala-library:2.13.16:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-js:scalajs-scalalib_2.13:2.13.16+1.18.2:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-js:scalajs-javalib:1.18.2:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.circe:circe-generic_sjs1_3:0.14.9:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-js:scalajs-test-interface_2.13:1.18.2:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.circe:circe-core_sjs1_3:0.14.9:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.circe:circe-scalajs_sjs1_3:0.14.9:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-lang:scala3-library_sjs1_3:3.6.2:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.typelevel:cats-core_sjs1_3:2.12.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.typelevel:cats-kernel_sjs1_3:2.12.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-js:scalajs-test-bridge_2.13:1.18.2:jar" level="project" />
+  </component>
+  <component name="SharedSourcesOwnerModules">
+    <option name="ownersModuleNames">
+      <list>
+        <option value="root.boards-bots.botsJS.test" />
+        <option value="root.boards-bots.botsJVM.test" />
+        <option value="root.boards-server.test" />
+      </list>
+    </option>
+  </component>
+</module>

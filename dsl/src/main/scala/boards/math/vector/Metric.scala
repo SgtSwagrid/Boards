@@ -75,9 +75,17 @@ object Metric:
     
     def ball (p: VecI, rmax: Int, rmin: Int = 0): RegionI =
       SquareRegion(p.position.dim, rmax, rmin) + p
+
+  object Hex extends EnumerableMetric[Int]:
+
+    inline def norm (p: VecI): Int =
+      ???
+
+    def ball (p: VecI, rmax: Int, rmin: Int = 0): RegionI =
+      HexRegion(rmax, rmin) + p
   
   /** A region used to enumerate the positions in a neighbourhood. */
-  private trait NormRegion extends Region[Int]:
+  trait NormRegion extends Region[Int]:
     
     val rmax: Int
     val rmin: Int
@@ -86,7 +94,7 @@ object Metric:
       Bounds.between(-Vec.one[Int](dim) * rmax, Vec.one[Int](dim) * rmax)
   
   /** A region comprised of an origin-centred diamond ring. */
-  private case class DiamondRegion (
+  case class DiamondRegion (
     override val dim: Int,
     rmax: Int,
     rmin: Int = 0
@@ -101,7 +109,7 @@ object Metric:
             for
               r <- LazyList.range(if dim == 1 then rmin else 0, rmax + 1)
               b <- rec(dim - 1, rmax - r, Math.max(rmin - r, 0))
-              sign <- LazyList(-1, 1)
+              sign <- if r == 0 then LazyList(1) else LazyList(-1, 1)
             yield (r * sign) +: b
       
       rec(dim, rmax, rmin)
@@ -111,7 +119,7 @@ object Metric:
       rmin <= length && length <= rmax
   
   /** A region comprised of an origin-centred circular ring. */
-  private case class CircleRegion (
+  case class CircleRegion (
     override val dim: Int,
     rmax: Int,
     rmin: Int = 0
@@ -125,7 +133,7 @@ object Metric:
       rmin * rmin <= length && length <= rmax * rmax
   
   /** A region comprised of an origin-centred square ring. */
-  private case class SquareRegion (
+  case class SquareRegion (
     override val dim: Int,
     rmax: Int,
     rmin: Int = 0
@@ -140,7 +148,7 @@ object Metric:
             val ends = for
               b <- rec(dim - 1, rmax, 0)
               r <- LazyList.range(rmin, rmax + 1)
-              sign <- Seq(-1, 1)
+              sign <- if r == 0 then LazyList(1) else LazyList(-1, 1)
             yield (r * sign) +: b
             val middle = for
               b <- rec(dim - 1, rmax, rmin) if !b.isEmpty
@@ -153,3 +161,16 @@ object Metric:
     def contains (v: VecI): Boolean =
       val length = Metric.Chebyshev.norm(v)
       rmin <= length && length <= rmax
+
+  case class HexRegion (
+    rmin: Int,
+    rmax: Int,
+  ) extends NormRegion:
+
+    override val dim: Int = 2
+
+    lazy val positions: LazyList[VecI] =
+      LazyList(VecI(0, 1), VecI(0, -1), VecI(1, 0), VecI(-1, 0), VecI(-1, 1), VecI(1, -1))
+
+    def contains (v: VecI): Boolean =
+      v.x.abs <= 1 && v.y.abs <= 1 && v.x != v.y

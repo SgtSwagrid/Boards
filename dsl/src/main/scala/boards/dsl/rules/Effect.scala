@@ -1,7 +1,7 @@
 package boards.dsl.rules
 
 import boards.dsl.meta.Game.Board
-import boards.dsl.meta.PlayerRef.PlayerRef
+import boards.dsl.meta.PlayerRef.{PlayerId, PlayerRef}
 import boards.dsl.pieces.{Piece, PieceFilter, PieceRef, PieceSet, PieceState, PieceType}
 import boards.dsl.states.GameState.Outcome
 import boards.dsl.states.{GameState, HistoryState}
@@ -49,7 +49,7 @@ object Effect:
   def stopWhen
     (condition: (state: HistoryState) ?=> Boolean)
     (outcome: (state: HistoryState) ?=> Outcome)
-  : Rule =
+  : Effect =
     Effect(if condition then Effect.stop(outcome) else Effect.identity)
   
   def create (
@@ -64,6 +64,12 @@ object Effect:
     pieceTypes: PieceType*,
   ) (using owner: PlayerRef): Effect =
     Effect.create(owner, region, pieceTypes*)
+    
+  def createNeutral (
+    region: (state: HistoryState) ?=> RegionI,
+    pieceTypes: PieceType*,
+  ): Effect =
+    Effect.create(PlayerId(-1), region, pieceTypes*)
   
   def relocate (
     pieces: (state: HistoryState) ?=> PieceFilter,

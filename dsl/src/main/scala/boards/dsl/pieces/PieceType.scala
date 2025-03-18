@@ -2,8 +2,9 @@ package boards.dsl.pieces
 
 import boards.dsl.rules.{Cause, Control, Effect, Rule}
 import boards.dsl.meta.PlayerRef.PlayerRef
+import boards.dsl.pieces.PieceType.PieceAppearance
 import boards.dsl.states.{GameState, HistoryState}
-import boards.graphics.Texture
+import boards.graphics.{Colour, Polygon, Texture}
 import boards.math.vector.Region.RegionI
 
 /** Comprises the part of the state of a [[Piece]] over which the [[Game]] implementer has direct control.
@@ -13,7 +14,7 @@ import boards.math.vector.Region.RegionI
   */
 trait PieceType extends PieceFilter:
   
-  final def applyBase(pieces: PieceState): PieceView =
+  final def applyBase (pieces: PieceState): PieceView =
     pieces.ofType(this)
   
   /** The [[Rule]] which governs the behaviour of [[Piece]]s of this [[PieceType]].
@@ -32,13 +33,14 @@ trait PieceType extends PieceFilter:
     * In addition to the usual [[HistoryState]],
     * the [[Piece]] itself is also provided to implementations as part of the implicit scope.
     */
-  def rule: (HistoryState, Piece) ?=> Rule
+  def rule: (state: HistoryState, piece: Piece) ?=> Rule
   
   /** Determines the appropriate [[Texture]] for a [[Piece]] based on its current state. */
-  def texture(piece: Piece): boards.graphics.Texture =
-    textures(piece.owner.playerId.toInt % textures.size)
+  def appearance (piece: Piece): PieceAppearance =
+    if piece.isNeutral then appearances.head else
+    appearances(piece.owner.playerId.toInt % appearances.size)
   
-  def textures: Seq[boards.graphics.Texture] = Seq()
+  def appearances: Seq[PieceAppearance] = Seq()
   
   def hash: String = getClass.getSimpleName
   
@@ -55,6 +57,11 @@ trait PieceType extends PieceFilter:
   ) (using PlayerRef): Effect =
     Effect.createFriendly(region, this)
   
+  def createNeutral (
+    region: (state: HistoryState) ?=> RegionI,
+  ): Effect =
+    Effect.createNeutral(region, this)
+  
   /** Allow the user to place a [[Piece]] of this [[PieceType]] by clicking. */
   def place (
     owner: (state: HistoryState) ?=> PlayerRef,
@@ -68,6 +75,11 @@ trait PieceType extends PieceFilter:
   ) (using PlayerRef): Rule =
     Control.placeFriendly(region, this)
   
+  def placeNeutral (
+    region: (state: HistoryState) ?=> RegionI,
+  ): Rule =
+    Control.placeNeutral(region, this)
+  
   /** Fill a [[RegionI]] with [[Piece]]s of this [[PieceType]]. */
   def fill (
     owner: (state: HistoryState) ?=> PlayerRef,
@@ -80,16 +92,29 @@ trait PieceType extends PieceFilter:
     region: (state: HistoryState) ?=> RegionI,
   ) (using PlayerRef): Rule =
     Control.fillFriendly(region, this)
+  
+  def fillNeutral (
+    region: (state: HistoryState) ?=> RegionI,
+  ): Rule =
+    Control.fillNeutral(region)
     
   override def toString = getClass.getSimpleName.dropRight(1)
 
 object PieceType:
   
+  enum PieceAppearance:
+    case Textured (texture: Texture)
+    case Shape (shape: Polygon, colour: Colour, scale: Float = 0.5F)
+  
   /** A [[PieceType]] with static, possibly owner-dependent [[Texture]]s. */
-  trait TexturedPiece(override val textures: Texture*) extends PieceType
+  trait TexturedPiece (textures: Texture*) extends PieceType:
+    override val appearances = textures.map(PieceAppearance.Textured.apply)
+    
+  trait GeometricPiece (shape: Polygon, scale: Float = 0.5F) (colours: Colour*) extends PieceType:
+    override val appearances = colours.map(colour => PieceAppearance.Shape(shape, colour, scale))
   
   /** A [[PieceType]] which may act in an arbitrary way. */
-  trait DynamicPiece(behaviour: (HistoryState, Piece) ?=> Rule) extends PieceType:
+  trait DynamicPiece (behaviour: (HistoryState, Piece) ?=> Rule) extends PieceType:
     def rule: (HistoryState, Piece) ?=> Rule = behaviour
     
   /** A [[PieceType]] which never moves or acts at all, for static obstacles. */
@@ -97,5 +122,5 @@ object PieceType:
     def rule: (HistoryState, Piece) ?=> Rule = Cause.none
     
   /** A [[PieceType]] which acts only by simple movement. */
-  trait MoveablePiece(val region: (HistoryState, Piece) ?=> RegionI):
+  trait MoveablePiece (val region: (HistoryState, Piece) ?=> RegionI):
     def rule: (HistoryState, Piece) ?=> Rule = Control.moveThis(region)

@@ -2,13 +2,8 @@
 <project version="4">
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
-      <module name="root" options="" />
-      <module name="root.boards-client" options="" />
-      <module name="root.boards-common.commonJS" options="" />
-      <module name="root.boards-common.commonJVM" options="" />
-      <module name="root.boards-common.gamesJS" options="" />
-      <module name="root.boards-common.gamesJVM" options="" />
-      <module name="root.boards-server" options="-encoding utf8 -g" />
+      <module name="root.boards-server.main" options="-encoding utf8 -g" />
+      <module name="root.boards-server.test" options="-encoding utf8 -g" />
     </option>
   </component>
 </project>

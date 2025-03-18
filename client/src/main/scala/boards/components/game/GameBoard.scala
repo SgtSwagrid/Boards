@@ -35,6 +35,7 @@ import io.laminext.fetch.circe.fetchEventStreamBuilderSyntaxCirce
 import io.laminext.websocket.circe.webSocketReceiveBuilderSyntax
 import boards.components.{ExpandingButton, Footer, InputField, Navbar, SVG, Tabs}
 import boards.dsl.pieces.PieceRef.PieceId
+import boards.dsl.pieces.PieceType.PieceAppearance
 import boards.dsl.rules.Input
 import boards.math.vector.Vec.{VecF, VecI, given}
 import boards.math.algebra.Algebra.{*, given}
@@ -210,13 +211,13 @@ class GameBoard (
     * @param actualScale The current size length of this piece, in pixels.
     * @param isAnimating Whether this piece is currently moving or growing/shrinking.
     * @param isMoving Whether this piece is currently moving (i.e. actualPos != targetPos).
-    * @param texture The texture of this piece.
+    * @param appearance The texture of this piece.
     */
   private case class PieceSprite (
     pieceId: PieceId,
     actualBounds: BoundsF,
     targetBounds: BoundsF,
-    texture: Texture,
+    appearance: PieceAppearance,
   ):
     val actualSize: VecF = actualBounds.size
     val actualCentre: VecF = actualBounds.centre
@@ -241,7 +242,7 @@ class GameBoard (
               actualBounds = (previous.actualBounds.extend((target.size - previous.actualSize) * PIECE_GROWTH_SPEED))
                 + ((target.centre - previous.actualCentre) * PIECE_MOVEMENT_SPEED),
               targetBounds = target,
-              texture = piece.texture,
+              appearance = piece.appearance,
             )
           .toMap
         
@@ -253,7 +254,7 @@ class GameBoard (
               pieceId = piece.pieceId,
               actualBounds = target.collapseToCentre,
               targetBounds = target,
-              texture = piece.texture,
+              appearance = piece.appearance,
             )
           .toMap
         
@@ -264,7 +265,7 @@ class GameBoard (
               pieceId = previous.pieceId,
               actualBounds = previous.actualBounds.scaleCentred(1.0F - PIECE_GROWTH_SPEED),
               targetBounds = previous.targetBounds.collapseToCentre,
-              texture = previous.texture,
+              appearance = previous.appearance,
             )
           .filter((_, p) => p.isAnimating)
           .toMap
@@ -330,7 +331,11 @@ class GameBoard (
     
     // Draw all pieces in the foreground.
     for piece <- pieces do
-      canvas.drawImage(piece.actualBounds, piece.texture)
+      piece.appearance match
+        case PieceAppearance.Shape(shape, colour, scale) =>
+          canvas.fillPolygon(shape.fitTo(piece.actualBounds.scaleCentred(scale)), colour)
+        case PieceAppearance.Textured(texture) =>
+          canvas.drawImage(piece.actualBounds, texture)
 
     // If some piece is currently being dragged, highlight all possible destinations.
     dragged.foreach: dragged =>

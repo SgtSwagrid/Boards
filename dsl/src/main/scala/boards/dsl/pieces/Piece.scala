@@ -3,8 +3,9 @@ package boards.dsl.pieces
 import boards.dsl.meta.PlayerRef.PlayerId
 import boards.dsl.pieces.PieceRef.PieceId
 import boards.dsl.pieces.PieceState.Version
+import boards.dsl.pieces.PieceType.PieceAppearance
 import boards.dsl.pieces.PieceUpdate.UpdateQuery
-import boards.dsl.rules.Rule
+import boards.dsl.rules.{Effect, Rule}
 import boards.dsl.states.HistoryState
 import boards.graphics.Texture
 import boards.math.vector.Vec.{HasVecI, VecI}
@@ -42,6 +43,8 @@ case class Piece private[pieces] (
   /** Determine whether this piece is owned by the given player. */
   def ownedBy (player: PlayerId): Boolean = owner == player
   
+  def isNeutral: Boolean = ownedBy(PlayerId(-1))
+  
   /** Select a value among those given based on the owner of this piece.
     * i.e. if this piece is owned by player 0, then `byOwner(a, b, c)` is equivalent to `a`.
     */
@@ -63,9 +66,12 @@ case class Piece private[pieces] (
     this #:: previous.map(_.history).getOrElse(LazyList.empty)
     
   /** The current texture of this piece. */
-  def texture: Texture = pieceType.texture(this)
+  def appearance: PieceAppearance = pieceType.appearance(this)
   
   /** The set of all current pieces with the same owner as this one. */
   def fellowPieces (using pieces: PieceState): PieceView = pieces.ofPlayer(owner)
+  
+  def replace (pieceType: PieceType): Effect =
+    Effect.create(owner, position, pieceType)
   
   override def toString = s"$pieceType$position"

@@ -35,10 +35,15 @@ sealed trait Ray extends Region[Int]:
   def takeTo (f: VecI => Boolean): Ray
   
   /** In each direction, remove the furthest `n` positions. */
-  def retract (n: Int): Ray
+  def dropEnd (n: Int): Ray
+  
+  def takeEnd (n: Int): Ray
   
   /** Remove the first and last position along this ray. */
-  def interior: Ray = drop(1).retract(1)
+  def interior: Ray = drop(1).dropEnd(1)
+  
+  def first: Ray = take(1)
+  def last: Ray = takeEnd(1)
   
 object Ray:
   
@@ -113,7 +118,7 @@ object Ray:
       refine(lengthBounds, length, positions.dropWhile(f))
       
     def take (n: Int) =
-      refine(lengthBounds, length.limitBelow(n).orElse(n), positions.take(n))
+      refine(lengthBounds, length.limitBelow(n).orElse(0), positions.take(n))
     
     def takeWhile (f: VecI => Boolean) =
       refine(lengthBounds, length, positions.takeWhile(f))
@@ -122,8 +127,11 @@ object Ray:
       val (prefix, suffix) = positions.span(!f)
       refine(lengthBounds, length, prefix.lazyAppendedAll(suffix.headOption))
       
-    def retract (n: Int) =
+    def dropEnd (n: Int) =
       refine(lengthBounds.shiftEnd(-n), length.shift(-n).limitAbove(0).orElse(0), positions.dropRight(n))
+      
+    def takeEnd (n: Int) =
+      refine(lengthBounds, length.limitBelow(n).orElse(0), positions.takeRight(n))
     
     /** Determine the number of multiples of step that are required to fall inside the given interval. */
     @tailrec
@@ -174,7 +182,8 @@ object Ray:
     def takeWhile (f: VecI => Boolean): Ray = CompositeRay(parts.map(_.takeWhile(f)))
     def takeTo (f: VecI => Boolean): Ray = CompositeRay(parts.map(_.takeTo(f)))
     
-    def retract (n: Int): Ray = CompositeRay(parts.map(_.retract(n)))
+    def dropEnd (n: Int): Ray = CompositeRay(parts.map(_.dropEnd(n)))
+    def takeEnd (n: Int): Ray = CompositeRay(parts.map(_.takeEnd(n)))
     
     override def window (window: BoundsI): RegionI =
       parts.map(_.window(window)).reduceOption(_ | _).getOrElse(Region.empty)

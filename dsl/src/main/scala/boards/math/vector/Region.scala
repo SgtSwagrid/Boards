@@ -92,6 +92,8 @@ trait Region[@specialized X: Numeric] extends
       asRegionI.bounds.toBoundsF,
       that.bounds.toBoundsF
     ).toVecI
+
+    println(s"Joining left=$bounds right=${that.bounds} offset=$offset")
     asRegionI | (that + offset)
   
   /**
@@ -170,8 +172,9 @@ object Region:
     * @param regions The sub-regions to combine.
     */
   def join (align: Align) (regions: RegionI*): RegionI =
-    regions.foldLeft(Region.empty[Int]): (region, appendant) =>
+    regions.reduceOption: (region, appendant) =>
       region.join(appendant, align)
+    .getOrElse(Region.empty)
     
   /** A region built from stacking sub-regions end-to-end.
     *
@@ -188,14 +191,14 @@ object Region:
     join(Align.stack(dim, spacing=spacing, reverse=reverse))(regions*)
     
   /** A region built from stacking 2D-sub-regions horizontally. */
-  def hstack (regions: RegionI*): RegionI = stack(0)(regions*)
+  def stackX (regions: RegionI*): RegionI = stack(0)(regions*)
   
   /** A region built from stacking 2D-sub-regions vertically. */
-  def vstack (regions: RegionI*): RegionI = stack(1)(regions.reverse*)
+  def stackY (regions: RegionI*): RegionI = stack(1)(regions.reverse*)
   
-  def empty[X: Numeric](size: Vec[X]): Region[X] = EmptyRegion(size.position.toUnbounded)
-  def empty[X: Numeric](size: X*): Region[X] = empty(Vec(size*))
-  def empty[X: Numeric]: Region[X] = EmptyRegion(Vec.empty)
+  def empty [X: Numeric] (size: Vec[X]): Region[X] = EmptyRegion(size.position.toUnbounded)
+  def empty [X: Numeric] (size: X*): Region[X] = empty(Vec(size*))
+  def empty [X: Numeric]: Region[X] = EmptyRegion(Vec.empty)
   
   /**
    * A region containing an empty region.

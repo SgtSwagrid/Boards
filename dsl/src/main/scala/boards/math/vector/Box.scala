@@ -6,6 +6,7 @@ import boards.math.algebra.Unbounded.UInt
 import boards.util.extensions.CollectionOps.cartesianProduct
 import boards.math.Conversions.{*, given}
 import boards.math.algebra.Algebra.{*, given}
+import boards.math.vector.Region.RegionI
 
 import scala.annotation.tailrec
 
@@ -39,5 +40,8 @@ object Box:
   
   /** A 2D-region consisting of a single row. */
   def row (width: Int): Box = Box(width, 1)
+  def rows (widths: Int*): RegionI = Region.stackY(widths.map(Box.row)*)
+
   /** A 2D-region consisting of a single column. */
   def col (height: Int): Box = Box(1, height)
+  def cols (heights: Int*): RegionI = Region.stackX(heights.map(Box.col)*)

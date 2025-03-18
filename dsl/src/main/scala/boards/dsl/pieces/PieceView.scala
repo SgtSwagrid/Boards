@@ -10,6 +10,7 @@ import boards.dsl.pieces.{PieceFilter, PieceSet}
 import boards.dsl.rules.Rule
 import boards.dsl.states.{HistoryState, InstantaneousState}
 import boards.dsl.states.HistoryState.AtTime
+import boards.math.vector.Metric.EnumerableMetric
 import boards.math.vector.Region.{HasRegion, RegionI}
 import boards.math.vector.Vec.VecI
 import boards.math.vector.Region
@@ -46,7 +47,7 @@ trait PieceView extends PieceSet, UpdateQuery, OfPlayer[PieceView], HasRegion[In
   /** Get a [[PieceView]] of this [[PieceState]] with only some specified subset of the pieces. */
   def restrictTo(pieces: PieceSet): PieceView
   
-  export pieces.map
+  export pieces.{map, exists, forall}
   
   protected[pieces] final val pieceBitset: BitSet =
     selected.pieceBitset
@@ -88,9 +89,19 @@ trait PieceView extends PieceSet, UpdateQuery, OfPlayer[PieceView], HasRegion[In
     ofClass(C.runtimeClass.asInstanceOf[Class[? <: PieceType]])
   
   /** Restrict the [[PieceView]] to only those [[Piece]]s in a particular [[RegionI]]. */
-  final override def ofRegion(region: RegionI): PieceView =
+  final override def ofRegion (region: RegionI): PieceView =
     filter(PieceFilter.ofRegion(region))
-  
+
+  def connectedComponent (start: RegionI, metric: EnumerableMetric[Int]): PieceView =
+
+    def step (core: Set[VecI], frontier: Set[VecI]): Set[VecI] =
+      (frontier.flatMap(v => metric.neighbours(v).positions) -- core).filter(this.contains)
+
+    def rec (core: Set[VecI], frontier: Set[VecI]): Set[VecI] =
+      if frontier.isEmpty then core else rec(core ++ frontier, step(core, frontier))
+
+    ofRegion(Region.from(rec(Set.empty, start.positions.toSet)))
+
   override def toString = pieces.size match
     case 0 => "∅"
     case 1 => pieces.head.toString
@@ -99,7 +110,7 @@ trait PieceView extends PieceSet, UpdateQuery, OfPlayer[PieceView], HasRegion[In
 object PieceView:
   
   def empty: PieceView = FilteredPieceView()
-  def from(base: PieceState, selected: PieceSet): PieceView =
+  def from (base: PieceState, selected: PieceSet): PieceView =
     FilteredPieceView(base, base & selected)
   
   case class FilteredPieceView (

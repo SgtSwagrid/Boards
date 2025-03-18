@@ -10,6 +10,7 @@ import boards.dsl.meta.TurnId
 import boards.dsl.meta.TurnId.TurnId
 import boards.dsl.pieces.PieceRef.PieceId
 import boards.dsl.pieces.PieceState.empty.region
+import boards.dsl.pieces.PieceType.PieceAppearance
 import boards.dsl.rules
 import boards.dsl.rules.Input
 import boards.dsl.states.{GameState, HistoryState}
@@ -195,12 +196,12 @@ object Scene:
     *
     * @param pieceId A unique code used to identify this piece.
     * @param position The logical position of this piece on the game board.
-    * @param texture The current texture of this piece.
+    * @param appearance The current texture of this piece.
     */
   case class PieceData (
     pieceId: PieceId,
     position: VecI,
-    texture: Texture,
+    appearance: PieceAppearance,
   ) derives Codec.AsObject
   
   /** Constructs a new scene from an actual state.
@@ -220,7 +221,7 @@ object Scene:
     val board = currentState.now.board
       
     val pieces = currentState.now.pieces.pieces.map: piece =>
-      PieceData(piece.pieceId, piece.position, piece.texture)
+      PieceData(piece.pieceId, piece.position, piece.appearance)
     
     val choices =
       val isMyTurn = room.isActive && userId.exists(room.userIsPlaying) &&

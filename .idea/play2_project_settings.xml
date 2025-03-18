@@ -6,7 +6,6 @@
         <entry key="server">
           <value>
             <ProjectSettingsEntry>
-              <option name="sourceDir" value="C:\Users\alecd\IdeaProjects\Boards\server\src\main" />
               <option name="confDir" value="C:\Users\alecd\IdeaProjects\Boards\server\src\main" />
               <option name="templateImports">
                 <list>

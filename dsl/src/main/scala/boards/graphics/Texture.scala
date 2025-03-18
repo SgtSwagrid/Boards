@@ -11,7 +11,10 @@ import io.circe.Codec
 case class Texture (
   file: String,
   size: Float = 1.0F,
-) derives Codec.AsObject
+  colour: Colour = Colour.White,
+) derives Codec.AsObject:
+  def withSize (size: Float): Texture = copy(size = size)
+  def withColour (colour: Colour): Texture = copy(colour = colour)
 
 object Texture:
   
@@ -41,8 +44,10 @@ object Texture:
   val BlackRaja   = Texture("chess/black_king.svg")
   val BlackPadati = Texture("chess/black_pawn.svg")
   
-  val WhiteArrow = Texture("amazons/white_arrow.svg", 0.8F)
-  val BlackArrow = Texture("amazons/black_arrow.svg", 0.8F)
+  val WhiteArrow = Texture("amazons/white_arrow.svg", size=0.8F)
+  val BlackArrow = Texture("amazons/black_arrow.svg", size=0.8F)
   
-  val X = Texture("tictactoe/x.svg", 0.4F)
-  val O = Texture("tictactoe/o.svg", 0.4F)
+  val X = Texture("tictactoe/x.svg", size=0.4F)
+  val O = Texture("tictactoe/o.svg", size=0.4F)
+  
+  val Circle = Texture("shapes/circle.svg", size=0.6F)

@@ -19,7 +19,7 @@ import scala.reflect.ClassTag
   * @author Alec Dorrington
   */
 trait PieceFilter extends AtTime[PieceView], PeriodQuery[UpdateQuery], OfPlayer[PieceFilter]:
-  
+
   /** Restrict a [[PieceView]] to only [[Piece]]s which satisfy this predicate. */
   final def apply (pieces: PieceView): PieceView = pieces match
     case pieces: PieceState => applyBase(pieces)

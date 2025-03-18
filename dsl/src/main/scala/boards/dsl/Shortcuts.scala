@@ -58,6 +58,9 @@ object Shortcuts:
       
     def whileEnemy (using pieces: PieceState, playerId: PlayerRef): Ray =
       ray.takeWhile(pieces.isEnemy)
+      
+    def whileInBounds (using state: HistoryState): Ray =
+      ray.takeWhile(state.board.inLogicalBounds)
   
   extension (region: RegionI)
     
@@ -127,9 +130,11 @@ object Shortcuts:
     def click (using HistoryState): Cause = Cause.click(position)
     
   extension (board: Board)
+    
     def useAsBoard: Effect = Effect.setBoard(board)
   
   def byPlayer [X] (x: X*) (using player: PlayerRef): X = x(player.playerId.toInt)
+  def byActivePlayer [X] (x: X*) (using state: HistoryState): X = x(state.activePlayer.toInt)
   
   given (using state: GameState): HistoryState = state.history
   given (using state: HistoryState): InstantaneousState = state.now

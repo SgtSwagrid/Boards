@@ -25,8 +25,9 @@
             <option value="$PROJECT_DIR$/server" />
           </set>
         </option>
-        <option name="preferScala2" value="false" />
         <option name="sbtVersion" value="1.10.1" />
+        <option name="useSbtShellForBuild" value="true" />
+        <option name="useSbtShellForImport" value="true" />
       </SbtProjectSettings>
     </option>
   </component>

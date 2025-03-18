@@ -14,6 +14,31 @@ import boards.math.vector.Embedding
   */
 abstract class Game:
   
+  /*export boards.dsl.meta.{Game, PlayerRef, TurnId}
+  export boards.dsl.meta.Game.{GameConfig, Property}
+  export boards.dsl.meta.PlayerRef.{Player, PlayerId, PlayerRef}
+  export boards.dsl.meta.TurnId.{TurnId, HasTurnId}
+  export boards.dsl.states.{InstantaneousState, HistoryState, GameState}
+  export boards.dsl.states.GameState.Outcome
+  export boards.dsl.states.GameState.Outcome.{Winner, Draw}
+  export boards.dsl.rules.{Capability, Cause, Control, Effect, Input, Rule}
+  export boards.dsl.pieces.{Piece, PieceFilter, PieceRef, PieceSet, PieceState, PieceType, PieceUpdate, PieceView}
+  export boards.dsl.pieces.PieceType.{TexturedPiece, GeometricPiece, DynamicPiece, StaticPiece, MoveablePiece, PieceAppearance}
+  export boards.dsl.pieces.PieceView.Pieces
+  export boards.dsl.Shortcuts.{*, given}
+  export boards.graphics.{Colour, Pattern, Polygon, Texture}
+  
+  export boards.math.Conversions.{*, given}
+  export boards.math.{Interval, Number, Rational}
+  export boards.math.Interval.{IntervalI, IntervalL, IntervalF, IntervalD, IntervalR, given}
+  export boards.math.vector.{Align, Bounds, Box, Dir, Embedding, Metric, Ray, Region, RegionMap, Vec}
+  export boards.math.vector.Vec.{VecI, VecL, VecF, VecD, VecR, UVec, UVecI, UVecL, UVecF, UVecD, UVecR, HasVec, given}
+  export boards.math.vector.Bounds.{BoundsI, BoundsL, BoundsF, BoundsD, BoundsR, HasBounds}
+  export boards.math.vector.Region.{RegionI, RegionL, given}
+  export boards.math.vector.RegionMap.{RegionMapI, RegionMapL, HasRegionMap, given}
+  export boards.math.vector.Embedding.{embed, embedHex}
+  export boards.math.algebra.Algebra.{*, given}*/
+  
   /** The human-readable name for this game. */
   val name: String = ""
   

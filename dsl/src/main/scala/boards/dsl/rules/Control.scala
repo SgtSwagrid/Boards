@@ -1,6 +1,6 @@
 package boards.dsl.rules
 
-import boards.dsl.meta.PlayerRef.PlayerRef
+import boards.dsl.meta.PlayerRef.{PlayerId, PlayerRef}
 import boards.dsl.pieces.{Piece, PieceFilter, PieceRef, PieceType}
 import boards.dsl.states.HistoryState
 import boards.math.vector.Region.RegionI
@@ -36,6 +36,12 @@ object Control:
     pieceTypes: PieceType*,
   ) (using owner: PlayerRef): Rule =
     place(owner, region, pieceTypes*)
+  
+  def placeNeutral (
+    region: HistoryState ?=> RegionI,
+    pieceTypes: PieceType*,
+  ): Rule =
+    place(PlayerId(-1), region, pieceTypes *)
     
   def fill (
     owner: (state: HistoryState) ?=> PlayerRef,
@@ -49,6 +55,12 @@ object Control:
     pieceTypes: PieceType*,
   ) (using owner: PlayerRef): Rule =
     fill(owner, region, pieceTypes*)
+  
+  def fillNeutral (
+    region: (state: HistoryState) ?=> RegionI,
+    pieceTypes: PieceType*,
+  ): Rule =
+    fill(PlayerId(-1), region, pieceTypes*)
     
   def move (
     pieces: HistoryState ?=> PieceFilter,

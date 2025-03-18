@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module external.linked.project.id="client:main [file:/C:/Users/alecd/IdeaProjects/Boards/]" external.linked.project.path="$MODULE_DIR$/../../../../client" external.root.project.path="$MODULE_DIR$/../../../.." external.system.id="SBT" external.system.module.type="sbtSourceSet" type="JAVA_MODULE" version="4">
+  <component name="DisplayModuleName">
+    <option name="name" value="boards-client.main" />
+  </component>
+  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_21">
+    <output url="file://$MODULE_DIR$/../../../../client/target/scala-3.6.2/classes" />
+    <exclude-output />
+    <content url="file://$MODULE_DIR$/../../../../client/src/main">
+      <sourceFolder url="file://$MODULE_DIR$/../../../../client/src/main/scala" isTestSource="false" />
+    </content>
+    <content url="file://$MODULE_DIR$/../../../../client/target/scala-3.6.2/resource_managed/main" />
+    <content url="file://$MODULE_DIR$/../../../../client/target/scala-3.6.2/src_managed/main" />
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="sbt: scala-sdk-3.6.2" level="project" />
+    <orderEntry type="module" module-name="root.boards-bots.bots-sources.main" exported="" />
+    <orderEntry type="module" module-name="root.boards-bots.botsJS.main" />
+    <orderEntry type="module" module-name="root.boards-common.common-sources.main" exported="" />
+    <orderEntry type="module" module-name="root.boards-common.commonJS.main" />
+    <orderEntry type="module" module-name="root.boards-dsl.dsl-sources.main" exported="" />
+    <orderEntry type="module" module-name="root.boards-dsl.dslJS.main" />
+    <orderEntry type="module" module-name="root.boards-games.games-sources.main" exported="" />
+    <orderEntry type="module" module-name="root.boards-games.gamesJS.main" />
+    <orderEntry type="library" name="sbt: io.circe:circe-parser_sjs1_3:0.14.9:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.laminext:fetch-circe_sjs1_3:0.17.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-js:scalajs-library_2.13:1.18.2:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.circe:circe-numbers_sjs1_3:0.14.9:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.raquo:airstream_sjs1_3:17.0.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.raquo:laminar_sjs1_3:17.0.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-lang:scala-library:2.13.16:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-js:scalajs-scalalib_2.13:2.13.16+1.18.2:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-js:scalajs-javalib:1.18.2:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.laminext:fetch_sjs1_3:0.17.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.laminext:websocket-circe_sjs1_3:0.17.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.circe:circe-generic_sjs1_3:0.14.9:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.circe:circe-core_sjs1_3:0.14.9:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.circe:circe-scalajs_sjs1_3:0.14.9:jar" level="project" />
+    <orderEntry type="library" name="sbt: com.raquo:ew_sjs1_3:0.2.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: app.tulz:tuplez-full-light_sjs1_3:0.4.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-lang:scala3-library_sjs1_3:3.6.2:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.laminext:core_sjs1_3:0.17.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.laminext:websocket_sjs1_3:0.17.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.typelevel:cats-core_sjs1_3:2.12.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.typelevel:cats-kernel_sjs1_3:2.12.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: io.laminext:util_sjs1_3:0.17.0:jar" level="project" />
+    <orderEntry type="library" name="sbt: org.scala-js:scalajs-dom_sjs1_3:2.8.0:jar" level="project" />
+  </component>
+</module>

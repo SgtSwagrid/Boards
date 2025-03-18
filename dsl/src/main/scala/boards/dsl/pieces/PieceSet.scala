@@ -19,7 +19,7 @@ import scala.collection.immutable.BitSet
   */
 trait PieceSet extends PieceFilter:
   
-  protected def applyBase(pieces: PieceState): PieceView =
+  protected def applyBase (pieces: PieceState): PieceView =
     pieces.restrictTo(this)
   
   /** A [[BitSet]] describing the IDs of all included pieces. */
@@ -55,11 +55,11 @@ object PieceSet:
   val empty: PieceSet = PieceSet()
   
   /** Construct a [[PieceSet]] consisting of the given [[Piece]]s. */
-  def apply(pieces: PieceRef*): PieceSet =
+  def apply (pieces: PieceRef*): PieceSet =
     PieceSet.Of(BitSet(pieces.map(_.pieceId.toInt)*))
     
   /** Construct a [[PieceSet]] based on a [[BitSet]]. */
-  def apply(pieceIds: BitSet): PieceSet =
+  def apply (pieceIds: BitSet): PieceSet =
     PieceSet.Of(pieceIds)
   
   private[pieces] case class Of (

@@ -16,7 +16,7 @@ import io.circe.syntax.*
 
 import scala.collection.mutable
 
-sealed trait Polygon extends Affine[Float, Polygon] derives Codec.AsObject:
+sealed trait Polygon extends Affine[Float, Polygon]:
   
   protected val memo: mutable.Map[Float, BoundsF] = mutable.Map.empty
   
@@ -56,7 +56,7 @@ sealed trait Polygon extends Affine[Float, Polygon] derives Codec.AsObject:
 
 object Polygon:
   
-  case object Rectangle extends Polygon:
+  case object Rectangle extends Polygon derives Codec.AsObject:
     
     def inscribedBounds (aspectRatio: Float): BoundsF =
       memo.getOrElseUpdate(aspectRatio,
@@ -69,7 +69,7 @@ object Polygon:
     def contains (v: VecF): Boolean =
       0.0F <= v.x && v.x <= 1.0F && 0.0F <= v.y && v.y <= 1.0F
       
-  case object Hexagon extends Polygon:
+  case object Hexagon extends Polygon derives Codec.AsObject:
     
     private val l_short_diag = 1.0F
     private val l_radius     = 0.5F * l_short_diag
@@ -104,13 +104,15 @@ object Polygon:
   case class TransformedPolygon (
     base: Polygon,
     f: AffineBijection[Float, Float],
-  ) extends Polygon:
+  ) extends Polygon derives Codec.AsObject:
     
     def vertices: Seq[VecF] =
       base.vertices.map(_.toUnbounded).map(f.apply).map(_.toFinite)
     
     def inscribedBounds (aspectRatio: Float): BoundsF =
-      base.inscribedBounds(aspectRatio * base.aspectRatio / this.aspectRatio).mapAffine(f)
+      memo.getOrElseUpdate(aspectRatio,
+        base.inscribedBounds(aspectRatio * base.aspectRatio / this.aspectRatio).mapAffine(f)
+      )
       
     def contains (v: VecF): Boolean =
       base.contains(f.inverse(v.toUnbounded).toFinite)
@@ -124,3 +126,8 @@ object Polygon:
       case Up | Down => true
       case Left | Right => false
     def isHorizontal: Boolean = !isVertical
+    
+  case class ColouredPolygon (
+    polygon: Polygon,
+    colour: Colour,
+  )

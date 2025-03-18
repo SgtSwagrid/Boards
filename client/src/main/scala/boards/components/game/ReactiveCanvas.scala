@@ -78,11 +78,11 @@ class ReactiveCanvas (id: String = "canvas"):
   def clear (): Unit =
     context.clearRect(0, 0, rect.width, rect.height)
   
-  def drawImage (bounds: BoundsF, image: Texture, alpha: Float = 1.0F) =
+  def drawImage (bounds: BoundsF, image: Texture) =
     val pos = bounds.bottomLeft
     val size = bounds.size
     loadTexture(s"/assets/images/games/${image.file}"): img =>
-      setAlpha(alpha)
+      setColour(image.colour)
       val actualPos = pos + ((1.0F - image.size) * size.toVecF) / 2.0F
       val actualSize = image.size * size.toVecF
       context.drawImage(img, actualPos.x, actualPos.y, actualSize.x, actualSize.y)

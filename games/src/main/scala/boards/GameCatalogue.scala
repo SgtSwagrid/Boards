@@ -9,7 +9,12 @@ object GameCatalogue:
     Chess,
     Amazons,
     TicTacToe,
-    HexChess,
+    Hex,
+    Neutron,
+    Breakthrough,
+    Chaturanga,
+    Clobber,
+    Camelot,
   )
   
   val byName: Map[String, Game] =

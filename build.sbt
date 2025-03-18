@@ -11,6 +11,7 @@ ThisBuild / scalacOptions ++= Seq (
 )
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
+Global / scalaJSStage := FullOptStage
 
 val V = new {
   val slick     = "3.5.2"

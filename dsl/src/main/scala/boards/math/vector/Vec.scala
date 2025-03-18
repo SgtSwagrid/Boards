@@ -237,7 +237,7 @@ extends Region[X], Affine[X, Vec[X]]:
     
   override def hashCode: Int =
     // Temporary: a simple hash function for vectors of small component size.
-    components.foldLeft(0)((hash, x) => hash << 4 + x.hashCode)
+    components.foldLeft(0)((hash, x) => hash << 6 + x.hashCode)
     
   def direction (using X =:= Int): VecI =
     val divisor = gcd(asVecI.abs.components*)
@@ -276,7 +276,7 @@ extends Region[X], Affine[X, Vec[X]]:
    * Each step is determined using `VecI.directionTo`.
    */
   def rayUntil (until: VecI) (using X =:= Int): Ray =
-    rayTo(until).retract(1)
+    rayTo(until).dropEnd(1)
   
   /**
    * Create a ray consisting of all points along some direction(s) from this `Vec`.
@@ -321,6 +321,9 @@ object Vec:
   def apply [X: Numeric as N] (x: X*): Vec[X] = SeqVec(x.toIndexedSeq, N.zero)
   /** Construct a new `Vec` with the given components in the standard basis. */
   def apply [X: Numeric as N] (x: Iterable[X]): Vec[X] = SeqVec(x.toIndexedSeq, N.zero)
+  
+  def unapplySeq [X] (v: Vec[X]): Option[Seq[X]] =
+    Some(v.components)
   
   /** Construct a `d`-dimensional `Vec` of all 0's, where 0 is the additive identity. */
   def zero [X: Numeric as R] (d: Int = 0): Vec[X] =

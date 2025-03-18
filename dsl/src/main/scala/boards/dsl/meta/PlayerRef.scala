@@ -2,8 +2,10 @@ package boards.dsl.meta
 
 import Game.GameConfig
 import boards.dsl.meta.PlayerRef.PlayerId
+import boards.dsl.rules.Effect
 import boards.dsl.states.GameState.Outcome
 import boards.dsl.states.GameState.Outcome.Winner
+import boards.dsl.states.HistoryState
 import boards.graphics.Colour
 import boards.util.extensions.CollectionOps.contramap
 
@@ -33,7 +35,10 @@ object PlayerRef:
     def previous(using config: GameConfig): PlayerId =
       (playerId + config.numPlayers - 1) % config.numPlayers
       
-    def wins: Outcome = Winner(playerId)
+    def winner: Outcome = Winner(playerId)
+    def wins: Effect = Winner(playerId).declare
+    def winsIf (cond: HistoryState ?=> Boolean): Effect =
+      Effect.stopWhen(cond)(Winner(playerId))
   
   object PlayerId:
     def apply(id: Int): PlayerId = id
@@ -45,7 +50,9 @@ object PlayerRef:
     playerId: PlayerId,
     name: String,
     colour: Colour = Colour.White,
-  )
+  ):
+    def wins: Effect = playerId.wins
+    def winsIf (cond: HistoryState ?=> Boolean) = playerId.winsIf(cond)
   
   object Player:
     

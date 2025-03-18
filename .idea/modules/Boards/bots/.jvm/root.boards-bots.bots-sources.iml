@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module external.linked.project.id="bots-sources" external.linked.project.path="$MODULE_DIR$/../../../../../bots" external.root.project.path="$MODULE_DIR$/../../../../.." external.system.id="SBT" external.system.module.type="nestedProject" type="SHARED_SOURCES_MODULE" version="4">
+  <component name="DisplayModuleName">
+    <option name="name" value="bots-sources" />
+  </component>
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$/../../../../../bots">
+      <excludeFolder url="file://$MODULE_DIR$/../../../../../bots/target" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module" module-name="root.boards-bots.bots-sources.main" />
+    <orderEntry type="module" module-name="root.boards-bots.bots-sources.test" production-on-test="" />
+  </component>
+</module>
